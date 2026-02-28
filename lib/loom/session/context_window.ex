@@ -176,7 +176,28 @@ defmodule Loom.Session.ContextWindow do
 
     recent_messages = select_recent(messages, available)
 
-    [system_msg | recent_messages]
+    messages_out = [system_msg | recent_messages]
+
+    if opts[:team_id] do
+      system_tokens = estimate_tokens(enriched_system)
+      history_tokens = recent_messages |> Enum.map(&estimate_message_tokens/1) |> Enum.sum()
+      total = model_limit(model)
+      usage = (system_tokens + history_tokens) / total * 100
+
+      if usage > 50 do
+        pressure_msg = %{
+          role: :system,
+          content:
+            "[Context pressure: #{round(usage)}%]. Consider offloading completed topics via context_offload."
+        }
+
+        messages_out ++ [pressure_msg]
+      else
+        messages_out
+      end
+    else
+      messages_out
+    end
   end
 
   @doc """

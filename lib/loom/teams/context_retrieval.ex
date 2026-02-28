@@ -23,6 +23,7 @@ defmodule Loom.Teams.ContextRetrieval do
         id: id,
         pid: pid,
         topic: meta[:topic] || "unnamed",
+        source_agent: meta[:source_agent] || "unknown",
         token_count: meta[:tokens] || 0
       }
     end)

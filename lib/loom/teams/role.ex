@@ -116,6 +116,44 @@ defmodule Loom.Teams.Role do
     "context_offload" => Loom.Tools.ContextOffload
   }
 
+  # -- Context Mesh prompt blocks --
+
+  @context_mesh_prompt """
+
+  ## Context Mesh
+
+  You have access to a shared knowledge system called the Context Mesh. It allows you to:
+  - **Offload** completed work to persistent Keepers (use `context_offload` tool)
+  - **Retrieve** knowledge from any Keeper (use `context_retrieve` tool)
+  - **Discover** what teammates know (use `peer_discovery` tool)
+
+  ### When to Offload
+  - After completing a subtask or research topic
+  - Before switching to a new topic
+  - When you see a context pressure warning (>50%)
+
+  ### When to Retrieve
+  - Before starting work on a new task — check if someone already explored this
+  - When answering questions — keepers may have relevant context
+  - When you see a keeper notification from a teammate
+
+  ### Available Keepers
+  {keeper_index}
+  """
+
+  @context_role_guidance %{
+    lead:
+      "Before decomposing tasks, check keepers for prior analysis. Offload synthesis and decisions after planning.",
+    researcher:
+      "Offload findings after each subtask. Always check keepers before starting new research — avoid duplicate work. Broadcast important discoveries.",
+    coder:
+      "Retrieve design context and research from keepers before implementing. Offload implementation notes and decisions for reviewers.",
+    reviewer:
+      "Query keepers for design context, requirements, and implementation notes before reviewing code.",
+    tester:
+      "Query keepers for implementation notes and design decisions to inform your test strategy."
+  }
+
   # -- Built-in role definitions --
   #
   # All roles use `model_tier: :default` — the uniform model default.
@@ -216,11 +254,21 @@ defmodule Loom.Teams.Role do
   def get(name) when is_atom(name) do
     case Map.fetch(@built_in_role_data, name) do
       {:ok, data} ->
+        data = Map.update!(data, :system_prompt, &append_context_awareness(name, &1))
         {:ok, struct!(__MODULE__, Map.put(data, :name, name))}
 
       :error ->
         {:error, :unknown_role}
     end
+  end
+
+  defp append_context_awareness(role, base_prompt) do
+    role_guidance = Map.get(@context_role_guidance, role, "")
+
+    base_prompt <>
+      "\n### Context Awareness\n" <>
+      role_guidance <>
+      @context_mesh_prompt
   end
 
   @doc """
