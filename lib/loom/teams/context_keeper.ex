@@ -40,12 +40,13 @@ defmodule Loom.Teams.ContextKeeper do
     id = Keyword.fetch!(opts, :id)
     team_id = Keyword.fetch!(opts, :team_id)
     topic = Keyword.get(opts, :topic, "unnamed")
+    source_agent = Keyword.get(opts, :source_agent, "unknown")
 
     GenServer.start_link(__MODULE__, opts,
       name:
         {:via, Registry,
          {Loom.Teams.AgentRegistry, {team_id, "keeper:#{id}"},
-          %{type: :keeper, topic: topic, tokens: 0}}}
+          %{type: :keeper, topic: topic, tokens: 0, source_agent: source_agent}}}
     )
   end
 
@@ -337,7 +338,7 @@ defmodule Loom.Teams.ContextKeeper do
     Registry.update_value(
       Loom.Teams.AgentRegistry,
       {state.team_id, "keeper:#{state.id}"},
-      fn _old -> %{type: :keeper, topic: state.topic, tokens: state.token_count} end
+      fn _old -> %{type: :keeper, topic: state.topic, tokens: state.token_count, source_agent: state.source_agent} end
     )
   rescue
     _ -> :ok

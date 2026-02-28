@@ -4,7 +4,7 @@ defmodule Loom.Teams.ContextOffload do
   alias Loom.Teams.{ContextKeeper, Manager}
   alias Loom.Session.ContextWindow
 
-  @offload_threshold 0.80
+  @offload_threshold 0.60
   @chars_per_token 4
 
   @doc """
@@ -74,6 +74,15 @@ defmodule Loom.Teams.ContextOffload do
          ) do
       {:ok, pid} ->
         entry = ContextKeeper.index_entry(pid)
+        keeper_state = ContextKeeper.get_state(pid)
+
+        Phoenix.PubSub.broadcast(Loom.PubSub, "team:#{team_id}", {:keeper_created, %{
+          id: keeper_state.id,
+          topic: topic,
+          source: to_string(agent_name),
+          tokens: keeper_state.token_count
+        }})
+
         {:ok, pid, entry}
 
       error ->

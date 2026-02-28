@@ -8,6 +8,7 @@ defmodule Loom.AgentLoop do
   """
 
   alias Loom.Session.ContextWindow
+  alias Loom.Teams.ContextOffload
   alias Loom.Telemetry, as: LoomTelemetry
 
   require Logger
@@ -84,12 +85,16 @@ defmodule Loom.AgentLoop do
   end
 
   defp do_loop(messages, config, iteration) do
+    # Auto-offload context if agent is above threshold
+    messages = maybe_auto_offload(messages, config)
+
     # Build windowed messages with context enrichment
     windowed =
       ContextWindow.build_messages(messages, config.system_prompt,
         model: config.model,
         session_id: config.session_id,
-        project_path: config.project_path
+        project_path: config.project_path,
+        team_id: config[:team_id]
       )
 
     # Parse model and build req_llm messages
@@ -418,6 +423,22 @@ defmodule Loom.AgentLoop do
         %{input_tokens: 0, output_tokens: 0, total_cost: 0}
     end
   end
+
+  defp maybe_auto_offload(messages, %{team_id: team_id, agent_name: agent_name, model: model, on_event: on_event})
+       when not is_nil(team_id) and not is_nil(agent_name) do
+    state = %{team_id: team_id, name: agent_name, messages: messages, model: model}
+
+    case ContextOffload.maybe_offload(state) do
+      {:offloaded, updated_messages, entry} ->
+        on_event.(:context_offloaded, %{entry: entry})
+        updated_messages
+
+      :noop ->
+        messages
+    end
+  end
+
+  defp maybe_auto_offload(messages, _config), do: messages
 
   defp maybe_acquire_rate_limit(%{rate_limiter: nil}, _provider), do: :ok
   defp maybe_acquire_rate_limit(%{rate_limiter: callback}, provider), do: callback.(provider)
