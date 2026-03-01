@@ -130,14 +130,18 @@ defmodule Loom.AgentLoop do
       iteration: iteration
     }
 
+    Logger.debug("AgentLoop calling LLM: #{provider}:#{model_id}, #{length(req_messages)} messages, #{length(opts[:tools] || [])} tools")
+
     case LoomTelemetry.span_llm_request(telemetry_meta, fn ->
            call_llm(provider, model_id, req_messages, opts)
          end) do
       {:ok, response} ->
         classified = ReqLLM.Response.classify(response)
+        Logger.debug("AgentLoop LLM response type: #{classified.type}")
         handle_classified(classified, response, messages, config, iteration)
 
       {:error, reason} ->
+        Logger.error("AgentLoop LLM error: #{inspect(reason)}")
         {:error, reason, messages}
     end
   end
@@ -270,16 +274,42 @@ defmodule Loom.AgentLoop do
       session_id: context[:session_id]
     }
 
+    # LLM tool calls arrive with string keys ("pattern") but Jido schema
+    # validation expects atom keys (:pattern). Atomize known keys safely.
+    atomized_args = atomize_known_keys(tool_args, tool_module)
+
     result =
       LoomTelemetry.span_tool_execute(tool_meta, fn ->
         try do
-          Jido.Exec.run(tool_module, tool_args, context, timeout: 60_000)
+          Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
         rescue
           e -> {:error, Exception.message(e)}
         end
       end)
 
     format_tool_result(result)
+  end
+
+  defp atomize_known_keys(args, tool_module) do
+    known_keys =
+      try do
+        Jido.Action.Schema.known_keys(tool_module.schema())
+      rescue
+        _ -> []
+      end
+
+    known_strings = Map.new(known_keys, fn k -> {Atom.to_string(k), k} end)
+
+    Map.new(args, fn
+      {k, v} when is_binary(k) ->
+        case Map.fetch(known_strings, k) do
+          {:ok, atom_key} -> {atom_key, v}
+          :error -> {k, v}
+        end
+
+      {k, v} ->
+        {k, v}
+    end)
   end
 
   defp record_tool_result(messages, config, tool_name, tool_call_id, result_text) do

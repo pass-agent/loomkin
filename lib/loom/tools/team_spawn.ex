@@ -60,43 +60,39 @@ defmodule Loom.Tools.TeamSpawn do
   end
 
   defp spawn_from_roles(team_name, roles, project_path) do
-    case Manager.create_team(name: team_name, project_path: project_path) do
-      {:ok, team_id} ->
-        results =
-          Enum.map(roles, fn role_map ->
-            name = Map.get(role_map, :name) || Map.get(role_map, "name")
-            role = Map.get(role_map, :role) || Map.get(role_map, "role")
-            role_atom =
-              if is_binary(role) do
-                try do
-                  String.to_existing_atom(role)
-                rescue
-                  ArgumentError -> nil
-                end
-              else
-                role
-              end
+    {:ok, team_id} = Manager.create_team(name: team_name, project_path: project_path)
 
-            if is_nil(role_atom) do
-              "  - #{name} (#{role}): failed - unknown role"
-            else
-              case Manager.spawn_agent(team_id, name, role_atom, project_path: project_path) do
-                {:ok, _pid} -> "  - #{name} (#{role}): spawned"
-                {:error, reason} -> "  - #{name} (#{role}): failed - #{inspect(reason)}"
-              end
+    results =
+      Enum.map(roles, fn role_map ->
+        name = Map.get(role_map, :name) || Map.get(role_map, "name")
+        role = Map.get(role_map, :role) || Map.get(role_map, "role")
+        role_atom =
+          if is_binary(role) do
+            try do
+              String.to_existing_atom(role)
+            rescue
+              ArgumentError -> nil
             end
-          end)
+          else
+            role
+          end
 
-        summary = """
-        Team "#{team_name}" created (id: #{team_id})
-        Agents:
-        #{Enum.join(results, "\n")}
-        """
+        if is_nil(role_atom) do
+          "  - #{name} (#{role}): failed - unknown role"
+        else
+          case Manager.spawn_agent(team_id, name, role_atom, project_path: project_path) do
+            {:ok, _pid} -> "  - #{name} (#{role}): spawned"
+            {:error, reason} -> "  - #{name} (#{role}): failed - #{inspect(reason)}"
+          end
+        end
+      end)
 
-        {:ok, %{result: String.trim(summary), team_id: team_id}}
+    summary = """
+    Team "#{team_name}" created (id: #{team_id})
+    Agents:
+    #{Enum.join(results, "\n")}
+    """
 
-      {:error, reason} ->
-        {:error, "Failed to create team: #{inspect(reason)}"}
-    end
+    {:ok, %{result: String.trim(summary), team_id: team_id}}
   end
 end

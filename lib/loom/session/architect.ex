@@ -21,33 +21,12 @@ defmodule Loom.Session.Architect do
 
   require Logger
 
-  @plan_schema %{
-    "type" => "object",
-    "properties" => %{
-      "plan" => %{
-        "type" => "array",
-        "items" => %{
-          "type" => "object",
-          "properties" => %{
-            "file" => %{"type" => "string", "description" => "Relative file path"},
-            "action" => %{
-              "type" => "string",
-              "enum" => ["create", "edit", "delete"],
-              "description" => "Type of file operation"
-            },
-            "description" => %{"type" => "string", "description" => "What this step accomplishes"},
-            "details" => %{"type" => "string", "description" => "Specific edit instructions for the editor model"}
-          },
-          "required" => ["file", "action", "description", "details"]
-        }
-      },
-      "summary" => %{
-        "type" => "string",
-        "description" => "Brief human-readable summary of the overall plan"
-      }
-    },
-    "required" => ["plan", "summary"]
-  }
+  # Planning-phase tools: the architect can spawn teams for complex tasks
+  @planning_tools [
+    Loom.Tools.TeamSpawn,
+    Loom.Tools.TeamAssign,
+    Loom.Tools.TeamProgress
+  ]
 
   @doc """
   Run the full architect -> editor pipeline.
@@ -68,14 +47,23 @@ defmodule Loom.Session.Architect do
     case plan(user_text, state, architect_model: architect_model) do
       {:ok, plan_data, state} ->
         steps = plan_data["plan"] || []
+        team_spawned = plan_data["team_spawned"] == true
 
-        if steps == [] do
-          Logger.info("[Architect] Plan returned 0 steps — falling back to conversational response")
-          conversational_fallback(user_text, state, architect_model)
-        else
-          Logger.info("[Architect] Plan succeeded with #{length(steps)} steps, executing...")
-          broadcast(state.id, {:architect_phase, :executing})
-          execute_plan(plan_data, state, editor_model: editor_model)
+        cond do
+          team_spawned ->
+            # Team was spawned to handle the task — don't fall back or re-plan
+            Logger.info("[Architect] Team spawned — delegating execution to agents")
+            summary = plan_data["summary"] || "Team spawned to handle task"
+            {:ok, summary, state}
+
+          steps == [] ->
+            Logger.info("[Architect] Plan returned 0 steps — falling back to conversational response")
+            conversational_fallback(user_text, state, architect_model)
+
+          true ->
+            Logger.info("[Architect] Plan succeeded with #{length(steps)} steps, executing...")
+            broadcast(state.id, {:architect_phase, :executing})
+            execute_plan(plan_data, state, editor_model: editor_model)
         end
 
       {:error, reason, state} ->
@@ -134,9 +122,10 @@ defmodule Loom.Session.Architect do
     state = %{state | messages: state.messages ++ [user_msg]}
     broadcast(state.id, {:new_message, state.id, user_msg})
 
-    # NOTE: We rely on the prompt to produce JSON rather than response_format,
-    # since not all providers support structured output (e.g. zai).
-    opts = []
+    # Include planning tools so the architect can spawn teams for complex tasks.
+    # The architect can choose between a file-based plan OR using team_spawn.
+    planning_tool_defs = Jido.AI.ToolAdapter.from_actions(@planning_tools)
+    opts = if planning_tool_defs != [], do: [tools: planning_tool_defs], else: []
 
     telemetry_meta = %{
       session_id: state.id,
@@ -148,42 +137,49 @@ defmodule Loom.Session.Architect do
            call_llm(provider, model_id, req_messages, opts)
          end) do
       {:ok, response} ->
-        text = extract_text(response)
-        Logger.debug("[Architect] Plan response received, parsing... (#{String.length(text)} chars)")
+        # Check if the architect chose to use tools (e.g. team_spawn) instead of a JSON plan
+        classified = ReqLLM.Response.classify(response)
 
-        case parse_plan(text) do
-          {:ok, plan_data} ->
-            steps = plan_data["plan"] || []
-            Logger.debug("[Architect] Parsed plan: #{length(steps)} steps — #{inspect(plan_data, limit: 500)}")
+        if classified.type == :tool_calls do
+          Logger.info("[Architect] Planning phase invoked tools — executing team operations")
+          update_usage(state.id, response)
+          handle_planning_tool_calls(classified, response, provider, model_id, req_messages, state, opts)
+        else
+          text = extract_text(response)
+          Logger.debug("[Architect] Plan response received, parsing... (#{String.length(text)} chars)")
 
-            # Only save/broadcast the plan summary when there are actual steps.
-            # Empty plans (conversational requests) are handled by the fallback.
-            state =
-              if steps != [] do
-                plan_summary = format_plan_summary(plan_data)
+          case parse_plan(text) do
+            {:ok, plan_data} ->
+              steps = plan_data["plan"] || []
+              Logger.debug("[Architect] Parsed plan: #{length(steps)} steps — #{inspect(plan_data, limit: 500)}")
 
-                {:ok, _} =
-                  Persistence.save_message(%{
-                    session_id: state.id,
-                    role: :assistant,
-                    content: plan_summary
-                  })
+              state =
+                if steps != [] do
+                  plan_summary = format_plan_summary(plan_data)
 
-                assistant_msg = %{role: :assistant, content: plan_summary}
-                state = %{state | messages: state.messages ++ [assistant_msg]}
-                broadcast(state.id, {:new_message, state.id, assistant_msg})
-                broadcast(state.id, {:architect_plan, state.id, plan_data})
-                state
-              else
-                state
-              end
+                  {:ok, _} =
+                    Persistence.save_message(%{
+                      session_id: state.id,
+                      role: :assistant,
+                      content: plan_summary
+                    })
 
-            update_usage(state.id, response)
-            {:ok, plan_data, state}
+                  assistant_msg = %{role: :assistant, content: plan_summary}
+                  state = %{state | messages: state.messages ++ [assistant_msg]}
+                  broadcast(state.id, {:new_message, state.id, assistant_msg})
+                  broadcast(state.id, {:architect_plan, state.id, plan_data})
+                  state
+                else
+                  state
+                end
 
-          {:error, reason} ->
-            Logger.error("[Architect] Failed to parse plan: #{reason}\n  Raw text: #{String.slice(text, 0, 500)}")
-            {:error, "Failed to parse architect plan: #{reason}", state}
+              update_usage(state.id, response)
+              {:ok, plan_data, state}
+
+            {:error, reason} ->
+              Logger.error("[Architect] Failed to parse plan: #{reason}\n  Raw text: #{String.slice(text, 0, 500)}")
+              {:error, "Failed to parse architect plan: #{reason}", state}
+          end
         end
 
       {:error, reason} ->
@@ -203,6 +199,45 @@ defmodule Loom.Session.Architect do
   end
 
   # --- Private ---
+
+  # Handle tool calls from the planning phase (e.g. team_spawn, team_assign).
+  # Executes tools and returns the result as a conversational response.
+  defp handle_planning_tool_calls(classified, _response, _provider, _model_id, _req_messages, state, _opts) do
+    tool_calls = classified.tool_calls
+    tool_names = Enum.map(tool_calls, fn tc -> tc[:name] || tc["name"] end)
+    Logger.info("[Architect] Planning tools: #{Enum.join(tool_names, ", ")}")
+
+    results =
+      Enum.map(tool_calls, fn tool_call ->
+        tool_name = tool_call[:name] || tool_call["name"]
+        tool_args = tool_call[:arguments] || tool_call["arguments"] || %{}
+        context = %{project_path: state.project_path, session_id: state.id}
+
+        case Jido.AI.ToolAdapter.lookup_action(tool_name, @planning_tools) do
+          {:ok, tool_module} ->
+            run_and_format_tool(tool_module, tool_args, context)
+
+          {:error, :not_found} ->
+            "Error: Planning tool '#{tool_name}' not found"
+        end
+      end)
+
+    response_text = Enum.join(results, "\n\n")
+
+    {:ok, _} =
+      Persistence.save_message(%{
+        session_id: state.id,
+        role: :assistant,
+        content: response_text
+      })
+
+    assistant_msg = %{role: :assistant, content: response_text}
+    state = %{state | messages: state.messages ++ [assistant_msg]}
+    broadcast(state.id, {:new_message, state.id, assistant_msg})
+
+    # Signal that the team was spawned — run/3 should not fall back to conversational
+    {:ok, %{"plan" => [], "summary" => response_text, "team_spawned" => true}, state}
+  end
 
   defp conversational_fallback(user_text, state, model) do
     {provider, model_id} = parse_model(model)
@@ -403,18 +438,28 @@ defmodule Loom.Session.Architect do
 
     Project path: #{state.project_path}
 
-    Your job is to analyze the user's request and produce a detailed, structured edit plan.
-    You have full context: the repo map, decision history, and conversation.
+    Your job is to analyze the user's request and decide the best execution strategy.
 
-    For each change needed, specify:
-    - The exact file path (relative to project root)
-    - The action: "create" (new file), "edit" (modify existing), or "delete" (remove)
-    - A brief description of what the step accomplishes
-    - Detailed instructions that a junior developer (the Editor) can follow precisely
+    ## Strategy Options
 
-    Be thorough and specific in your "details" — include exact code snippets, line references,
-    function signatures, and clear before/after descriptions. The Editor will only see the
-    specific file and your instructions, not the full conversation context.
+    ### 1. File-based edit plan (default for simple/focused tasks)
+    Respond with a JSON object containing your edit plan:
+    - "summary": brief description of what will be done
+    - "plan": array of steps, each with "file", "action" (create/edit/delete), "description", and "details"
+
+    ### 2. Team spawn (for complex, multi-file, or parallelizable tasks)
+    Use the `team_spawn` tool to create a team of specialized agents. Do this when:
+    - The task involves 5+ files across multiple modules
+    - Independent subtasks can be parallelized (e.g. research + implementation)
+    - The task benefits from specialized roles (researcher, coder, reviewer, tester)
+
+    After spawning a team, use `team_assign` to delegate subtasks to agents.
+
+    ## Guidelines
+    - For simple changes (1-4 files, single concern), prefer a JSON edit plan
+    - For complex changes, spawn a team and coordinate via task assignment
+    - Be thorough and specific in edit plan "details" — include exact code snippets,
+      line references, function signatures, and clear before/after descriptions
     """
   end
 

@@ -235,13 +235,10 @@ defmodule Loom.MCP.Client do
   end
 
   defp build_proxy_modules(endpoint_id, tools) do
-    case Jido.MCP.JidoAI.ProxyGenerator.build_modules(endpoint_id, tools, prefix: "mcp_#{endpoint_id}") do
-      {:ok, modules, _warnings, _skipped} ->
-        {:ok, modules}
+    {:ok, modules, _warnings, _skipped} =
+      Jido.MCP.JidoAI.ProxyGenerator.build_modules(endpoint_id, tools, prefix: "mcp_#{endpoint_id}")
 
-      {:error, reason} ->
-        {:error, reason}
-    end
+    {:ok, modules}
   rescue
     e -> {:error, Exception.message(e)}
   end

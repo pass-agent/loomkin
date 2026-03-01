@@ -11,6 +11,9 @@ defmodule Loom.Application do
     # Initialize tree-sitter symbol cache
     Loom.RepoIntel.TreeSitter.init_cache()
 
+    # Create ETS table for Plug session store (must exist before endpoint starts)
+    :ets.new(:loom_sessions, [:named_table, :public, :set])
+
     children =
       [
         # Storage

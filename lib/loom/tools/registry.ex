@@ -16,7 +16,7 @@ defmodule Loom.Tools.Registry do
     Loom.Tools.LspDiagnostics
   ]
 
-  @team_tools [
+  @peer_tools [
     Loom.Tools.ContextRetrieve,
     Loom.Tools.ContextOffload,
     Loom.Tools.PeerAskQuestion,
@@ -24,7 +24,16 @@ defmodule Loom.Tools.Registry do
     Loom.Tools.PeerForwardQuestion
   ]
 
-  @tools @solo_tools ++ @team_tools
+  @lead_tools [
+    Loom.Tools.TeamSpawn,
+    Loom.Tools.TeamAssign,
+    Loom.Tools.TeamProgress,
+    Loom.Tools.TeamDissolve
+  ]
+
+  @team_tools @peer_tools ++ @lead_tools
+
+  @all_tools @solo_tools ++ @team_tools
 
   @doc "Returns solo-safe tool modules (no team context required)."
   @spec all() :: [module()]
@@ -32,22 +41,36 @@ defmodule Loom.Tools.Registry do
 
   @doc "Returns all registered tool modules including team-only tools."
   @spec all_with_team() :: [module()]
-  def all_with_team, do: @tools
+  def all_with_team, do: @all_tools
 
-  @doc "Returns team-only tool modules."
+  @doc "Returns team-only tool modules (peer + lead tools)."
   @spec team_tools() :: [module()]
   def team_tools, do: @team_tools
+
+  @doc "Returns lead-only tools (team_spawn, team_assign, team_progress, team_dissolve)."
+  @spec lead_tools() :: [module()]
+  def lead_tools, do: @lead_tools
+
+  @doc "Returns the full tool set for a lead agent (solo + all team tools)."
+  @spec for_lead() :: [module()]
+  def for_lead, do: @all_tools
 
   @doc "Returns the tool definitions for all registered tools as ReqLLM.Tool structs."
   @spec definitions() :: [ReqLLM.Tool.t()]
   def definitions do
-    Jido.AI.ToolAdapter.from_actions(@tools)
+    Jido.AI.ToolAdapter.from_actions(@all_tools)
+  end
+
+  @doc "Returns tool definitions for a specific list of tool modules."
+  @spec definitions_for([module()]) :: [ReqLLM.Tool.t()]
+  def definitions_for(tool_modules) when is_list(tool_modules) do
+    Jido.AI.ToolAdapter.from_actions(tool_modules)
   end
 
   @doc "Finds a tool module by its string name (e.g. \"file_read\")."
   @spec find(String.t()) :: {:ok, module()} | {:error, String.t()}
   def find(name) when is_binary(name) do
-    case Jido.AI.ToolAdapter.lookup_action(name, @tools) do
+    case Jido.AI.ToolAdapter.lookup_action(name, @all_tools) do
       {:ok, module} -> {:ok, module}
       {:error, :not_found} -> {:error, "Unknown tool: #{name}"}
     end

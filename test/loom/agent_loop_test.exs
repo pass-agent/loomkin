@@ -128,6 +128,65 @@ defmodule Loom.AgentLoopTest do
     end
   end
 
+  describe "default_run_tool/3" do
+    @tag :tmp_dir
+    test "atomizes string-keyed args and runs the tool successfully", %{tmp_dir: tmp_dir} do
+      # Write a file the tool can read
+      file_path = Path.join(tmp_dir, "hello.txt")
+      File.write!(file_path, "line one\nline two\n")
+
+      # Simulate how the LLM delivers args: string keys
+      string_keyed_args = %{"file_path" => "hello.txt"}
+      context = %{project_path: tmp_dir, session_id: nil}
+
+      result = AgentLoop.default_run_tool(Loom.Tools.FileRead, string_keyed_args, context)
+
+      assert is_binary(result)
+      assert result =~ "line one"
+      assert result =~ "line two"
+    end
+
+    @tag :tmp_dir
+    test "returns formatted error string when tool returns an error", %{tmp_dir: tmp_dir} do
+      string_keyed_args = %{"file_path" => "does_not_exist.txt"}
+      context = %{project_path: tmp_dir, session_id: nil}
+
+      result = AgentLoop.default_run_tool(Loom.Tools.FileRead, string_keyed_args, context)
+
+      assert is_binary(result)
+      assert result =~ "Error:"
+      assert result =~ "does_not_exist.txt"
+    end
+
+    @tag :tmp_dir
+    test "atomizes optional integer args (offset, limit)", %{tmp_dir: tmp_dir} do
+      file_path = Path.join(tmp_dir, "paged.txt")
+      File.write!(file_path, Enum.map_join(1..10, "\n", &"line #{&1}"))
+
+      string_keyed_args = %{"file_path" => "paged.txt", "offset" => 3, "limit" => 2}
+      context = %{project_path: tmp_dir, session_id: nil}
+
+      result = AgentLoop.default_run_tool(Loom.Tools.FileRead, string_keyed_args, context)
+
+      assert is_binary(result)
+      assert result =~ "line 3"
+      assert result =~ "line 4"
+      refute result =~ "line 1"
+      refute result =~ "line 5"
+    end
+
+    @tag :tmp_dir
+    test "does not crash when tool module raises an exception", %{tmp_dir: tmp_dir} do
+      string_keyed_args = %{"file_path" => "../../etc/passwd"}
+      context = %{project_path: tmp_dir, session_id: nil}
+
+      result = AgentLoop.default_run_tool(Loom.Tools.FileRead, string_keyed_args, context)
+
+      assert is_binary(result)
+      assert result =~ "Error:"
+    end
+  end
+
   describe "resume/3" do
     test "resume with invalid pending_info raises on missing keys" do
       # Resume expects a specific pending_info structure

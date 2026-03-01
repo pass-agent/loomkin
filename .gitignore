@@ -39,3 +39,9 @@ npm-debug.log
 
 # Escript binary
 /loom
+/.specstory
+/.history
+/.expert
+/.claude
+/.cursorindexingignore
+/.loom.toml

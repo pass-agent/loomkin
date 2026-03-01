@@ -53,7 +53,6 @@ defmodule LoomWeb.TeamActivityComponent do
 
   # --- PubSub Handlers ---
 
-  @impl true
   def handle_info({:agent_status, agent_name, status}, socket) do
     type =
       case status do

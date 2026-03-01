@@ -84,32 +84,28 @@ defmodule Loom.Teams.Templates do
   def spawn_from_template(team_name, template_name, opts \\ []) do
     case get_template(template_name) do
       {:ok, template} ->
-        case Manager.create_team(name: team_name, project_path: opts[:project_path]) do
-          {:ok, team_id} ->
-            agents = expand_agents(template.agents)
+        {:ok, team_id} = Manager.create_team(name: team_name, project_path: opts[:project_path])
 
-            results =
-              Enum.map(agents, fn agent_config ->
-                role = agent_config.role
-                name = agent_config.name
-                model = opts[:model] || agent_config[:model]
+        agents = expand_agents(template.agents)
 
-                spawn_opts =
-                  [project_path: opts[:project_path]]
-                  |> then(fn o -> if model, do: Keyword.put(o, :model, model), else: o end)
+        results =
+          Enum.map(agents, fn agent_config ->
+            role = agent_config.role
+            name = agent_config.name
+            model = opts[:model] || agent_config[:model]
 
-                case Manager.spawn_agent(team_id, name, role, spawn_opts) do
-                  {:ok, pid} -> %{name: name, role: role, pid: pid, status: :ok}
-                  {:error, reason} -> %{name: name, role: role, pid: nil, status: {:error, reason}}
-                end
-              end)
+            spawn_opts =
+              [project_path: opts[:project_path]]
+              |> then(fn o -> if model, do: Keyword.put(o, :model, model), else: o end)
 
-            Logger.info("[Templates] Spawned team #{team_name} from template #{template_name}")
-            {:ok, team_id, results}
+            case Manager.spawn_agent(team_id, name, role, spawn_opts) do
+              {:ok, pid} -> %{name: name, role: role, pid: pid, status: :ok}
+              {:error, reason} -> %{name: name, role: role, pid: nil, status: {:error, reason}}
+            end
+          end)
 
-          {:error, reason} ->
-            {:error, reason}
-        end
+        Logger.info("[Templates] Spawned team #{team_name} from template #{template_name}")
+        {:ok, team_id, results}
 
       {:error, :not_found} ->
         {:error, :template_not_found}

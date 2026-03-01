@@ -23,7 +23,7 @@ defmodule LoomWeb.TeamActivityComponentTest do
 
       # All button should be highlighted (active) when no agent filter is set
       assert html =~ "All"
-      assert html =~ "bg-indigo-600"
+      assert html =~ "bg-violet-600"
     end
 
     test "renders type filter buttons" do

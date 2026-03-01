@@ -228,8 +228,8 @@ defmodule Loom.Teams.AgentProactivityTest do
         case role do
           :lead -> assert prompt =~ "decomposing tasks"
           :researcher -> assert prompt =~ "Offload findings"
-          :coder -> assert prompt =~ "design context"
-          :reviewer -> assert prompt =~ "design context"
+          :coder -> assert prompt =~ "keeper context"
+          :reviewer -> assert prompt =~ "design decisions"
           :tester -> assert prompt =~ "implementation notes"
         end
       end

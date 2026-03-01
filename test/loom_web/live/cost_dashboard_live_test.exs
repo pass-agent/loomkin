@@ -66,7 +66,11 @@ defmodule LoomWeb.CostDashboardLiveTest do
         }
       )
 
-      # Wait for the PubSub broadcast and re-render
+      # Wait for the GenServer.cast to update ETS, then trigger a re-render.
+      # The broadcast_update() in the telemetry handler fires before the GenServer
+      # processes the cast, so the first re-render may read stale ETS data.
+      Process.sleep(100)
+      Phoenix.PubSub.broadcast(Loom.PubSub, "telemetry:updates", :metrics_updated)
       Process.sleep(50)
 
       html = render(view)

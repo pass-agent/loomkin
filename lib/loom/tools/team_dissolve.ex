@@ -20,17 +20,13 @@ defmodule Loom.Tools.TeamDissolve do
     agents = Manager.list_agents(team_id)
     agent_names = Enum.map(agents, & &1.name)
 
-    case Manager.dissolve_team(team_id) do
-      :ok ->
-        summary = """
-        Team #{team_id} dissolved.
-        Stopped agents: #{Enum.join(agent_names, ", ")}
-        """
+    :ok = Manager.dissolve_team(team_id)
 
-        {:ok, %{result: String.trim(summary)}}
+    summary = """
+    Team #{team_id} dissolved.
+    Stopped agents: #{Enum.join(agent_names, ", ")}
+    """
 
-      {:error, reason} ->
-        {:error, "Failed to dissolve team: #{inspect(reason)}"}
-    end
+    {:ok, %{result: String.trim(summary)}}
   end
 end

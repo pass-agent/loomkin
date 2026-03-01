@@ -244,8 +244,6 @@ defmodule Loom.LSP.Client do
       {:ok, port}
     rescue
       e -> {:error, Exception.message(e)}
-    catch
-      :error, :enoent -> {:error, "LSP server not found: #{cmd}"}
     end
   end
 

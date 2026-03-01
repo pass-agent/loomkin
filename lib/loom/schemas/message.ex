@@ -9,7 +9,7 @@ defmodule Loom.Schemas.Message do
     belongs_to :session, Loom.Schemas.Session
     field :role, Ecto.Enum, values: [:system, :user, :assistant, :tool]
     field :content, :string
-    field :tool_calls, :map
+    field :tool_calls, {:array, :map}
     field :tool_call_id, :string
     field :token_count, :integer
 

@@ -144,16 +144,31 @@ defmodule Loom.Teams.Role do
   """
 
   @context_role_guidance %{
-    lead:
-      "Before decomposing tasks, check keepers for prior analysis. Offload synthesis and decisions after planning.",
-    researcher:
-      "Offload findings after each subtask. Always check keepers before starting new research — avoid duplicate work. Broadcast important discoveries.",
-    coder:
-      "Retrieve design context and research from keepers before implementing. Offload implementation notes and decisions for reviewers.",
-    reviewer:
-      "Query keepers for design context, requirements, and implementation notes before reviewing code.",
-    tester:
-      "Query keepers for implementation notes and design decisions to inform your test strategy."
+    lead: """
+    - Before decomposing tasks, check keepers for prior analysis
+    - After receiving agent results, offload the synthesis to a keeper for team reference
+    - Monitor team context health — if an agent seems to be re-researching, point them to keepers
+    - Offload key decisions and rationale after planning phases
+    """,
+    researcher: """
+    - Offload findings to a keeper when you complete each research subtask
+    - Before starting research, query existing keepers — another agent may have already explored this
+    - Broadcast key discoveries via peer_discovery so the team knows immediately
+    - Your research has the most long-term value — always offload before your context fills up
+    """,
+    coder: """
+    - Before implementing, retrieve relevant keeper context — a researcher may have mapped the area
+    - After completing a significant implementation, offload your notes for the tester and reviewer
+    - If you discover unexpected dependencies, broadcast via peer_discovery
+    """,
+    reviewer: """
+    - Query keepers for the original research and design decisions before reviewing code
+    - Your review feedback is valuable — offload review notes for future reference
+    """,
+    tester: """
+    - Query keepers for implementation notes and design decisions when writing test plans
+    - Offload test results and coverage analysis for the team's reference
+    """
   }
 
   # -- Built-in role definitions --

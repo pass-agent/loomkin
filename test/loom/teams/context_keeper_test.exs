@@ -286,8 +286,6 @@ defmodule Loom.Teams.ContextKeeperTest do
       ref = Process.monitor(pid)
       GenServer.stop(pid, :shutdown)
       assert_receive {:DOWN, ^ref, :process, ^pid, _}, 1000
-      # Small delay to let DynamicSupervisor process the child exit and deregister
-      Process.sleep(50)
 
       record = Repo.get(Loom.Schemas.ContextKeeper, id)
       assert record

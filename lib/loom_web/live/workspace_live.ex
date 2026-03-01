@@ -42,7 +42,8 @@ defmodule LoomWeb.WorkspaceLive do
   end
 
   defp start_and_subscribe(socket, session_id) do
-    tools = Loom.Tools.Registry.all()
+    # Use full lead tool set — every session is a team-capable lead agent
+    tools = Loom.Tools.Registry.for_lead()
     project_path = File.cwd!()
 
     {:ok, _pid} =
@@ -178,6 +179,16 @@ defmodule LoomWeb.WorkspaceLive do
 
   def handle_info({:permission_request, _session_id, tool_name, tool_path}, socket) do
     {:noreply, assign(socket, permission_request: %{tool_name: tool_name, tool_path: tool_path})}
+  end
+
+  def handle_info({:team_available, _session_id, team_id}, socket) do
+    # Auto-subscribe to backing team events when the team is created
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Loom.PubSub, "team:#{team_id}")
+      Phoenix.PubSub.subscribe(Loom.PubSub, "team:#{team_id}:tasks")
+    end
+
+    {:noreply, assign(socket, team_id: team_id)}
   end
 
   def handle_info({:architect_phase, _phase}, socket) do
@@ -389,7 +400,7 @@ defmodule LoomWeb.WorkspaceLive do
           <%!-- Sidebar tab bar --%>
           <div class="flex items-center gap-1 px-3 py-2 border-b border-gray-800 bg-gray-900/80">
             <button
-              :for={tab <- [:files, :diff, :terminal, :graph] ++ if(@team_id, do: [:team], else: [])}
+              :for={tab <- [:files, :diff, :terminal, :graph, :team]}
               phx-click="switch_tab"
               phx-value-tab={tab}
               class={"flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 " <>

@@ -13,6 +13,7 @@ defmodule Loom.Session do
     :project_path,
     :db_session,
     :status,
+    :team_id,
     messages: [],
     tools: [],
     auto_approve: false
@@ -154,6 +155,24 @@ defmodule Loom.Session do
     {:reply, {:ok, state.status}, state}
   end
 
+  @impl true
+  def handle_call(:get_team_id, _from, state) do
+    {:reply, state.team_id, state}
+  end
+
+  # --- handle_info ---
+
+  @impl true
+  def handle_info({:team_created, team_id}, state) do
+    Logger.info("[Session] Backing team created: #{team_id} for session #{state.id}")
+    broadcast(state.id, {:team_available, state.id, team_id})
+    {:noreply, %{state | team_id: team_id}}
+  end
+
+  @impl true
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
 
   # --- Private ----------------------------------------
 
