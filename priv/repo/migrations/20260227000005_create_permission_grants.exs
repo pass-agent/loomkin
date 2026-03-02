@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreatePermissionGrants do
+defmodule Loomkin.Repo.Migrations.CreatePermissionGrants do
   use Ecto.Migration
 
   def change do

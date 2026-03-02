@@ -1,2 +1,2 @@
 ExUnit.start()
-Ecto.Adapters.SQL.Sandbox.mode(Loom.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Loomkin.Repo, :manual)

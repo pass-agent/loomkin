@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateContextKeepers do
+defmodule Loomkin.Repo.Migrations.CreateContextKeepers do
   use Ecto.Migration
 
   def change do

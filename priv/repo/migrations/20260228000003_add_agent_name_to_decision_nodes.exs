@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.AddAgentNameToDecisionNodes do
+defmodule Loomkin.Repo.Migrations.AddAgentNameToDecisionNodes do
   use Ecto.Migration
 
   def change do

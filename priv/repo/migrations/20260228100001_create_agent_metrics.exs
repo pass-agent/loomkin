@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateAgentMetrics do
+defmodule Loomkin.Repo.Migrations.CreateAgentMetrics do
   use Ecto.Migration
 
   def change do

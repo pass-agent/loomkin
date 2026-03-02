@@ -1,11 +1,11 @@
-defmodule Loom.MixProject do
+defmodule Loomkin.MixProject do
   use Mix.Project
 
   @version "0.1.0"
 
   def project do
     [
-      app: :loom,
+      app: :loomkin,
       version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
@@ -21,7 +21,7 @@ defmodule Loom.MixProject do
   def application do
     [
       extra_applications: [:logger, :runtime_tools],
-      mod: {Loom.Application, []}
+      mod: {Loomkin.Application, []}
     ]
   end
 
@@ -29,12 +29,12 @@ defmodule Loom.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp escript do
-    [main_module: LoomCli.Main]
+    [main_module: LoomkinCli.Main]
   end
 
   defp releases do
     [
-      loom: [
+      loomkin: [
         steps: [:assemble, &Burrito.wrap/1],
         burrito: [
           targets: [
@@ -45,7 +45,7 @@ defmodule Loom.MixProject do
           ]
         ],
         applications: [runtime_tools: :permanent],
-        cookie: "loom_#{@version}"
+        cookie: "loomkin_#{@version}"
       ]
     ]
   end

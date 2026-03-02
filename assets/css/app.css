@@ -2,7 +2,7 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-/* Loom dark theme defaults */
+/* Loomkin dark theme defaults */
 body {
   @apply bg-slate-950 text-gray-100;
 }

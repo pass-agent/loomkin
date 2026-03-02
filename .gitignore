@@ -17,11 +17,11 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-loom-*.tar
+loomkin-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
-.loom/
+.loomkin/
 
 # Phoenix/assets
 /priv/static/assets/
@@ -38,10 +38,10 @@ npm-debug.log
 .env.*
 
 # Escript binary
-/loom
+/loomkin
 /.specstory
 /.history
 /.expert
 /.claude
 /.cursorindexingignore
-/.loom.toml
+/.loomkin.toml

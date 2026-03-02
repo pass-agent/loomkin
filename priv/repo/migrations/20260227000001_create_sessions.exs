@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateSessions do
+defmodule Loomkin.Repo.Migrations.CreateSessions do
   use Ecto.Migration
 
   def change do

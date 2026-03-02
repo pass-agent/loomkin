@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateDecisionNodes do
+defmodule Loomkin.Repo.Migrations.CreateDecisionNodes do
   use Ecto.Migration
 
   def change do

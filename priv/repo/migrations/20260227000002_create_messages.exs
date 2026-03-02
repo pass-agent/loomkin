@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateMessages do
+defmodule Loomkin.Repo.Migrations.CreateMessages do
   use Ecto.Migration
 
   def change do

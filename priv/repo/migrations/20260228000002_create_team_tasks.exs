@@ -1,4 +1,4 @@
-defmodule Loom.Repo.Migrations.CreateTeamTasks do
+defmodule Loomkin.Repo.Migrations.CreateTeamTasks do
   use Ecto.Migration
 
   def change do
