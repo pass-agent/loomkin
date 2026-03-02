@@ -527,7 +527,16 @@ defmodule LoomkinWeb.WorkspaceLive do
         <div class="flex items-center gap-4">
           <%!-- Branding --%>
           <div class="flex items-center gap-2">
-            <span class="text-base opacity-70">&#129525;</span>
+            <svg class="w-7 h-7" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="10,2 6,10 15,7" fill="#5B21B6"/>
+              <polygon points="22,2 26,10 17,7" fill="#5B21B6"/>
+              <polygon points="6,10 4,20 12,15" fill="#4B0082"/>
+              <polygon points="26,10 28,20 20,15" fill="#4B0082"/>
+              <polygon points="12,15 16,7 20,15" fill="#7C3AED"/>
+              <polygon points="12,15 16,24 20,15" fill="#4B0082"/>
+              <circle cx="12" cy="14" r="3" fill="#F59E0B"/>
+              <circle cx="20" cy="14" r="3" fill="#F59E0B"/>
+            </svg>
             <span class="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
               Loomkin
             </span>
