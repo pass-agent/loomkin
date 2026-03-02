@@ -3,90 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loomkin — Elixir-Native AI Coding Assistant</title>
-  <meta name="description" content="Reads your codebase, proposes edits, runs commands, commits changes. Built on the BEAM VM with OTP-native multi-agent coordination.">
-  <meta property="og:title" content="Loomkin — Elixir-Native AI Coding Assistant">
-  <meta property="og:description" content="Reads your codebase, proposes edits, runs commands, commits changes. Built on the BEAM VM.">
+  <title>Loomkin — AI Agents That Actually Communicate</title>
+  <meta name="description" content="Every multi-agent AI framework is reimplementing actors on the wrong runtime. Loomkin runs on OTP — where actors are the runtime. Microsecond messaging, zero context loss, 100+ concurrent agents.">
+  <meta property="og:title" content="Loomkin — AI Agents That Actually Communicate">
+  <meta property="og:description" content="AI agents shouldn't communicate through files on disk. Loomkin is an Elixir-native AI coding assistant where every session is a team.">
   <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='10,2 6,10 15,7' fill='%235B21B6'/%3E%3Cpolygon points='22,2 26,10 17,7' fill='%235B21B6'/%3E%3Cpolygon points='6,10 4,20 12,15' fill='%234B0082'/%3E%3Cpolygon points='26,10 28,20 20,15' fill='%234B0082'/%3E%3Cpolygon points='12,15 16,7 20,15' fill='%237C3AED'/%3E%3Cpolygon points='12,15 16,24 20,15' fill='%234B0082'/%3E%3Ccircle cx='12' cy='14' r='3' fill='%23F59E0B'/%3E%3Ccircle cx='20' cy='14' r='3' fill='%23F59E0B'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0F172A;
-      --bg-elevated: #1E293B;
-      --bg-hover: #253347;
-      --purple: #7C3AED;
-      --purple-deep: #4B0082;
-      --purple-light: #8B5CF6;
-      --violet: #6D28D9;
-      --teal: #14B8A6;
-      --teal-dim: rgba(20, 184, 166, 0.15);
-      --amber: #F59E0B;
-      --amber-dim: rgba(245, 158, 11, 0.15);
-      --text: #F8FAFC;
-      --text-muted: #CBD5E1;
-      --text-dim: #64748B;
-      --border: rgba(124, 58, 237, 0.12);
-      --glow-purple: rgba(124, 58, 237, 0.25);
-      --glow-teal: rgba(20, 184, 166, 0.2);
+      --bg: #080B16;
+      --bg-alt: #0C1022;
+      --bg-elevated: #131A2E;
+      --bg-surface: #1A2340;
+      --bg-hover: #1F2A4A;
+
+      --purple: #8B5CF6;
+      --purple-deep: #6D28D9;
+      --purple-light: #A78BFA;
+      --violet: #7C3AED;
+
+      --teal: #2DD4BF;
+      --teal-dim: rgba(45, 212, 191, 0.10);
+
+      --amber: #FBBF24;
+      --amber-dim: rgba(251, 191, 36, 0.10);
+
+      --red: #F87171;
+      --red-dim: rgba(248, 113, 113, 0.06);
+
+      --text: #E8ECF4;
+      --text-secondary: #8896B0;
+      --text-tertiary: #4A5672;
+
+      --border: rgba(139, 92, 246, 0.08);
+      --border-visible: rgba(139, 92, 246, 0.15);
     }
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'DM Sans', system-ui, sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.65;
+      line-height: 1.7;
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* ─── NAV ─── */
+    /* ═══ NOISE TEXTURE ═══ */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 10000;
+    }
+
+    /* ═══ DOT GRID for alternating sections ═══ */
+    .has-dots {
+      background-image: radial-gradient(circle, rgba(139, 92, 246, 0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* ═══ NAV ═══ */
     .nav {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 0.85rem 2rem;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      padding: 0 2.5rem;
+      height: 60px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      backdrop-filter: blur(16px) saturate(180%);
-      -webkit-backdrop-filter: blur(16px) saturate(180%);
-      background: rgba(15, 23, 42, 0.75);
+      background: rgba(8, 11, 22, 0.6);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
       border-bottom: 1px solid var(--border);
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .nav.scrolled {
+      background: rgba(8, 11, 22, 0.92);
+      box-shadow: 0 1px 40px rgba(0,0,0,0.3);
     }
 
     .nav-logo {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.65rem;
       text-decoration: none;
       color: var(--text);
     }
 
-    .nav-logo svg { width: 28px; height: 28px; }
+    .nav-logo svg { width: 26px; height: 26px; }
 
     .nav-logo span {
       font-family: 'Syne', sans-serif;
       font-weight: 700;
-      font-size: 1.15rem;
-      letter-spacing: -0.02em;
+      font-size: 1.1rem;
+      letter-spacing: -0.03em;
     }
 
-    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links { display: flex; align-items: center; gap: 2rem; }
 
     .nav-links a {
-      color: var(--text-muted);
+      color: var(--text-secondary);
       text-decoration: none;
-      font-size: 0.875rem;
+      font-size: 0.84rem;
       font-weight: 500;
+      letter-spacing: -0.01em;
       transition: color 0.2s;
     }
 
@@ -95,23 +127,23 @@
     .nav-gh {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.4rem 0.85rem;
+      gap: 0.45rem;
+      padding: 0.4rem 0.9rem;
       border-radius: 8px;
       border: 1px solid var(--border);
-      background: rgba(124, 58, 237, 0.06);
+      background: rgba(139, 92, 246, 0.04);
       transition: all 0.2s;
     }
 
     .nav-gh:hover {
       border-color: var(--purple);
-      background: rgba(124, 58, 237, 0.12);
+      background: rgba(139, 92, 246, 0.1);
       color: var(--text) !important;
     }
 
-    .nav-gh svg { width: 16px; height: 16px; fill: currentColor; }
+    .nav-gh svg { width: 15px; height: 15px; fill: currentColor; }
 
-    /* ─── HERO ─── */
+    /* ═══ HERO ═══ */
     .hero {
       position: relative;
       min-height: 100vh;
@@ -119,36 +151,39 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 6rem 2rem 4rem;
+      padding: 7rem 2rem 6rem;
       overflow: hidden;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% 35%, rgba(139, 92, 246, 0.07), transparent),
+        radial-gradient(ellipse 50% 35% at 50% 75%, rgba(45, 212, 191, 0.03), transparent),
+        var(--bg);
     }
 
     .hero-glow {
       position: absolute;
-      width: 600px;
-      height: 600px;
+      width: 700px;
+      height: 700px;
       border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.12;
+      filter: blur(140px);
+      opacity: 0.10;
       pointer-events: none;
     }
 
     .hero-glow--purple {
-      top: 10%;
+      top: 5%;
       left: 50%;
       transform: translateX(-50%);
       background: var(--purple);
     }
 
     .hero-glow--teal {
-      bottom: 5%;
+      bottom: 0;
       left: 50%;
       transform: translateX(-50%);
       background: var(--teal);
-      opacity: 0.06;
+      opacity: 0.05;
     }
 
-    /* Background floating threads */
     .bg-threads {
       position: absolute;
       inset: 0;
@@ -161,73 +196,119 @@
       width: 1px;
       background: linear-gradient(180deg, transparent 0%, var(--purple) 30%, var(--teal) 70%, transparent 100%);
       opacity: 0;
-      animation: threadDrift 28s linear infinite;
+      animation: threadDrift 32s linear infinite;
     }
 
-    .bg-thread:nth-child(1) { left: 8%; height: 180px; animation-delay: 0s; }
-    .bg-thread:nth-child(2) { left: 18%; height: 140px; animation-delay: -4s; }
-    .bg-thread:nth-child(3) { left: 32%; height: 200px; animation-delay: -8s; }
-    .bg-thread:nth-child(4) { left: 48%; height: 160px; animation-delay: -12s; }
-    .bg-thread:nth-child(5) { left: 62%; height: 190px; animation-delay: -16s; }
-    .bg-thread:nth-child(6) { left: 75%; height: 150px; animation-delay: -20s; }
-    .bg-thread:nth-child(7) { left: 88%; height: 170px; animation-delay: -24s; }
-    .bg-thread:nth-child(8) { left: 95%; height: 130px; animation-delay: -6s; }
+    .bg-thread:nth-child(1) { left: 8%; height: 200px; animation-delay: 0s; }
+    .bg-thread:nth-child(2) { left: 18%; height: 160px; animation-delay: -4s; }
+    .bg-thread:nth-child(3) { left: 32%; height: 220px; animation-delay: -8s; }
+    .bg-thread:nth-child(4) { left: 48%; height: 180px; animation-delay: -12s; }
+    .bg-thread:nth-child(5) { left: 62%; height: 210px; animation-delay: -16s; }
+    .bg-thread:nth-child(6) { left: 75%; height: 170px; animation-delay: -20s; }
+    .bg-thread:nth-child(7) { left: 88%; height: 190px; animation-delay: -24s; }
+    .bg-thread:nth-child(8) { left: 95%; height: 150px; animation-delay: -6s; }
 
     @keyframes threadDrift {
-      0% { transform: translateY(-220px) rotate(18deg); opacity: 0; }
-      8% { opacity: 0.12; }
-      50% { opacity: 0.18; }
-      92% { opacity: 0.12; }
-      100% { transform: translateY(calc(100vh + 50px)) rotate(18deg); opacity: 0; }
+      0% { transform: translateY(-240px) rotate(18deg); opacity: 0; }
+      8% { opacity: 0.10; }
+      50% { opacity: 0.15; }
+      92% { opacity: 0.10; }
+      100% { transform: translateY(calc(100vh + 60px)) rotate(18deg); opacity: 0; }
     }
 
     .hero-mascot {
       position: relative;
       z-index: 2;
-      width: 260px;
-      max-width: 60vw;
-      margin-bottom: 2.5rem;
+      width: 200px;
+      max-width: 45vw;
+      margin-bottom: 3rem;
+      filter: drop-shadow(0 0 60px rgba(139, 92, 246, 0.15));
     }
 
     .hero-mascot svg { width: 100%; height: auto; }
 
-    /* Eye glow pulse */
-    .eye-glow {
-      animation: eyePulse 4s ease-in-out infinite;
-    }
+    .eye-glow { animation: eyePulse 4s ease-in-out infinite; }
 
     @keyframes eyePulse {
       0%, 100% { opacity: 0.25; }
-      50% { opacity: 0.55; }
+      50% { opacity: 0.6; }
     }
 
     .hero-content {
       position: relative;
       z-index: 2;
       text-align: center;
-      max-width: 680px;
+      max-width: 820px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--teal);
+      background: rgba(45, 212, 191, 0.08);
+      border: 1px solid rgba(45, 212, 191, 0.15);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 2rem;
     }
 
     .hero-title {
       font-family: 'Syne', sans-serif;
       font-weight: 800;
-      font-size: clamp(3rem, 8vw, 5rem);
-      letter-spacing: -0.04em;
-      line-height: 1;
-      margin-bottom: 1.25rem;
-      background: linear-gradient(135deg, var(--text) 0%, var(--purple-light) 50%, var(--teal) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 2rem;
+      color: var(--text);
     }
 
     .hero-tagline {
-      font-size: 1.15rem;
-      color: var(--text-muted);
-      max-width: 540px;
-      margin: 0 auto 2.5rem;
-      font-weight: 400;
-      line-height: 1.7;
+      max-width: 640px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .hero-tagline p {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      line-height: 1.75;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-tagline p:last-child {
+      margin-bottom: 0;
+    }
+
+    .hero-tagline .hero-punchline {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .hero-metrics {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .hero-metrics span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      color: var(--text-tertiary);
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      background: rgba(139, 92, 246, 0.04);
+      border: 1px solid var(--border);
+      letter-spacing: 0.01em;
+    }
+
+    .hero-metrics span b {
+      color: var(--teal);
+      font-weight: 500;
     }
 
     .hero-ctas {
@@ -241,84 +322,421 @@
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.75rem 1.75rem;
+      padding: 0.8rem 1.85rem;
       border-radius: 10px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 0.92rem;
       font-weight: 600;
       text-decoration: none;
-      transition: all 0.25s ease;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       cursor: pointer;
       border: none;
+      letter-spacing: -0.01em;
     }
 
     .btn--primary {
-      background: linear-gradient(135deg, var(--purple) 0%, var(--violet) 100%);
+      background: linear-gradient(135deg, var(--purple) 0%, var(--purple-deep) 100%);
       color: white;
-      box-shadow: 0 4px 20px var(--glow-purple), inset 0 1px 0 rgba(255,255,255,0.1);
+      box-shadow: 0 4px 24px rgba(139, 92, 246, 0.25), inset 0 1px 0 rgba(255,255,255,0.1);
     }
 
     .btn--primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 30px var(--glow-purple), inset 0 1px 0 rgba(255,255,255,0.15);
+      box-shadow: 0 8px 40px rgba(139, 92, 246, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
     }
 
     .btn--secondary {
       background: var(--bg-elevated);
-      color: var(--text-muted);
-      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-visible);
     }
 
     .btn--secondary:hover {
-      border-color: rgba(124, 58, 237, 0.3);
+      border-color: rgba(139, 92, 246, 0.3);
       color: var(--text);
       transform: translateY(-2px);
+      background: var(--bg-surface);
     }
 
-    .btn--secondary svg { width: 18px; height: 18px; fill: currentColor; }
+    .btn--secondary svg { width: 17px; height: 17px; fill: currentColor; }
 
-    /* ─── SECTIONS ─── */
+    /* ═══ SECTIONS ═══ */
     .section {
-      padding: 6rem 2rem;
-      max-width: 1200px;
+      padding: 7rem 2rem;
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .section--alt {
+      background: var(--bg-alt);
+    }
+
+    .section--full {
+      max-width: none;
+    }
+
+    .section--full > .section-inner {
+      max-width: 1140px;
       margin: 0 auto;
     }
 
     .section-label {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
       color: var(--teal);
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
     }
 
     .section-title {
       font-family: 'Syne', sans-serif;
       font-weight: 700;
-      font-size: clamp(1.75rem, 4vw, 2.5rem);
-      letter-spacing: -0.03em;
-      line-height: 1.15;
-      margin-bottom: 1rem;
+      font-size: clamp(1.85rem, 4vw, 2.75rem);
+      letter-spacing: -0.035em;
+      line-height: 1.12;
+      margin-bottom: 1.25rem;
+      color: var(--text);
     }
 
     .section-desc {
-      color: var(--text-muted);
-      max-width: 560px;
+      color: var(--text-secondary);
+      max-width: 600px;
       font-size: 1.05rem;
-      margin-bottom: 3.5rem;
+      line-height: 1.75;
+      margin-bottom: 4rem;
     }
 
-    /* Divider line between sections */
-    .divider {
-      max-width: 1200px;
-      margin: 0 auto;
+    /* ═══ PAIN POINTS ═══ */
+    .pain-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-width: 860px;
+    }
+
+    .pain-card {
+      background: var(--bg-elevated);
+      border: 1px solid rgba(248, 113, 113, 0.06);
+      border-radius: 16px;
+      padding: 2rem 2.25rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pain-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--red), rgba(248, 113, 113, 0.2));
+      border-radius: 3px 0 0 3px;
+      opacity: 0.5;
+    }
+
+    .pain-card:hover {
+      border-color: rgba(248, 113, 113, 0.12);
+      transform: translateX(4px);
+      background: #161E34;
+    }
+
+    .pain-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--red-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .pain-icon svg { width: 18px; height: 18px; }
+
+    .pain-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.6rem;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .pain-card p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+
+    .pain-quote {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-tertiary);
+      background: rgba(8, 11, 22, 0.6);
+      border: 1px solid rgba(248, 113, 113, 0.06);
+      padding: 1rem 1.25rem;
+      margin-top: 1.25rem;
+      border-radius: 10px;
+      line-height: 1.65;
+    }
+
+    .pain-quote .log-prefix {
+      color: rgba(248, 113, 113, 0.45);
+      user-select: none;
+    }
+
+    /* ═══ COMPARISON TABLE ═══ */
+    .compare-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .compare-table thead th {
+      padding: 1.4rem 1.75rem;
+      text-align: left;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.82rem;
+      letter-spacing: -0.01em;
+      border-bottom: 1px solid var(--border-visible);
+      background: rgba(8, 11, 22, 0.4);
+    }
+
+    .compare-table thead th:first-child {
+      color: var(--text-tertiary);
+      width: 20%;
+    }
+
+    .compare-table thead th:nth-child(2) {
+      color: var(--text-tertiary);
+      width: 40%;
+    }
+
+    .compare-table thead th:last-child {
+      color: var(--teal);
+      width: 40%;
+      position: relative;
+    }
+
+    .compare-table thead th:last-child::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+      opacity: 0.4;
+    }
+
+    .compare-table tbody td {
+      padding: 1.1rem 1.75rem;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.04);
+      vertical-align: top;
+    }
+
+    .compare-table tbody tr:last-child td { border-bottom: none; }
+
+    .compare-table tbody tr {
+      transition: background 0.2s;
+    }
+
+    .compare-table tbody tr:hover {
+      background: rgba(139, 92, 246, 0.03);
+    }
+
+    .compare-table .cap-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.01em;
+    }
+
+    .compare-table .val-old {
+      color: var(--text-tertiary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .compare-table .val-new {
+      color: var(--text);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    .compare-table .val-new strong {
+      color: var(--teal);
+      font-weight: 600;
+    }
+
+    /* Loomkin column highlight */
+    .compare-table tbody td:last-child {
+      background: rgba(45, 212, 191, 0.02);
+    }
+
+    /* ═══ CONTEXT MESH ═══ */
+    .mesh-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.75rem;
+      align-items: start;
+    }
+
+    .mesh-block {
+      background: #060910;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .mesh-block--old {
+      border-color: rgba(248, 113, 113, 0.1);
+    }
+
+    .mesh-block--new {
+      border-color: rgba(45, 212, 191, 0.15);
+      box-shadow: 0 0 60px rgba(45, 212, 191, 0.04);
+    }
+
+    .mesh-bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0.8rem 1.25rem;
+      background: rgba(19, 26, 46, 0.6);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mesh-bar-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .mesh-bar-dot--red { background: var(--red); opacity: 0.5; }
+    .mesh-bar-dot--teal { background: var(--teal); opacity: 0.5; }
+
+    .mesh-bar-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      margin-left: 0.5rem;
+    }
+
+    .mesh-block--old .mesh-bar-title { color: rgba(248, 113, 113, 0.5); }
+    .mesh-block--new .mesh-bar-title { color: var(--teal); }
+
+    .mesh-body {
+      padding: 1.5rem 1.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      color: var(--text-tertiary);
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .mesh-body .ctx-system { color: var(--purple-light); }
+    .mesh-body .ctx-msgs { color: var(--text-secondary); }
+    .mesh-body .ctx-lost { color: var(--red); background: rgba(248, 113, 113, 0.06); padding: 1px 5px; border-radius: 3px; }
+    .mesh-body .ctx-tools { color: var(--text-tertiary); }
+    .mesh-body .ctx-keeper { color: var(--teal); }
+    .mesh-body .ctx-ok { color: var(--teal); }
+    .mesh-body .ctx-zero { color: var(--teal); font-weight: 500; }
+    .mesh-body .ctx-comment { color: var(--text-tertiary); opacity: 0.5; }
+    .mesh-body .ctx-label { color: var(--text-secondary); }
+
+    .mesh-stat {
+      text-align: center;
+      margin-top: 2.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-tertiary);
+      padding: 1.25rem 2rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 620px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .mesh-stat strong {
+      color: var(--teal);
+      font-weight: 500;
+    }
+
+    /* ═══ STATS ═══ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 1.75rem;
+      text-align: center;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 20%; right: 20%;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+      opacity: 0;
+      transition: opacity 0.35s;
     }
 
-    /* ─── FEATURES GRID ─── */
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(45, 212, 191, 0.15);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+
+    .stat-card:hover::after { opacity: 0.6; }
+
+    .stat-number {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.5rem, 5vw, 3.5rem);
+      letter-spacing: -0.05em;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+      color: var(--teal);
+    }
+
+    .stat-label {
+      font-size: 0.88rem;
+      color: var(--text);
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.01em;
+    }
+
+    .stat-detail {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+    }
+
+    /* ═══ FEATURES GRID ═══ */
     .features-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -328,9 +746,9 @@
     .feature-card {
       background: var(--bg-elevated);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 1.75rem;
-      transition: all 0.3s ease;
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
       overflow: hidden;
     }
@@ -338,34 +756,39 @@
     .feature-card::before {
       content: '';
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       height: 1px;
       background: linear-gradient(90deg, transparent, var(--purple), transparent);
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.35s;
     }
 
     .feature-card:hover {
-      border-color: rgba(124, 58, 237, 0.25);
-      background: var(--bg-hover);
-      transform: translateY(-3px);
+      border-color: rgba(139, 92, 246, 0.2);
+      background: #161E34;
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.15);
     }
 
-    .feature-card:hover::before { opacity: 1; }
+    .feature-card:hover::before { opacity: 0.6; }
+
+    /* Bento: first two cards span wider */
+    .feature-card:nth-child(1),
+    .feature-card:nth-child(2) {
+      grid-column: span 1;
+    }
 
     .feature-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 1.15rem;
+      margin-bottom: 1.25rem;
     }
 
-    .feature-icon--purple { background: rgba(124, 58, 237, 0.12); }
+    .feature-icon--purple { background: rgba(139, 92, 246, 0.10); }
     .feature-icon--teal { background: var(--teal-dim); }
     .feature-icon--amber { background: var(--amber-dim); }
 
@@ -375,62 +798,20 @@
       font-family: 'Syne', sans-serif;
       font-weight: 700;
       font-size: 1.05rem;
-      margin-bottom: 0.5rem;
-      letter-spacing: -0.01em;
+      margin-bottom: 0.6rem;
+      letter-spacing: -0.02em;
     }
 
     .feature-card p {
-      color: var(--text-muted);
+      color: var(--text-secondary);
       font-size: 0.9rem;
-      line-height: 1.6;
+      line-height: 1.65;
     }
 
-    /* ─── WHY ELIXIR ─── */
-    .elixir-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
-    }
-
-    .elixir-card {
-      padding: 1.5rem;
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      background: var(--bg-elevated);
-      transition: all 0.3s ease;
-    }
-
-    .elixir-card:nth-child(even) {
-      transform: translateY(1.5rem);
-    }
-
-    .elixir-card:hover {
-      border-color: rgba(20, 184, 166, 0.25);
-      transform: translateY(-2px);
-    }
-
-    .elixir-card:nth-child(even):hover {
-      transform: translateY(calc(1.5rem - 2px));
-    }
-
-    .elixir-card h4 {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 0.95rem;
-      margin-bottom: 0.4rem;
-      color: var(--teal);
-    }
-
-    .elixir-card p {
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      line-height: 1.55;
-    }
-
-    /* ─── ARCHITECTURE ─── */
+    /* ═══ ARCHITECTURE ═══ */
     .arch-container {
       display: flex;
-      gap: 4rem;
+      gap: 5rem;
       align-items: flex-start;
     }
 
@@ -440,166 +821,241 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      max-width: 460px;
+      gap: 3px;
+      max-width: 480px;
+      position: relative;
+    }
+
+    /* Connecting line */
+    .arch-stack::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      bottom: 12px;
+      width: 1px;
+      background: linear-gradient(180deg, var(--teal), var(--purple), var(--text-tertiary));
+      opacity: 0.15;
+      z-index: 0;
     }
 
     .arch-layer {
-      padding: 0.9rem 1.25rem;
-      border-radius: 8px;
+      padding: 1rem 1.5rem 1rem 2.5rem;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 0.88rem;
       font-weight: 500;
       position: relative;
-      transition: all 0.25s ease;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1;
+    }
+
+    /* Layer number dots */
+    .arch-layer::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      background: var(--bg);
+      opacity: 0.4;
     }
 
     .arch-layer:hover {
-      transform: scaleX(1.02);
+      transform: translateX(6px);
       z-index: 2;
     }
 
-    .arch-layer .layer-name { font-weight: 600; }
+    .arch-layer .layer-name { font-weight: 600; letter-spacing: -0.01em; }
     .arch-layer .layer-detail {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.72rem;
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
-    .arch-layer:nth-child(1) { background: linear-gradient(90deg, rgba(20,184,166,0.2), rgba(20,184,166,0.08)); color: var(--teal); }
-    .arch-layer:nth-child(2) { background: linear-gradient(90deg, rgba(20,184,166,0.14), rgba(124,58,237,0.08)); color: #5EEAD4; }
-    .arch-layer:nth-child(3) { background: linear-gradient(90deg, rgba(124,58,237,0.18), rgba(124,58,237,0.06)); color: var(--purple-light); }
-    .arch-layer:nth-child(4) { background: linear-gradient(90deg, rgba(124,58,237,0.22), rgba(124,58,237,0.08)); color: var(--purple-light); }
-    .arch-layer:nth-child(5) { background: linear-gradient(90deg, rgba(109,40,217,0.22), rgba(109,40,217,0.08)); color: #A78BFA; }
-    .arch-layer:nth-child(6) { background: linear-gradient(90deg, rgba(75,0,130,0.3), rgba(75,0,130,0.1)); color: #C4B5FD; }
-    .arch-layer:nth-child(7) { background: linear-gradient(90deg, rgba(75,0,130,0.18), rgba(45,0,96,0.08)); color: var(--text-dim); }
+    .arch-layer:nth-child(1) { background: linear-gradient(90deg, rgba(45,212,191,0.15), rgba(45,212,191,0.04)); color: var(--teal); }
+    .arch-layer:nth-child(2) { background: linear-gradient(90deg, rgba(45,212,191,0.10), rgba(139,92,246,0.04)); color: #5EEAD4; }
+    .arch-layer:nth-child(3) { background: linear-gradient(90deg, rgba(139,92,246,0.14), rgba(139,92,246,0.04)); color: var(--purple-light); }
+    .arch-layer:nth-child(4) { background: linear-gradient(90deg, rgba(139,92,246,0.18), rgba(139,92,246,0.06)); color: var(--purple-light); }
+    .arch-layer:nth-child(5) { background: linear-gradient(90deg, rgba(109,40,217,0.18), rgba(109,40,217,0.06)); color: #A78BFA; }
+    .arch-layer:nth-child(6) { background: linear-gradient(90deg, rgba(75,0,130,0.22), rgba(75,0,130,0.08)); color: #C4B5FD; }
+    .arch-layer:nth-child(7) { background: linear-gradient(90deg, rgba(75,0,130,0.14), rgba(45,0,96,0.06)); color: var(--text-tertiary); }
 
-    /* ─── GETTING STARTED ─── */
+    /* ═══ GETTING STARTED ═══ */
     .terminal {
-      background: #0B1120;
-      border: 1px solid var(--border);
-      border-radius: 14px;
+      background: #050810;
+      border: 1px solid var(--border-visible);
+      border-radius: 16px;
       overflow: hidden;
-      max-width: 720px;
+      max-width: 760px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(139, 92, 246, 0.05);
     }
 
     .terminal-bar {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 0.75rem 1rem;
-      background: rgba(30, 41, 59, 0.6);
+      gap: 7px;
+      padding: 0.85rem 1.25rem;
+      background: rgba(19, 26, 46, 0.5);
       border-bottom: 1px solid var(--border);
     }
 
     .terminal-dot {
-      width: 10px;
-      height: 10px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
     }
 
-    .terminal-dot--red { background: #EF4444; opacity: 0.7; }
-    .terminal-dot--yellow { background: #F59E0B; opacity: 0.7; }
-    .terminal-dot--green { background: #22C55E; opacity: 0.7; }
+    .terminal-dot--red { background: #EF4444; opacity: 0.6; }
+    .terminal-dot--yellow { background: #FBBF24; opacity: 0.6; }
+    .terminal-dot--green { background: #34D399; opacity: 0.6; }
 
     .terminal-title {
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.72rem;
-      color: var(--text-dim);
-      margin-left: 0.5rem;
+      color: var(--text-tertiary);
+      margin-left: 0.6rem;
     }
 
     .terminal-body {
-      padding: 1.25rem 1.5rem;
+      padding: 1.75rem 2rem;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      line-height: 1.85;
+      font-size: 0.85rem;
+      line-height: 2;
       overflow-x: auto;
     }
 
     .terminal-body .cmd { color: var(--teal); }
-    .terminal-body .comment { color: var(--text-dim); }
+    .terminal-body .comment { color: var(--text-tertiary); }
     .terminal-body .prompt { color: var(--purple-light); user-select: none; }
     .terminal-body .string { color: var(--amber); }
 
-    /* ─── FOOTER ─── */
+    /* ═══ FOOTER ═══ */
     .footer {
-      padding: 3rem 2rem;
-      text-align: center;
+      padding: 4rem 2rem 3rem;
+      background: #050810;
       border-top: 1px solid var(--border);
     }
 
     .footer-content {
-      max-width: 1200px;
+      max-width: 1140px;
       margin: 0 auto;
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 2rem;
+    }
+
+    .footer-brand {
+      display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
-    .footer p {
-      color: var(--text-dim);
-      font-size: 0.85rem;
+    .footer-owl { width: 28px; height: 28px; opacity: 0.35; }
+
+    .footer-brand-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-tertiary);
+      letter-spacing: -0.02em;
     }
 
-    .footer a {
-      color: var(--text-muted);
+    .footer-center {
+      text-align: center;
+      flex: 1;
+    }
+
+    .footer-center p {
+      color: var(--text-tertiary);
+      font-size: 0.82rem;
+      line-height: 1.7;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-links a {
+      color: var(--text-tertiary);
       text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
       transition: color 0.2s;
     }
 
-    .footer a:hover { color: var(--purple-light); }
+    .footer-links a:hover { color: var(--purple-light); }
 
-    .footer-owl { width: 32px; height: 32px; opacity: 0.4; margin-bottom: 0.5rem; }
-
-    /* ─── ANIMATIONS ─── */
+    /* ═══ ANIMATIONS ═══ */
     .animate-in {
       opacity: 0;
-      transform: translateY(28px);
-      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-                  transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(24px);
+      filter: blur(4px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                  filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .animate-in.visible {
       opacity: 1;
       transform: none;
+      filter: blur(0);
     }
 
-    .stagger-1 { transition-delay: 0.05s; }
-    .stagger-2 { transition-delay: 0.1s; }
-    .stagger-3 { transition-delay: 0.15s; }
-    .stagger-4 { transition-delay: 0.2s; }
-    .stagger-5 { transition-delay: 0.25s; }
-    .stagger-6 { transition-delay: 0.3s; }
-    .stagger-7 { transition-delay: 0.35s; }
+    .stagger-1 { transition-delay: 0.06s; }
+    .stagger-2 { transition-delay: 0.12s; }
+    .stagger-3 { transition-delay: 0.18s; }
+    .stagger-4 { transition-delay: 0.24s; }
+    .stagger-5 { transition-delay: 0.30s; }
+    .stagger-6 { transition-delay: 0.36s; }
+    .stagger-7 { transition-delay: 0.42s; }
 
-    /* ─── RESPONSIVE ─── */
-    @media (max-width: 960px) {
+    /* ═══ RESPONSIVE ═══ */
+    @media (max-width: 1024px) {
       .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .elixir-grid { grid-template-columns: repeat(2, 1fr); }
-      .arch-container { flex-direction: column; gap: 2rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .arch-container { flex-direction: column; gap: 3rem; }
       .arch-stack { max-width: 100%; }
       .nav-links a:not(.nav-gh) { display: none; }
+      .compare-card { overflow-x: auto; }
+      .compare-table { min-width: 680px; }
+      .footer-content { flex-direction: column; align-items: center; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    @media (max-width: 768px) {
+      .mesh-container { grid-template-columns: 1fr; }
+      .section { padding: 5rem 1.5rem; }
+      .hero { padding: 6rem 1.5rem 4rem; }
     }
 
     @media (max-width: 640px) {
       .features-grid { grid-template-columns: 1fr; }
-      .elixir-grid { grid-template-columns: 1fr; }
-      .elixir-card:nth-child(even) { transform: none; }
-      .elixir-card:nth-child(even):hover { transform: translateY(-2px); }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .hero-mascot { width: 160px; }
+      .hero-title { font-size: clamp(1.75rem, 7vw, 2.2rem); }
       .hero { padding: 5rem 1.25rem 3rem; }
       .section { padding: 4rem 1.25rem; }
-      .hero-mascot { width: 200px; }
-      .hero-title { font-size: 2.5rem; }
+      .nav { padding: 0 1.25rem; }
+      .pain-card { padding: 1.5rem 1.5rem; }
+      .stat-number { font-size: 2.25rem; }
+    }
+
+    @media (max-width: 420px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .hero-metrics { flex-direction: column; align-items: center; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ══════════ NAV ══════════ -->
+  <!-- NAV -->
   <nav class="nav">
     <a href="#" class="nav-logo">
       <svg viewBox="0 0 32 32" fill="none">
@@ -615,8 +1071,9 @@
       <span>Loomkin</span>
     </a>
     <div class="nav-links">
+      <a href="#the-problem">The Problem</a>
+      <a href="#comparison">Compare</a>
       <a href="#features">Features</a>
-      <a href="#architecture">Architecture</a>
       <a href="#getting-started">Get Started</a>
       <a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener" class="nav-gh">
         <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -625,7 +1082,7 @@
     </div>
   </nav>
 
-  <!-- ══════════ HERO ══════════ -->
+  <!-- HERO -->
   <section class="hero">
     <div class="hero-glow hero-glow--purple"></div>
     <div class="hero-glow hero-glow--teal"></div>
@@ -641,7 +1098,7 @@
       <div class="bg-thread"></div>
     </div>
 
-    <!-- ── OWL MASCOT SVG ── -->
+    <!-- OWL MASCOT SVG -->
     <div class="hero-mascot">
       <svg viewBox="0 0 300 470" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -662,120 +1119,80 @@
             <stop offset="100%" stop-color="#14B8A6"/>
           </linearGradient>
         </defs>
-
-        <!-- ── OWL HEAD ── -->
-        <!-- Left ear -->
+        <!-- OWL HEAD -->
         <polygon points="110,10 85,58 130,48" fill="#5B21B6"/>
         <polygon points="110,10 130,48 150,32" fill="#4B0082"/>
-        <!-- Right ear -->
         <polygon points="190,10 170,48 215,58" fill="#5B21B6"/>
         <polygon points="190,10 150,32 170,48" fill="#4B0082"/>
-        <!-- Crown -->
         <polygon points="130,48 150,32 170,48" fill="#7C3AED"/>
-
-        <!-- Left head side -->
         <polygon points="85,58 72,110 105,92" fill="#3B0070"/>
         <polygon points="85,58 105,92 130,48" fill="#4B0082"/>
-        <!-- Right head side -->
         <polygon points="215,58 228,110 195,92" fill="#3B0070"/>
         <polygon points="215,58 195,92 170,48" fill="#4B0082"/>
-
-        <!-- Forehead -->
         <polygon points="130,48 105,92 135,85" fill="#6D28D9"/>
         <polygon points="170,48 195,92 165,85" fill="#6D28D9"/>
         <polygon points="130,48 135,85 150,32" fill="#5B21B6"/>
         <polygon points="170,48 165,85 150,32" fill="#5B21B6"/>
-        <!-- Center forehead highlight -->
         <polygon points="135,85 150,32 165,85" fill="#8B5CF6"/>
         <polygon points="135,85 165,85 150,105" fill="#7C3AED"/>
-
-        <!-- Left cheek -->
         <polygon points="72,110 82,148 105,92" fill="#2D0060"/>
         <polygon points="105,92 82,148 122,140" fill="#3B0070"/>
-        <!-- Right cheek -->
         <polygon points="228,110 218,148 195,92" fill="#2D0060"/>
         <polygon points="195,92 218,148 178,140" fill="#3B0070"/>
-
-        <!-- Under eyes -->
         <polygon points="105,92 122,140 150,105" fill="#4B0082"/>
         <polygon points="195,92 178,140 150,105" fill="#4B0082"/>
-
-        <!-- Lower face / beak area -->
         <polygon points="122,140 150,105 150,158" fill="#5B21B6"/>
         <polygon points="178,140 150,105 150,158" fill="#6D28D9"/>
-
-        <!-- Chin -->
         <polygon points="82,148 96,175 122,140" fill="#2D0060"/>
         <polygon points="122,140 96,175 150,172" fill="#3B0070"/>
         <polygon points="122,140 150,172 150,158" fill="#4B0082"/>
         <polygon points="218,148 204,175 178,140" fill="#2D0060"/>
         <polygon points="178,140 204,175 150,172" fill="#3B0070"/>
         <polygon points="178,140 150,172 150,158" fill="#4B0082"/>
-
-        <!-- ── OWL BODY ── -->
-        <!-- Neck / shoulders -->
+        <!-- OWL BODY -->
         <polygon points="96,175 150,172 150,198" fill="#3B0070"/>
         <polygon points="204,175 150,172 150,198" fill="#3B0070"/>
         <polygon points="96,175 90,212 150,198" fill="#4B0082"/>
         <polygon points="204,175 210,212 150,198" fill="#4B0082"/>
-
-        <!-- Wings -->
         <polygon points="90,212 68,248 100,262" fill="#2D0060"/>
         <polygon points="210,212 232,248 200,262" fill="#2D0060"/>
         <polygon points="68,248 82,292 100,262" fill="#3B0070"/>
         <polygon points="232,248 218,292 200,262" fill="#3B0070"/>
-
-        <!-- Upper body -->
         <polygon points="90,212 100,262 150,248" fill="#3B0070"/>
         <polygon points="210,212 200,262 150,248" fill="#3B0070"/>
         <polygon points="90,212 150,198 150,248" fill="#4B0082"/>
         <polygon points="210,212 150,198 150,248" fill="#4B0082"/>
-
-        <!-- Lower body -->
         <polygon points="100,262 118,302 150,288" fill="#2D0060"/>
         <polygon points="200,262 182,302 150,288" fill="#2D0060"/>
         <polygon points="100,262 150,248 150,288" fill="#3B0070"/>
         <polygon points="200,262 150,248 150,288" fill="#3B0070"/>
-
-        <!-- Bottom / feet -->
         <polygon points="118,302 150,315 150,288" fill="#4B0082"/>
         <polygon points="182,302 150,315 150,288" fill="#4B0082"/>
-        <!-- Talons -->
         <polygon points="118,302 125,318 138,314" fill="#3B0070"/>
         <polygon points="182,302 175,318 162,314" fill="#3B0070"/>
-
-        <!-- ── EYES ── -->
-        <!-- Eye ambient glow -->
+        <!-- EYES -->
         <circle cx="118" cy="112" r="22" fill="#F59E0B" opacity="0.08"/>
         <circle cx="182" cy="112" r="22" fill="#F59E0B" opacity="0.08"/>
-        <!-- Eye outer glow (animated) -->
         <circle class="eye-glow" cx="118" cy="112" r="24" fill="#F59E0B" opacity="0.25" filter="url(#eyeGlow)"/>
         <circle class="eye-glow" cx="182" cy="112" r="24" fill="#F59E0B" opacity="0.25" filter="url(#eyeGlow)"/>
-        <!-- Iris -->
         <circle cx="118" cy="112" r="16" fill="#F59E0B"/>
         <circle cx="182" cy="112" r="16" fill="#F59E0B"/>
-        <!-- Inner iris ring -->
         <circle cx="118" cy="112" r="12" fill="#D97706" opacity="0.5"/>
         <circle cx="182" cy="112" r="12" fill="#D97706" opacity="0.5"/>
-        <!-- Pupil -->
         <circle cx="118" cy="112" r="7" fill="#0F172A"/>
         <circle cx="182" cy="112" r="7" fill="#0F172A"/>
-        <!-- Highlight -->
         <circle cx="122" cy="108" r="3.5" fill="#FDE68A" opacity="0.85"/>
         <circle cx="186" cy="108" r="3.5" fill="#FDE68A" opacity="0.85"/>
         <circle cx="115" cy="116" r="1.5" fill="#FDE68A" opacity="0.4"/>
         <circle cx="179" cy="116" r="1.5" fill="#FDE68A" opacity="0.4"/>
-
-        <!-- ── SHUTTLE ── -->
+        <!-- SHUTTLE -->
         <polygon points="150,316 106,346 150,376 194,346" fill="#1E293B"/>
-        <!-- Circuit traces -->
         <line x1="128" y1="346" x2="172" y2="346" stroke="#7C3AED" stroke-width="0.8" opacity="0.35"/>
         <line x1="150" y1="324" x2="150" y2="368" stroke="#7C3AED" stroke-width="0.8" opacity="0.35"/>
         <line x1="128" y1="336" x2="150" y2="346" stroke="#14B8A6" stroke-width="0.5" opacity="0.25"/>
         <line x1="172" y1="336" x2="150" y2="346" stroke="#14B8A6" stroke-width="0.5" opacity="0.25"/>
         <line x1="128" y1="356" x2="150" y2="346" stroke="#14B8A6" stroke-width="0.5" opacity="0.25"/>
         <line x1="172" y1="356" x2="150" y2="346" stroke="#14B8A6" stroke-width="0.5" opacity="0.25"/>
-        <!-- Circuit nodes -->
         <circle cx="150" cy="346" r="3" fill="#7C3AED" opacity="0.5"/>
         <circle cx="138" cy="336" r="1.5" fill="#14B8A6" opacity="0.5"/>
         <circle cx="162" cy="336" r="1.5" fill="#14B8A6" opacity="0.5"/>
@@ -783,9 +1200,7 @@
         <circle cx="162" cy="356" r="1.5" fill="#14B8A6" opacity="0.5"/>
         <circle cx="150" cy="330" r="1" fill="#7C3AED" opacity="0.4"/>
         <circle cx="150" cy="362" r="1" fill="#7C3AED" opacity="0.4"/>
-
-        <!-- ── THREADS ── -->
-        <!-- Curved threads fanning outward -->
+        <!-- THREADS -->
         <path d="M150,376 Q110,418 38,452" stroke="url(#threadGradL)" stroke-width="1.3" fill="none" opacity="0.45"/>
         <path d="M150,376 Q120,420 65,458" stroke="url(#threadGradL)" stroke-width="1" fill="none" opacity="0.35"/>
         <path d="M150,376 Q130,425 95,455" stroke="url(#threadGrad)" stroke-width="0.8" fill="none" opacity="0.4"/>
@@ -795,20 +1210,15 @@
         <path d="M150,376 Q170,425 205,455" stroke="url(#threadGrad)" stroke-width="0.8" fill="none" opacity="0.4"/>
         <path d="M150,376 Q180,420 235,458" stroke="url(#threadGradR)" stroke-width="1" fill="none" opacity="0.35"/>
         <path d="M150,376 Q190,418 262,452" stroke="url(#threadGradR)" stroke-width="1.3" fill="none" opacity="0.45"/>
-
-        <!-- Code-like text on threads -->
         <text x="58" y="444" fill="#14B8A6" opacity="0.18" font-family="JetBrains Mono, monospace" font-size="5.5" transform="rotate(-32,58,444)">def handle_info</text>
         <text x="225" y="444" fill="#14B8A6" opacity="0.18" font-family="JetBrains Mono, monospace" font-size="5.5" transform="rotate(32,225,444)">|> Enum.map</text>
         <text x="115" y="458" fill="#7C3AED" opacity="0.12" font-family="JetBrains Mono, monospace" font-size="5" transform="rotate(-12,115,458)">:ok</text>
         <text x="172" y="458" fill="#7C3AED" opacity="0.12" font-family="JetBrains Mono, monospace" font-size="5" transform="rotate(12,172,458)">{:noreply</text>
-
-        <!-- Decision graph nodes on threads -->
         <circle cx="78" cy="435" r="2.5" fill="#14B8A6" opacity="0.3"/>
         <circle cx="92" cy="445" r="2" fill="#7C3AED" opacity="0.3"/>
         <circle cx="85" cy="452" r="1.5" fill="#14B8A6" opacity="0.2"/>
         <line x1="78" y1="435" x2="92" y2="445" stroke="#14B8A6" stroke-width="0.6" opacity="0.25"/>
         <line x1="92" y1="445" x2="85" y2="452" stroke="#7C3AED" stroke-width="0.5" opacity="0.2"/>
-
         <circle cx="222" cy="435" r="2.5" fill="#14B8A6" opacity="0.3"/>
         <circle cx="208" cy="445" r="2" fill="#7C3AED" opacity="0.3"/>
         <circle cx="215" cy="452" r="1.5" fill="#14B8A6" opacity="0.2"/>
@@ -818,9 +1228,17 @@
     </div>
 
     <div class="hero-content">
-      <h1 class="hero-title">Loomkin</h1>
-      <p class="hero-tagline">Elixir-native AI coding assistant. Reads your codebase, proposes edits, runs commands, commits changes &mdash; all on the BEAM.</p>
-      <div class="hero-ctas">
+      <div class="hero-badge animate-in">Elixir-native AI coding assistant</div>
+      <h1 class="hero-title animate-in stagger-1">AI agents shouldn&rsquo;t communicate through files on disk.</h1>
+      <div class="hero-tagline animate-in stagger-2">
+        <p>Your agent teams coordinate through JSON files, polled queues, and worktree copies. They can&rsquo;t tell if teammates are alive or dead. They shred context when it gets long.</p>
+        <p class="hero-punchline">Loomkin runs on the BEAM &mdash; where agents are native processes that message in microseconds, share memory, and never lose context.</p>
+      </div>
+      <div class="hero-metrics animate-in stagger-3">
+        <span><b>~19,000</b> LOC</span>
+        <span><b>100+</b> concurrent agents</span>
+      </div>
+      <div class="hero-ctas animate-in stagger-4">
         <a href="#getting-started" class="btn btn--primary">Get Started</a>
         <a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener" class="btn btn--secondary">
           <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="currentColor"/></svg>
@@ -830,172 +1248,381 @@
     </div>
   </section>
 
-  <div class="divider"></div>
-
-  <!-- ══════════ FEATURES ══════════ -->
-  <section class="section" id="features">
-    <div class="animate-in">
-      <p class="section-label">Capabilities</p>
-      <h2 class="section-title">Everything you need to ship</h2>
-      <p class="section-desc">27 built-in tools, multi-agent teams, and a shared nervous system that routes knowledge in real-time &mdash; backed by OTP fault tolerance.</p>
-    </div>
-
-    <div class="features-grid">
-      <!-- Multi-Agent Teams -->
-      <div class="feature-card animate-in stagger-1">
-        <div class="feature-icon feature-icon--purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.5">
-            <circle cx="12" cy="6" r="3"/><circle cx="4" cy="18" r="3"/><circle cx="20" cy="18" r="3"/>
-            <line x1="12" y1="9" x2="4" y2="15"/><line x1="12" y1="9" x2="20" y2="15"/>
-            <line x1="4" y1="18" x2="20" y2="18" stroke-dasharray="2 3"/>
-          </svg>
-        </div>
-        <h3>Multi-Agent Teams</h3>
-        <p>OTP-native agents coordinate through a two-layer architecture: the decision graph routes knowledge, Context Keepers preserve full-fidelity memory.</p>
+  <!-- THE PROBLEM -->
+  <section class="section--alt section--full has-dots" id="the-problem">
+    <div class="section" style="padding-top:7rem;padding-bottom:7rem;">
+      <div class="animate-in">
+        <p class="section-label">The problem</p>
+        <h2 class="section-title">You&rsquo;ve seen this. You just didn&rsquo;t know why.</h2>
+        <p class="section-desc">Every AI agent team you&rsquo;ve used has the same failure modes. They aren&rsquo;t bugs &mdash; they&rsquo;re symptoms of building actors on runtimes that don&rsquo;t have them.</p>
       </div>
 
-      <!-- 27+ Built-in Tools -->
-      <div class="feature-card animate-in stagger-2">
-        <div class="feature-icon feature-icon--teal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#14B8A6" stroke-width="1.5">
-            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-            <circle cx="6.5" cy="6.5" r="1" fill="#14B8A6"/>
-            <circle cx="17.5" cy="6.5" r="1" fill="#14B8A6"/>
-            <circle cx="6.5" cy="17.5" r="1" fill="#14B8A6"/>
-            <circle cx="17.5" cy="17.5" r="1" fill="#14B8A6"/>
-          </svg>
+      <div class="pain-grid">
+        <div class="pain-card animate-in stagger-1">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="#F87171"/>
+            </svg>
+          </div>
+          <h3>&ldquo;Is this agent alive or dead?&rdquo;</h3>
+          <p>You spawn three agents. One goes quiet. Is it thinking? Did it crash? Is it waiting for you? The system can&rsquo;t tell &mdash; &ldquo;idle&rdquo; and &ldquo;dead&rdquo; look identical. So the lead burns its context window playing detective instead of building your feature.</p>
+          <div class="pain-quote">
+            <span class="log-prefix">[lead] </span>Graph-builder went idle twice but didn&rsquo;t send a<br>
+            completion message. The idle notifications came at 02:05:37<br>
+            and 02:05:41. It&rsquo;s likely it received the message and went<br>
+            idle before fully processing it, or is now working on it.<br><br>
+            <span class="log-prefix">[lead] </span>I&rsquo;ll wait a bit longer before checking again...
+          </div>
         </div>
-        <h3>27+ Built-in Tools</h3>
-        <p>File ops, code search, shell execution, Git, LSP diagnostics, decision tracking &mdash; all as Jido Actions.</p>
-      </div>
 
-      <!-- Decision Graph -->
-      <div class="feature-card animate-in stagger-3">
-        <div class="feature-icon feature-icon--amber">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.5">
-            <circle cx="12" cy="4" r="2.5"/>
-            <circle cx="5" cy="12" r="2.5"/>
-            <circle cx="19" cy="12" r="2.5"/>
-            <circle cx="8" cy="20" r="2.5"/>
-            <circle cx="16" cy="20" r="2.5"/>
-            <line x1="12" y1="6.5" x2="5" y2="9.5"/>
-            <line x1="12" y1="6.5" x2="19" y2="9.5"/>
-            <line x1="5" y1="14.5" x2="8" y2="17.5"/>
-            <line x1="19" y1="14.5" x2="16" y2="17.5"/>
-          </svg>
+        <div class="pain-card animate-in stagger-2">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+              <line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/>
+              <line x1="8" y1="15" x2="16" y2="15" stroke="#F87171" stroke-width="2" opacity="0.5"/>
+            </svg>
+          </div>
+          <h3>&ldquo;Wait, how is it seeing the other agent&rsquo;s changes?&rdquo;</h3>
+          <p>To avoid file conflicts, each agent gets its own full copy of the repo. Isolated, right? Until one agent half-finishes a function and another agent &mdash; supposedly sandboxed &mdash; starts failing from incomplete code it shouldn&rsquo;t be able to see. Now the lead is debugging the isolation model instead of your code.</p>
+          <div class="pain-quote">
+            <span class="log-prefix">[lead] </span>event-builder has partially modified manager.ex but hasn&rsquo;t<br>
+            finished implementing start_nervous_system/1. This is causing<br>
+            a compile error that context-builder noticed.<br><br>
+            <span class="log-prefix">[lead] </span>Wait &mdash; context-builder said &ldquo;the project no longer compiles&rdquo;<br>
+            but it&rsquo;s in a separate worktree. How would it see event-builder&rsquo;s<br>
+            changes? Maybe the worktrees aren&rsquo;t fully isolated as expected...<br><br>
+            <span class="log-prefix">[lead] </span>I should tell context-builder to ignore the error and proceed<br>
+            with shutdown &mdash; it&rsquo;s just a temporary issue from work in progress.
+          </div>
         </div>
-        <h3>Shared Nervous System</h3>
-        <p>The decision graph auto-traces causality, broadcasts discoveries to relevant agents, and cascades confidence warnings downstream. Graph knows what happened &mdash; Keepers know why.</p>
-      </div>
 
-      <!-- Real-Time Web UI -->
-      <div class="feature-card animate-in stagger-4">
-        <div class="feature-icon feature-icon--teal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#14B8A6" stroke-width="1.5">
-            <rect x="2" y="3" width="20" height="14" rx="2"/>
-            <line x1="2" y1="7" x2="22" y2="7"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-            <line x1="6" y1="10.5" x2="14" y2="10.5" stroke-dasharray="3 2"/>
-            <line x1="6" y1="13.5" x2="11" y2="13.5" stroke-dasharray="3 2"/>
-          </svg>
+        <div class="pain-card animate-in stagger-3">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              <line x1="9" y1="13" x2="15" y2="13" stroke-dasharray="2 2"/>
+              <line x1="9" y1="17" x2="15" y2="17" stroke-dasharray="2 2"/>
+            </svg>
+          </div>
+          <h3>One agent per file, or everything breaks</h3>
+          <p>Refactoring auth means touching the router, the controller, the context, and the tests. But you can&rsquo;t assign two agents to router.ex &mdash; one would overwrite the other. So you serialize what should be parallel work, and a 10-minute task takes 30.</p>
         </div>
-        <h3>Real-Time Web UI</h3>
-        <p>Phoenix LiveView streams diffs, renders decision graphs, and manages sessions &mdash; zero JavaScript required.</p>
-      </div>
 
-      <!-- 665+ LLM Models -->
-      <div class="feature-card animate-in stagger-5">
-        <div class="feature-icon feature-icon--purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="1.5">
-            <rect x="4" y="2" width="16" height="12" rx="2"/>
-            <rect x="6" y="6" width="16" height="12" rx="2" fill="none" opacity="0.5"/>
-            <rect x="2" y="10" width="16" height="12" rx="2" fill="none" opacity="0.3"/>
-            <circle cx="12" cy="8" r="2" fill="#7C3AED" opacity="0.4"/>
-          </svg>
+        <div class="pain-card animate-in stagger-4">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="9" y1="3" x2="9" y2="21"/><line x1="6" y1="15" x2="6" y2="15.01" stroke-width="2"/>
+              <line x1="6" y1="18" x2="6" y2="18.01" stroke-width="2"/>
+            </svg>
+          </div>
+          <h3>Your research got thrown in a shredder</h3>
+          <p>The researcher spent 30 minutes mapping your codebase &mdash; file paths, edge cases, function signatures. Then its context window filled up. All of that became &ldquo;investigated auth module, found 3 issues.&rdquo; You paid for a deep analysis and got a sticky note.</p>
         </div>
-        <h3>665+ LLM Models</h3>
-        <p>Anthropic, OpenAI, Google, Groq, xAI, Bedrock and more via req_llm. Built-in cost tracking.</p>
-      </div>
 
-      <!-- Ship as Binary -->
-      <div class="feature-card animate-in stagger-6">
-        <div class="feature-icon feature-icon--amber">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.5">
-            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/>
-            <line x1="12" y1="12" x2="12" y2="22"/>
-            <line x1="12" y1="12" x2="3" y2="7"/>
-            <line x1="12" y1="12" x2="21" y2="7"/>
-          </svg>
+        <div class="pain-card animate-in stagger-5">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/>
+              <line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/>
+              <path d="M17 14l3 3-3 3" opacity="0.4"/>
+            </svg>
+          </div>
+          <h3>The plan was wrong, but nobody can change it</h3>
+          <p>The lead decomposed the task before anyone looked at the code. Agent 3 discovers the plan missed a critical dependency. But it can&rsquo;t update the plan &mdash; it finishes its assignment and reports back. Three agents did work that gets thrown away.</p>
         </div>
-        <h3>Ship as Binary</h3>
-        <p>Burrito-wrapped single binary for macOS &amp; Linux. No Erlang/Elixir install required.</p>
+
+        <div class="pain-card animate-in stagger-6">
+          <div class="pain-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <line x1="17" y1="11" x2="23" y2="11" opacity="0.4"/><line x1="20" y1="8" x2="20" y2="14" opacity="0.4"/>
+            </svg>
+          </div>
+          <h3>No agent ever says &ldquo;hey, check my work&rdquo;</h3>
+          <p>Agents work in total isolation. One writes questionable code, nobody catches it. You find out when tests fail at the end &mdash; after you&rsquo;ve already paid for all the tokens. Real teams do code review. Agent teams can&rsquo;t.</p>
+        </div>
       </div>
     </div>
   </section>
 
-  <div class="divider"></div>
+  <!-- COMPARISON -->
+  <section class="section" id="comparison">
+    <div class="animate-in">
+      <p class="section-label">The difference</p>
+      <h2 class="section-title">Same scenario, different outcome</h2>
+      <p class="section-desc">Every row is a situation you&rsquo;ve been in. The left column is what happened. The right column is what should have happened.</p>
+    </div>
 
-  <!-- ══════════ WHY ELIXIR ══════════ -->
+    <div class="compare-card animate-in stagger-2">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>What happens when&hellip;</th>
+            <th>Current agent frameworks</th>
+            <th>Loomkin (OTP)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="cap-label">You need a new agent</span></td>
+            <td class="val-old">Wait 20&ndash;30 seconds for a new process to spin up</td>
+            <td class="val-new"><strong>&lt;500ms</strong> &mdash; a GenServer starts in the same VM</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">An agent sends a message</span></td>
+            <td class="val-old">Written to a JSON file, polled by the recipient seconds later</td>
+            <td class="val-new"><strong>PubSub delivers in microseconds</strong> &mdash; confirmed in the sender&rsquo;s process</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">An agent goes quiet</span></td>
+            <td class="val-old">Is it thinking? Crashed? Waiting? No way to tell &mdash; &ldquo;idle&rdquo; and &ldquo;dead&rdquo; look identical</td>
+            <td class="val-new"><strong>Process.alive? returns a boolean.</strong> Supervisors auto-restart crashed agents</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">Two agents need the same file</span></td>
+            <td class="val-old">Entire repo gets copied to separate worktrees. Merging is your problem</td>
+            <td class="val-new"><strong>Region-level locks</strong> &mdash; two agents edit different functions in the same file, in parallel</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">Context window fills up</span></td>
+            <td class="val-old">Old messages get summarized into one sentence. Details are gone forever</td>
+            <td class="val-new"><strong>Context Mesh</strong> &mdash; overflow goes to keeper processes. Full fidelity, queryable by any agent</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">An agent discovers the plan is wrong</span></td>
+            <td class="val-old">Finishes its assignment anyway. Reports back. Lead re-plans from scratch</td>
+            <td class="val-new"><strong>Living plans</strong> &mdash; any agent can create tasks, flag blockers, or propose revisions in real-time</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">You want agents to review each other</span></td>
+            <td class="val-old">Not possible &mdash; agents work in isolation, no mechanism for peer feedback</td>
+            <td class="val-new"><strong>Native review protocol</strong> &mdash; review gates on critical paths, real-time pair programming</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">An agent crashes mid-task</span></td>
+            <td class="val-old">Nobody notices. The agent just stops responding. Lead might figure it out eventually</td>
+            <td class="val-new"><strong>Supervisor restarts it in milliseconds.</strong> Context survives in keepers. Team gets notified</td>
+          </tr>
+          <tr>
+            <td><span class="cap-label">You want 10+ agents</span></td>
+            <td class="val-old">3&ndash;5 is the practical limit before coordination overhead overwhelms the work</td>
+            <td class="val-new"><strong>100+ lightweight BEAM processes</strong> &mdash; coordination is in-memory, not API calls</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CONTEXT MESH -->
+  <section class="section--alt section--full" id="context-mesh">
+    <div class="section" style="padding-top:7rem;padding-bottom:7rem;">
+      <div class="animate-in">
+        <p class="section-label">Context Mesh</p>
+        <h2 class="section-title">Memory that never dies</h2>
+        <p class="section-desc">Other systems shred old context to make room. Loomkin offloads it to lightweight keeper processes &mdash; full fidelity, queryable by any agent, persisted to SQLite.</p>
+      </div>
+
+      <div class="mesh-container">
+        <div class="mesh-block mesh-block--old animate-in stagger-1">
+          <div class="mesh-bar">
+            <div class="mesh-bar-dot mesh-bar-dot--red"></div>
+            <div class="mesh-bar-dot mesh-bar-dot--red"></div>
+            <span class="mesh-bar-title">Traditional (Claude Code, Aider)</span>
+          </div>
+          <div class="mesh-body">
+<span class="ctx-comment">  Single Agent Process</span>
+<span class="ctx-comment">  Context Window: 128K tokens</span>
+
+  <span class="ctx-system">system_prompt</span>          2K
+  <span class="ctx-msgs">recent_messages</span>       100K
+  <span class="ctx-lost">COMPACTED</span>              20K  <span class="ctx-comment">&larr; lossy</span>
+  <span class="ctx-tools">tools</span>                   6K
+
+  <span class="ctx-label">Total preserved:</span>       128K
+  <span class="ctx-lost">Total LOST:         unbounded</span></div>
+        </div>
+
+        <div class="mesh-block mesh-block--new animate-in stagger-2">
+          <div class="mesh-bar">
+            <div class="mesh-bar-dot mesh-bar-dot--teal"></div>
+            <div class="mesh-bar-dot mesh-bar-dot--teal"></div>
+            <span class="mesh-bar-title">Loomkin (Context Mesh)</span>
+          </div>
+          <div class="mesh-body">
+<span class="ctx-comment">  Working Agent (GenServer)</span>
+<span class="ctx-comment">  Context Window: 128K tokens</span>
+
+  <span class="ctx-system">system_prompt</span>          2K
+  <span class="ctx-msgs">current_task</span>           80K
+  <span class="ctx-keeper">keeper_index</span>            1K  <span class="ctx-comment">&larr; pointers</span>
+  <span class="ctx-tools">tools</span>                   6K
+
+  <span class="ctx-keeper">Keeper: "auth-research"</span>   45K  <span class="ctx-ok">full</span>
+  <span class="ctx-keeper">Keeper: "billing-deps"</span>    30K  <span class="ctx-ok">full</span>
+  <span class="ctx-keeper">Keeper: "test-results"</span>   25K  <span class="ctx-ok">full</span>
+
+  <span class="ctx-label">Total preserved:</span>       <span class="ctx-zero">228K</span>
+  <span class="ctx-zero">Total LOST:             ZERO</span></div>
+        </div>
+      </div>
+
+      <p class="mesh-stat animate-in stagger-3"><strong>1,000 keepers</strong> on <strong>500MB of RAM</strong> = <strong>100 million tokens</strong> preserved simultaneously</p>
+    </div>
+  </section>
+
+  <!-- THE NUMBERS -->
   <section class="section">
     <div class="animate-in">
-      <p class="section-label">Why the BEAM</p>
-      <h2 class="section-title">Built different, on purpose</h2>
-      <p class="section-desc">The BEAM VM was designed for telecom-grade concurrency and fault tolerance. Turns out that&rsquo;s exactly what AI agents need.</p>
+      <p class="section-label">By the numbers</p>
+      <h2 class="section-title">What OTP actually gives you</h2>
     </div>
 
-    <div class="elixir-grid">
-      <div class="elixir-card animate-in stagger-1">
-        <h4>Lightweight Processes</h4>
-        <p>Thousands of concurrent tool executions on microsecond-weight BEAM processes. No thread pools, no async/await.</p>
+    <div class="stats-grid">
+      <div class="stat-card animate-in stagger-1">
+        <div class="stat-number">&lt;500ms</div>
+        <div class="stat-label">Agent spawn time</div>
+        <div class="stat-detail">GenServer.start_link</div>
       </div>
-      <div class="elixir-card animate-in stagger-2">
-        <h4>OTP Supervisors</h4>
-        <p>When a tool crashes, the supervisor restarts it. No try/catch pyramids. The runtime handles failure.</p>
+      <div class="stat-card animate-in stagger-2">
+        <div class="stat-number">18x</div>
+        <div class="stat-label">Cost savings</div>
+        <div class="stat-detail">$0.25 vs $4.50 (10 agents)</div>
       </div>
-      <div class="elixir-card animate-in stagger-3">
-        <h4>LiveView</h4>
-        <p>Real-time streaming UI rendered server-side. Diffs, graphs, and sessions update instantly over WebSocket.</p>
+      <div class="stat-card animate-in stagger-3">
+        <div class="stat-number">100+</div>
+        <div class="stat-label">Concurrent agents</div>
+        <div class="stat-detail">per BEAM node</div>
       </div>
-      <div class="elixir-card animate-in stagger-4">
-        <h4>Hot Code Reload</h4>
-        <p>Swap tools, models, and prompts in a running system without dropping a single session or losing state.</p>
-      </div>
-      <div class="elixir-card animate-in stagger-5">
-        <h4>Pattern Matching</h4>
-        <p>LLM response handling via clean pattern matches instead of nested conditionals. Elixir was made for this.</p>
-      </div>
-      <div class="elixir-card animate-in stagger-6">
-        <h4>Built-in Clustering</h4>
-        <p>Distribute agent teams across nodes with native BEAM distribution. No service mesh required.</p>
+      <div class="stat-card animate-in stagger-4">
+        <div class="stat-number">0</div>
+        <div class="stat-label">Context lost</div>
+        <div class="stat-detail">ever</div>
       </div>
     </div>
   </section>
 
-  <div class="divider"></div>
+  <!-- FEATURES -->
+  <section class="section--alt section--full has-dots" id="features">
+    <div class="section" style="padding-top:7rem;padding-bottom:7rem;">
+      <div class="animate-in">
+        <p class="section-label">Capabilities</p>
+        <h2 class="section-title">Everything, on the BEAM</h2>
+        <p class="section-desc">27 built-in tools, a persistent decision graph, and a LiveView workspace &mdash; supervised, fault-tolerant, and hot-reloadable.</p>
+      </div>
 
-  <!-- ══════════ ARCHITECTURE ══════════ -->
+      <div class="features-grid">
+        <div class="feature-card animate-in stagger-1">
+          <div class="feature-icon feature-icon--purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.5">
+              <circle cx="12" cy="6" r="3"/><circle cx="4" cy="18" r="3"/><circle cx="20" cy="18" r="3"/>
+              <line x1="12" y1="9" x2="4" y2="15"/><line x1="12" y1="9" x2="20" y2="15"/>
+              <line x1="4" y1="18" x2="20" y2="18" stroke-dasharray="2 3"/>
+            </svg>
+          </div>
+          <h3>Teams-First Runtime</h3>
+          <p>Every session is a team of one that auto-scales. Solo agent to full swarm &mdash; no mode switch, no opt-in. The agent decides based on task complexity.</p>
+        </div>
+
+        <div class="feature-card animate-in stagger-2">
+          <div class="feature-icon feature-icon--teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.5">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+              <circle cx="6.5" cy="6.5" r="1" fill="#2DD4BF"/>
+              <circle cx="17.5" cy="6.5" r="1" fill="#2DD4BF"/>
+              <circle cx="6.5" cy="17.5" r="1" fill="#2DD4BF"/>
+              <circle cx="17.5" cy="17.5" r="1" fill="#2DD4BF"/>
+            </svg>
+          </div>
+          <h3>27+ Tools as Jido Actions</h3>
+          <p>Files, search, shell, Git, LSP diagnostics, decision logging &mdash; each a supervised action that can crash independently without taking down the session.</p>
+        </div>
+
+        <div class="feature-card animate-in stagger-3">
+          <div class="feature-icon feature-icon--amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.5">
+              <circle cx="12" cy="4" r="2.5"/>
+              <circle cx="5" cy="12" r="2.5"/>
+              <circle cx="19" cy="12" r="2.5"/>
+              <circle cx="8" cy="20" r="2.5"/>
+              <circle cx="16" cy="20" r="2.5"/>
+              <line x1="12" y1="6.5" x2="5" y2="9.5"/>
+              <line x1="12" y1="6.5" x2="19" y2="9.5"/>
+              <line x1="5" y1="14.5" x2="8" y2="17.5"/>
+              <line x1="19" y1="14.5" x2="16" y2="17.5"/>
+            </svg>
+          </div>
+          <h3>Persistent Decision Graph</h3>
+          <p>SQLite-backed DAG with 7 node types, typed edges, and confidence scores. Persists reasoning across sessions. Any agent can read and write to it.</p>
+        </div>
+
+        <div class="feature-card animate-in stagger-4">
+          <div class="feature-icon feature-icon--teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="2" y1="7" x2="22" y2="7"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+              <line x1="6" y1="10.5" x2="14" y2="10.5" stroke-dasharray="3 2"/>
+              <line x1="6" y1="13.5" x2="11" y2="13.5" stroke-dasharray="3 2"/>
+            </svg>
+          </div>
+          <h3>LiveView Workspace</h3>
+          <p>Streaming chat, interactive decision graph, diff viewer, team dashboard &mdash; all server-rendered over WebSocket. Zero JavaScript framework.</p>
+        </div>
+
+        <div class="feature-card animate-in stagger-5">
+          <div class="feature-icon feature-icon--purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.5">
+              <rect x="4" y="2" width="16" height="12" rx="2"/>
+              <rect x="6" y="6" width="16" height="12" rx="2" fill="none" opacity="0.5"/>
+              <rect x="2" y="10" width="16" height="12" rx="2" fill="none" opacity="0.3"/>
+              <circle cx="12" cy="8" r="2" fill="#8B5CF6" opacity="0.4"/>
+            </svg>
+          </div>
+          <h3>665+ Models, Mixed Per-Agent</h3>
+          <p>Cheap models for grunt work, expensive models for judgment calls. Dynamic escalation: if a cheap model fails twice, auto-promote to the next tier.</p>
+        </div>
+
+        <div class="feature-card animate-in stagger-6">
+          <div class="feature-icon feature-icon--amber">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.5">
+              <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"/>
+              <line x1="12" y1="12" x2="12" y2="22"/>
+              <line x1="12" y1="12" x2="3" y2="7"/>
+              <line x1="12" y1="12" x2="21" y2="7"/>
+            </svg>
+          </div>
+          <h3>Single Binary</h3>
+          <p>Burrito-wrapped for macOS and Linux. No Erlang, no Elixir install. Download, set your API key, run.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
   <section class="section" id="architecture">
     <div class="arch-container">
       <div class="arch-text">
         <div class="animate-in">
           <p class="section-label">Under the hood</p>
           <h2 class="section-title">Seven layers deep</h2>
-          <p class="section-desc">A supervision tree that goes from user input to model output, with fault isolation at every boundary.</p>
+          <p class="section-desc">A supervision tree from user input to model output, with fault isolation at every boundary. Agents, keepers, and tools are all GenServers under OTP supervisors.</p>
         </div>
       </div>
 
       <div class="arch-stack animate-in">
         <div class="arch-layer stagger-1">
           <span class="layer-name">Interfaces</span>
-          <span class="layer-detail">CLI &middot; LiveView &middot; API</span>
+          <span class="layer-detail">CLI &middot; LiveView &middot; MCP</span>
         </div>
         <div class="arch-layer stagger-2">
-          <span class="layer-name">Session Layer</span>
-          <span class="layer-detail">GenServer per conversation</span>
+          <span class="layer-name">Teams Layer</span>
+          <span class="layer-detail">Agent &middot; Keeper &middot; PubSub Mesh</span>
         </div>
         <div class="arch-layer stagger-3">
           <span class="layer-name">Tool Layer</span>
@@ -1003,11 +1630,11 @@
         </div>
         <div class="arch-layer stagger-4">
           <span class="layer-name">Intelligence</span>
-          <span class="layer-detail">Causal Tracing &middot; Discovery &middot; Cascades</span>
+          <span class="layer-detail">Decision Graph &middot; Repo Map &middot; AST</span>
         </div>
         <div class="arch-layer stagger-5">
           <span class="layer-name">Protocol Layer</span>
-          <span class="layer-detail">MCP + LSP</span>
+          <span class="layer-detail">MCP Client + Server &middot; LSP</span>
         </div>
         <div class="arch-layer stagger-6">
           <span class="layer-name">LLM Layer</span>
@@ -1015,59 +1642,68 @@
         </div>
         <div class="arch-layer stagger-7">
           <span class="layer-name">Telemetry</span>
-          <span class="layer-detail">Metrics &middot; Cost tracking</span>
+          <span class="layer-detail">Cost &middot; Tokens &middot; Latency</span>
         </div>
       </div>
     </div>
   </section>
 
-  <div class="divider"></div>
-
-  <!-- ══════════ GETTING STARTED ══════════ -->
-  <section class="section" id="getting-started">
-    <div class="animate-in">
-      <p class="section-label">Quick start</p>
-      <h2 class="section-title">Up and running in minutes</h2>
-      <p class="section-desc">Elixir 1.18+, an API key, and six commands.</p>
-    </div>
-
-    <div class="terminal animate-in stagger-2">
-      <div class="terminal-bar">
-        <div class="terminal-dot terminal-dot--red"></div>
-        <div class="terminal-dot terminal-dot--yellow"></div>
-        <div class="terminal-dot terminal-dot--green"></div>
-        <span class="terminal-title">~/ &mdash; zsh</span>
+  <!-- GETTING STARTED -->
+  <section class="section--alt section--full" id="getting-started">
+    <div class="section" style="padding-top:7rem;padding-bottom:7rem;">
+      <div class="animate-in">
+        <p class="section-label">Quick start</p>
+        <h2 class="section-title">Up and running in minutes</h2>
+        <p class="section-desc">Elixir 1.18+, an API key, and six commands.</p>
       </div>
-      <div class="terminal-body">
+
+      <div class="terminal animate-in stagger-2">
+        <div class="terminal-bar">
+          <div class="terminal-dot terminal-dot--red"></div>
+          <div class="terminal-dot terminal-dot--yellow"></div>
+          <div class="terminal-dot terminal-dot--green"></div>
+          <span class="terminal-title">~/ &mdash; zsh</span>
+        </div>
+        <div class="terminal-body">
 <span class="prompt">$ </span><span class="cmd">git clone</span> https://github.com/bleuropa/loomkin.git
 <span class="prompt">$ </span><span class="cmd">cd</span> loomkin
 <span class="prompt">$ </span><span class="cmd">mix setup</span>                        <span class="comment"># deps + DB</span>
 <span class="prompt">$ </span><span class="cmd">mix phx.server</span>                  <span class="comment"># Web UI on :4200</span>
 <span class="prompt">$ </span><span class="cmd">mix escript.build</span>               <span class="comment"># Build CLI binary</span>
 <span class="prompt">$ </span>./loomkin --project . <span class="string">"refactor the auth module"</span>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ══════════ FOOTER ══════════ -->
+  <!-- FOOTER -->
   <footer class="footer">
     <div class="footer-content">
-      <svg class="footer-owl" viewBox="0 0 32 32" fill="none">
-        <polygon points="10,2 6,10 15,7" fill="#5B21B6"/>
-        <polygon points="22,2 26,10 17,7" fill="#5B21B6"/>
-        <polygon points="6,10 4,20 12,15" fill="#4B0082"/>
-        <polygon points="26,10 28,20 20,15" fill="#4B0082"/>
-        <polygon points="12,15 16,7 20,15" fill="#7C3AED"/>
-        <polygon points="12,15 16,24 20,15" fill="#4B0082"/>
-        <circle cx="12" cy="14" r="3" fill="#F59E0B"/>
-        <circle cx="20" cy="14" r="3" fill="#F59E0B"/>
-      </svg>
-      <p>Built with Elixir, Phoenix, and the BEAM</p>
-      <p><a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener">github.com/bleuropa/loomkin</a></p>
+      <div class="footer-brand">
+        <svg class="footer-owl" viewBox="0 0 32 32" fill="none">
+          <polygon points="10,2 6,10 15,7" fill="#5B21B6"/>
+          <polygon points="22,2 26,10 17,7" fill="#5B21B6"/>
+          <polygon points="6,10 4,20 12,15" fill="#4B0082"/>
+          <polygon points="26,10 28,20 20,15" fill="#4B0082"/>
+          <polygon points="12,15 16,7 20,15" fill="#7C3AED"/>
+          <polygon points="12,15 16,24 20,15" fill="#4B0082"/>
+          <circle cx="12" cy="14" r="3" fill="#F59E0B"/>
+          <circle cx="20" cy="14" r="3" fill="#F59E0B"/>
+        </svg>
+        <span class="footer-brand-text">Loomkin</span>
+      </div>
+      <div class="footer-center">
+        <p>Built with Elixir, Phoenix, and the BEAM</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener">GitHub</a>
+        <a href="#getting-started">Get Started</a>
+        <a href="#features">Features</a>
+      </div>
     </div>
   </footer>
 
-  <!-- ══════════ SCROLL ANIMATIONS ══════════ -->
+  <!-- SCROLL ANIMATIONS + NAV STATE -->
   <script>
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -1076,11 +1712,24 @@
         }
       });
     }, {
-      threshold: 0.08,
-      rootMargin: '0px 0px -40px 0px'
+      threshold: 0.06,
+      rootMargin: '0px 0px -60px 0px'
     });
 
     document.querySelectorAll('.animate-in').forEach(el => observer.observe(el));
+
+    // Nav scroll state
+    const nav = document.querySelector('.nav');
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          nav.classList.toggle('scrolled', window.scrollY > 40);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
   </script>
 </body>
 </html>
