@@ -108,12 +108,7 @@ defmodule LoomkinWeb.DecisionGraphComponent do
     positioned = layout_nodes(visible_nodes)
     {svg_w, svg_h} = compute_svg_dimensions(positioned)
 
-    pulse_assigns =
-      if pulse != socket.assigns[:pulse_data] do
-        [pulse_data: pulse, pulse_generated_at: System.monotonic_time(:second)]
-      else
-        []
-      end
+    pulse_assigns = [pulse_data: pulse, pulse_generated_at: System.monotonic_time(:second)]
 
     {:ok,
      assign(
