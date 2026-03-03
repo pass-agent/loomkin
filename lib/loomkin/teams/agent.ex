@@ -217,6 +217,12 @@ defmodule Loomkin.Teams.Agent do
   end
 
   @impl true
+  def handle_cast({:update_project_path, new_path}, state) do
+    Logger.debug("[Agent:#{state.name}] Updated project_path to #{new_path}")
+    {:noreply, %{state | project_path: new_path}}
+  end
+
+  @impl true
   def handle_cast({:peer_message, from, content}, state) do
     peer_msg = %{role: :user, content: "[Peer #{from}]: #{content}"}
     {:noreply, %{state | messages: state.messages ++ [peer_msg]}}

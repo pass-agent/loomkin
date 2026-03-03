@@ -253,6 +253,11 @@ defmodule LoomkinWeb.WorkspaceLive do
     path = String.trim(path)
 
     if File.dir?(path) do
+      # Propagate new directory to backing team and all agents
+      if team_id = socket.assigns[:team_id] do
+        Teams.Manager.update_project_path(team_id, path)
+      end
+
       {:noreply,
        socket
        |> assign(

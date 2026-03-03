@@ -159,6 +159,42 @@ defmodule Loomkin.Teams.Manager do
     Loomkin.Teams.ContextRetrieval.list_keepers(team_id)
   end
 
+  @doc """
+  Update the project path for a team and all its running agents.
+
+  Also recursively updates any sub-teams so the entire team tree uses the
+  new directory.
+  """
+  @spec update_project_path(String.t(), String.t()) :: :ok | {:error, :not_found}
+  def update_project_path(team_id, new_path) do
+    case TableRegistry.get_table(team_id) do
+      {:ok, table} ->
+        # Update team ETS metadata
+        case :ets.lookup(table, :meta) do
+          [{:meta, meta}] ->
+            :ets.insert(table, {:meta, %{meta | project_path: new_path}})
+
+          _ ->
+            :ok
+        end
+
+        # Notify all running agents in this team
+        for %{pid: pid} <- list_agents(team_id) do
+          GenServer.cast(pid, {:update_project_path, new_path})
+        end
+
+        # Recursively update sub-teams
+        for sub_id <- list_sub_teams(team_id) do
+          update_project_path(sub_id, new_path)
+        end
+
+        :ok
+
+      {:error, :not_found} ->
+        {:error, :not_found}
+    end
+  end
+
   @doc "Stop an agent gracefully."
   def stop_agent(team_id, name) do
     case find_agent(team_id, name) do

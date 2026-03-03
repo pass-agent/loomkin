@@ -116,9 +116,17 @@ defmodule Loomkin.MixProject do
 
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup"],
+      setup: ["deps.get", "ecto.setup", "assets.setup"],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "assets.setup": ["cmd --cd assets npm install"],
+      "assets.build": ["esbuild loomkin", "tailwind loomkin"],
+      "assets.deploy": [
+        "cmd --cd assets npm install",
+        "esbuild loomkin --minify",
+        "tailwind loomkin --minify",
+        "phx.digest"
+      ],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end

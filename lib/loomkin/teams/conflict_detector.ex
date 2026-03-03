@@ -139,7 +139,7 @@ defmodule Loomkin.Teams.ConflictDetector do
   end
 
   @impl true
-  def handle_info({:tool_complete, agent_name, %{tool_name: tool}}, state)
+  def handle_info({:tool_complete, _agent_name, %{tool_name: tool}}, state)
       when tool in ["file_write", "file_edit"] do
     # tool_complete doesn't carry file_path, but tool_executing already tracked it
     {:noreply, state}
