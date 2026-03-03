@@ -123,14 +123,17 @@ defmodule LoomkinWeb.WorkspaceLive do
     assign(socket,
       session_id: session_id,
       project_path: project_path,
-      editing_project_path: false,
+      explorer_path: project_path,
+      editing_explorer_path: false,
       model: effective_model,
       messages: messages,
       session_cost: session_metrics.cost_usd,
       session_tokens: session_metrics.prompt_tokens + session_metrics.completion_tokens,
       page_title: "Loomkin - #{short_id(session_id)}",
       child_teams: child_teams,
-      active_team_id: active_team_id
+      active_team_id: active_team_id,
+      switch_project_modal: nil,
+      recent_projects: []
     )
   end
 
@@ -241,34 +244,29 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, assign(socket, active_team_id: team_id)}
   end
 
-  def handle_event("edit_project_path", _params, socket) do
-    {:noreply, assign(socket, editing_project_path: true)}
+  def handle_event("edit_explorer_path", _params, socket) do
+    {:noreply, assign(socket, editing_explorer_path: true)}
   end
 
-  def handle_event("cancel_edit_project", _params, socket) do
-    {:noreply, assign(socket, editing_project_path: false)}
+  def handle_event("cancel_edit_explorer", _params, socket) do
+    {:noreply, assign(socket, editing_explorer_path: false)}
   end
 
-  def handle_event("set_project_path", %{"path" => path}, socket) do
+  def handle_event("set_explorer_path", %{"path" => path}, socket) do
     path = String.trim(path)
 
     if File.dir?(path) do
-      # Propagate new directory to backing team and all agents
-      if team_id = socket.assigns[:team_id] do
-        Teams.Manager.update_project_path(team_id, path)
-      end
-
       {:noreply,
        socket
        |> assign(
-         project_path: path,
-         editing_project_path: false,
+         explorer_path: path,
+         editing_explorer_path: false,
          file_tree_version: (socket.assigns[:file_tree_version] || 0) + 1
        )}
     else
       {:noreply,
        socket
-       |> assign(editing_project_path: false)
+       |> assign(editing_explorer_path: false)
        |> put_flash(:error, "Directory not found: #{path}")}
     end
   end
@@ -276,6 +274,17 @@ defmodule LoomkinWeb.WorkspaceLive do
   def handle_event("toggle_mode", _, socket) do
     new_mode = if socket.assigns.mode == :solo, do: :mission_control, else: :solo
     {:noreply, assign(socket, mode: new_mode)}
+  end
+
+  def handle_event("initiate_switch_project", _params, socket) do
+    {:noreply,
+     assign(socket,
+       switch_project_modal: %{
+         phase: :input,
+         target_path: socket.assigns.explorer_path,
+         active_agents: []
+       }
+     )}
   end
 
   def handle_event("keyboard_shortcut", %{"key" => "toggle_mode"}, socket) do
@@ -386,6 +395,21 @@ defmodule LoomkinWeb.WorkspaceLive do
        command_palette_open: false,
        command_palette_query: "",
        command_palette_results: []
+     )}
+  end
+
+  def handle_event("palette_select", %{"type" => "action", "value" => "switch_project"}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       command_palette_open: false,
+       command_palette_query: "",
+       command_palette_results: [],
+       switch_project_modal: %{
+         phase: :input,
+         target_path: socket.assigns.explorer_path,
+         active_agents: []
+       }
      )}
   end
 
@@ -626,7 +650,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:select_file, path}, socket) do
-    abs_path = Path.join(socket.assigns.project_path, path)
+    abs_path = Path.join(socket.assigns.explorer_path, path)
 
     file_content =
       case File.read(abs_path) do
@@ -651,6 +675,47 @@ defmodule LoomkinWeb.WorkspaceLive do
        messages: socket.assigns.messages ++ [user_msg]
      )
      |> push_event("clear-input", %{})}
+  end
+
+  # --- Switch Project modal messages ---
+
+  def handle_info({:switch_project_set_path, path}, socket) do
+    if !File.dir?(path) do
+      {:noreply, put_flash(socket, :error, "Directory not found: #{path}")}
+    else
+      team_id = socket.assigns[:team_id]
+      agents = if team_id, do: Teams.Manager.list_agents(team_id), else: []
+      active = Enum.filter(agents, fn a -> a.status not in [:idle] end)
+
+      if active == [] do
+        {:noreply, do_switch_project(socket, path)}
+      else
+        {:noreply,
+         assign(socket,
+           switch_project_modal: %{
+             phase: :confirm,
+             target_path: path,
+             active_agents: active
+           }
+         )}
+      end
+    end
+  end
+
+  def handle_info(:cancel_switch_project, socket) do
+    {:noreply, assign(socket, switch_project_modal: nil)}
+  end
+
+  def handle_info(:confirm_switch_project, socket) do
+    modal = socket.assigns.switch_project_modal
+
+    if modal do
+      team_id = socket.assigns[:team_id]
+      if team_id, do: Teams.Manager.cancel_all_loops(team_id)
+      {:noreply, do_switch_project(socket, modal.target_path)}
+    else
+      {:noreply, socket}
+    end
   end
 
   # Messages from child components
@@ -1007,6 +1072,16 @@ defmodule LoomkinWeb.WorkspaceLive do
         tool_path={@permission_request.tool_path}
       />
 
+      <%!-- Switch Project modal overlay --%>
+      <.live_component
+        :if={@switch_project_modal}
+        module={LoomkinWeb.SwitchProjectComponent}
+        id="switch-project-modal"
+        modal={@switch_project_modal}
+        explorer_path={@explorer_path}
+        recent_projects={@recent_projects}
+      />
+
       <%!-- Command palette overlay --%>
       {render_command_palette(assigns)}
 
@@ -1037,7 +1112,26 @@ defmodule LoomkinWeb.WorkspaceLive do
             model={@model}
           />
 
-          <%!-- Project path switcher --%>
+          <%!-- Project indicator + Switch button --%>
+          <div class="hidden items-center gap-2 text-sm text-gray-400 md:flex">
+            <div class="flex items-center gap-1.5">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span class="text-xs text-gray-300 font-mono truncate max-w-[12rem]" title={@project_path}>
+                {Path.basename(@project_path)}
+              </span>
+            </div>
+            <button
+              phx-click="initiate_switch_project"
+              class="text-[10px] text-violet-400 hover:text-violet-300 border border-violet-500/30 rounded px-1.5 py-0.5 transition"
+            >
+              Switch
+            </button>
+          </div>
+
+          <%!-- File explorer path (browse only) --%>
           <div class="hidden items-center gap-2 text-sm text-gray-400 md:flex">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1053,12 +1147,12 @@ defmodule LoomkinWeb.WorkspaceLive do
                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               />
             </svg>
-            <%= if @editing_project_path do %>
-              <form phx-submit="set_project_path" class="flex items-center gap-1">
+            <%= if @editing_explorer_path do %>
+              <form phx-submit="set_explorer_path" class="flex items-center gap-1">
                 <input
                   type="text"
                   name="path"
-                  value={@project_path}
+                  value={@explorer_path}
                   class="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-sm text-gray-200 w-64"
                   autofocus
                 />
@@ -1067,7 +1161,7 @@ defmodule LoomkinWeb.WorkspaceLive do
                 </button>
                 <button
                   type="button"
-                  phx-click="cancel_edit_project"
+                  phx-click="cancel_edit_explorer"
                   class="text-xs text-gray-500 hover:text-gray-400"
                 >
                   Cancel
@@ -1075,11 +1169,11 @@ defmodule LoomkinWeb.WorkspaceLive do
               </form>
             <% else %>
               <button
-                phx-click="edit_project_path"
+                phx-click="edit_explorer_path"
                 class="hover:text-gray-200 transition truncate max-w-xs"
-                title={@project_path}
+                title={@explorer_path}
               >
-                {@project_path}
+                {@explorer_path}
               </button>
             <% end %>
           </div>
@@ -1278,7 +1372,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       current_step={@current_step}
       session_id={@session_id}
       team_id={@active_team_id}
-      project_path={@project_path}
+      project_path={@explorer_path}
     />
     """
   end
@@ -1387,7 +1481,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         <.live_component
           module={LoomkinWeb.FileTreeComponent}
           id="file-tree"
-          project_path={assigns[:project_path] || File.cwd!()}
+          project_path={assigns[:explorer_path] || assigns[:project_path] || File.cwd!()}
           session_id={@session_id}
           version={@file_tree_version}
         />
@@ -2134,6 +2228,30 @@ defmodule LoomkinWeb.WorkspaceLive do
   defp short_team_id(id) when is_binary(id), do: String.slice(id, 0, 8)
   defp short_team_id(_), do: "?"
 
+  defp do_switch_project(socket, path) do
+    team_id = socket.assigns[:team_id]
+
+    if team_id do
+      Teams.Manager.update_project_path(team_id, path)
+    end
+
+    # Track in recent projects (dedup, max 5)
+    recent =
+      [socket.assigns.project_path | socket.assigns.recent_projects]
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 == path))
+      |> Enum.take(5)
+
+    socket
+    |> assign(
+      project_path: path,
+      explorer_path: path,
+      switch_project_modal: nil,
+      file_tree_version: (socket.assigns[:file_tree_version] || 0) + 1,
+      recent_projects: recent
+    )
+  end
+
   defp ensure_index_started(project_path) do
     case GenServer.whereis(Loomkin.RepoIntel.Index) do
       nil ->
@@ -2307,6 +2425,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
     actions = [
       %{type: :action, label: "Toggle Mode (Solo/Mission Control)", detail: "Action", value: "toggle_mode"},
+      %{type: :action, label: "Switch Project", detail: "Action", value: "switch_project"},
       %{type: :action, label: "Focus Input", detail: "Action", value: "focus_input"}
     ]
 

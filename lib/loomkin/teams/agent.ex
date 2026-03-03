@@ -10,7 +10,7 @@ defmodule Loomkin.Teams.Agent do
   use GenServer
 
   alias Loomkin.AgentLoop
-  alias Loomkin.Teams.{Comms, Context, ContextRetrieval, CostTracker, ModelRouter, PriorityRouter, RateLimiter, Role}
+  alias Loomkin.Teams.{Comms, Context, ContextRetrieval, CostTracker, Manager, ModelRouter, PriorityRouter, RateLimiter, Role}
 
   require Logger
 
@@ -243,12 +243,16 @@ defmodule Loomkin.Teams.Agent do
         # Resume in a task to avoid blocking the GenServer
         agent_pid = self()
         messages = state.messages
+        team_id = state.team_id
 
         Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
           tool_result =
             if action in ["allow_once", "allow_always"] do
               pd = pending_info.pending_data
-              AgentLoop.default_run_tool(pd.tool_module, pd.tool_args, pd.context)
+              # Refresh project_path in the tool context before re-executing
+              fresh_path = resolve_project_path(team_id, pd.context[:project_path])
+              context = Map.put(pd.context, :project_path, fresh_path)
+              AgentLoop.default_run_tool(pd.tool_module, pd.tool_args, context)
             else
               "Error: Permission denied for #{tool_name}"
             end
@@ -996,7 +1000,13 @@ defmodule Loomkin.Teams.Agent do
           {:agent_escalation, snapshot.name, old_model, next_model}
         )
 
-        new_loop_opts = Keyword.put(loop_opts, :model, next_model)
+        # Refresh project_path from ETS so escalation uses the latest directory
+        fresh_path = resolve_project_path(snapshot.team_id, Keyword.get(loop_opts, :project_path))
+
+        new_loop_opts =
+          loop_opts
+          |> Keyword.put(:model, next_model)
+          |> Keyword.put(:project_path, fresh_path)
 
         case AgentLoop.run(messages, new_loop_opts) do
           {:ok, text, msgs, meta} ->
@@ -1077,17 +1087,27 @@ defmodule Loomkin.Teams.Agent do
 
   defp handle_urgent(_msg, state), do: {:noreply, state}
 
+  @doc false
+  def resolve_project_path(team_id, fallback) do
+    Manager.get_team_project_path(team_id) || fallback
+  end
+
   defp build_loop_opts(state) do
     team_id = state.team_id
     name = state.name
     system_prompt = inject_keeper_index(state.role_config.system_prompt, team_id)
     permission_callback = build_permission_callback(state)
 
+    # A resolver fn allows AgentLoop to read the latest project_path from
+    # team ETS at every tool call, even when the Task captured stale opts.
+    project_path_resolver = fn -> resolve_project_path(team_id, state.project_path) end
+
     [
       model: state.model,
       tools: state.tools,
       system_prompt: system_prompt,
       project_path: state.project_path,
+      project_path_resolver: project_path_resolver,
       agent_name: state.name,
       team_id: state.team_id,
       check_permission: permission_callback,
@@ -1131,13 +1151,15 @@ defmodule Loomkin.Teams.Agent do
   defp build_permission_callback(%{
          permission_mode: :session,
          team_id: team_id,
-         name: name,
-         project_path: project_path
+         name: name
        }) do
     agent_name = name
 
     fn tool_name, tool_path ->
       tool_name_str = to_string(tool_name)
+
+      # Dynamically resolve project_path so permission checks use the latest directory
+      project_path = resolve_project_path(team_id, nil)
 
       # Resolve path to absolute for display and permission checking
       resolved_path =

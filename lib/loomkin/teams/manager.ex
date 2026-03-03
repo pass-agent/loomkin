@@ -195,6 +195,24 @@ defmodule Loomkin.Teams.Manager do
     end
   end
 
+  @doc "Cancel active agent loops across a team and its sub-teams."
+  @spec cancel_all_loops(String.t()) :: :ok
+  def cancel_all_loops(team_id) do
+    for %{pid: pid} <- list_agents(team_id) do
+      try do
+        GenServer.call(pid, :cancel, 5_000)
+      catch
+        :exit, _ -> :ok
+      end
+    end
+
+    for sub_id <- list_sub_teams(team_id) do
+      cancel_all_loops(sub_id)
+    end
+
+    :ok
+  end
+
   @doc "Stop an agent gracefully."
   def stop_agent(team_id, name) do
     case find_agent(team_id, name) do
@@ -274,7 +292,9 @@ defmodule Loomkin.Teams.Manager do
     "#{sanitized}-#{suffix}"
   end
 
-  defp get_team_project_path(team_id) do
+  @doc "Get the project path for a team from ETS metadata."
+  @spec get_team_project_path(String.t()) :: String.t() | nil
+  def get_team_project_path(team_id) do
     case get_team_meta(team_id) do
       {:ok, meta} -> meta[:project_path]
       :error -> nil

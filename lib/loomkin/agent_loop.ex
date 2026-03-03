@@ -92,6 +92,7 @@ defmodule Loomkin.AgentLoop do
       tools: Keyword.get(opts, :tools, []),
       system_prompt: Keyword.fetch!(opts, :system_prompt),
       project_path: Keyword.get(opts, :project_path),
+      project_path_resolver: Keyword.get(opts, :project_path_resolver),
       session_id: Keyword.get(opts, :session_id),
       agent_name: Keyword.get(opts, :agent_name),
       team_id: Keyword.get(opts, :team_id),
@@ -101,6 +102,20 @@ defmodule Loomkin.AgentLoop do
       check_permission: Keyword.get(opts, :check_permission),
       rate_limiter: Keyword.get(opts, :rate_limiter)
     }
+  end
+
+  @doc """
+  Returns the current project path, preferring the dynamic resolver over
+  the static value captured at loop-spawn time.
+  """
+  def current_project_path(config) do
+    case config[:project_path_resolver] do
+      resolver when is_function(resolver, 0) ->
+        resolver.() || config.project_path
+
+      _ ->
+        config.project_path
+    end
   end
 
   # -- Loop --------------------------------------------------------------------
@@ -126,12 +141,14 @@ defmodule Loomkin.AgentLoop do
     # Auto-offload context if agent is above threshold
     messages = maybe_auto_offload(messages, config)
 
-    # Build windowed messages with context enrichment
+    # Build windowed messages with context enrichment (use dynamic path)
+    effective_project_path = current_project_path(config)
+
     windowed =
       ContextWindow.build_messages(messages, config.system_prompt,
         model: config.model,
         session_id: config.session_id,
-        project_path: config.project_path,
+        project_path: effective_project_path,
         team_id: config[:team_id]
       )
 
@@ -279,8 +296,11 @@ defmodule Loomkin.AgentLoop do
     tool_call_id = tool_call[:id] || "call_#{Ecto.UUID.generate()}"
     tool_path = tool_args["file_path"] || tool_args["path"] || "*"
 
+    # Dynamically resolve project_path at each tool execution
+    effective_path = current_project_path(config)
+
     context = %{
-      project_path: config.project_path,
+      project_path: effective_path,
       session_id: config.session_id,
       agent_name: config.agent_name,
       team_id: config.team_id,
@@ -309,13 +329,13 @@ defmodule Loomkin.AgentLoop do
           :allowed ->
             # Tag context for permitted external reads so file_read can bypass safe_path!
             context =
-              if config.project_path &&
+              if effective_path &&
                    Loomkin.Tool.outside_project?(
-                     Loomkin.Tool.resolve_path(tool_path, config.project_path),
-                     config.project_path
+                     Loomkin.Tool.resolve_path(tool_path, effective_path),
+                     effective_path
                    ) do
                 Map.put(context, :allowed_external_path,
-                  Loomkin.Tool.resolve_path(tool_path, config.project_path))
+                  Loomkin.Tool.resolve_path(tool_path, effective_path))
               else
                 context
               end
