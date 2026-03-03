@@ -11,7 +11,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='10,2 6,10 15,7' fill='%235B21B6'/%3E%3Cpolygon points='22,2 26,10 17,7' fill='%235B21B6'/%3E%3Cpolygon points='6,10 4,20 12,15' fill='%234B0082'/%3E%3Cpolygon points='26,10 28,20 20,15' fill='%234B0082'/%3E%3Cpolygon points='12,15 16,7 20,15' fill='%237C3AED'/%3E%3Cpolygon points='12,15 16,24 20,15' fill='%234B0082'/%3E%3Ccircle cx='12' cy='14' r='3' fill='%23F59E0B'/%3E%3Ccircle cx='20' cy='14' r='3' fill='%23F59E0B'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rubik+Glitch&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #080B16;
@@ -105,8 +105,8 @@
     .nav-logo svg { width: 26px; height: 26px; }
 
     .nav-logo span {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: 1.1rem;
       letter-spacing: -0.03em;
     }
@@ -142,6 +142,11 @@
     }
 
     .nav-gh svg { width: 15px; height: 15px; fill: currentColor; }
+
+    .nav-discord:hover {
+      border-color: #5865F2;
+      background: rgba(88, 101, 242, 0.1);
+    }
 
     /* ═══ HERO ═══ */
     .hero {
@@ -257,8 +262,8 @@
     }
 
     .hero-title {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: clamp(1.9rem, 4vw, 3rem);
       letter-spacing: -0.03em;
       line-height: 1.2;
@@ -391,8 +396,8 @@
     }
 
     .section-title {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: clamp(1.85rem, 4vw, 2.75rem);
       letter-spacing: -0.035em;
       line-height: 1.12;
@@ -457,8 +462,8 @@
     .pain-icon svg { width: 18px; height: 18px; }
 
     .pain-card h3 {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: 1rem;
       margin-bottom: 0.6rem;
       color: var(--text);
@@ -506,8 +511,8 @@
     .compare-table thead th {
       padding: 1.4rem 1.75rem;
       text-align: left;
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: 0.82rem;
       letter-spacing: -0.01em;
       border-bottom: 1px solid var(--border-visible);
@@ -713,8 +718,8 @@
     .stat-card:hover::after { opacity: 0.6; }
 
     .stat-number {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: clamp(2.5rem, 5vw, 3.5rem);
       letter-spacing: -0.05em;
       line-height: 1;
@@ -795,8 +800,8 @@
     .feature-icon svg { width: 22px; height: 22px; }
 
     .feature-card h3 {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: 1.05rem;
       margin-bottom: 0.6rem;
       letter-spacing: -0.02em;
@@ -960,8 +965,8 @@
     .footer-owl { width: 28px; height: 28px; opacity: 0.35; }
 
     .footer-brand-text {
-      font-family: 'Rubik Glitch', sans-serif;
-      font-weight: 400;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
       font-size: 1rem;
       color: var(--text-tertiary);
       letter-spacing: -0.02em;
@@ -1076,6 +1081,10 @@
       <a href="#comparison">Compare</a>
       <a href="#features">Features</a>
       <a href="#getting-started">Get Started</a>
+      <a href="https://discord.gg/WUVneqArVD" target="_blank" rel="noopener" class="nav-gh nav-discord">
+        <svg viewBox="0 0 16 16"><path d="M13.545 2.907a13.227 13.227 0 00-3.257-1.011.05.05 0 00-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 00-3.658 0 8.258 8.258 0 00-.412-.833.051.051 0 00-.052-.025c-1.125.194-2.22.534-3.257 1.011a.046.046 0 00-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 003.995 2.02.05.05 0 00.056-.019c.308-.42.582-.863.818-1.329a.05.05 0 00-.027-.07 8.735 8.735 0 01-1.248-.595.05.05 0 01-.005-.083c.084-.063.168-.129.248-.195a.05.05 0 01.051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 01.053.007c.08.066.164.132.248.195a.05.05 0 01-.004.083c-.399.233-.813.44-1.249.595a.05.05 0 00-.026.07c.24.466.514.909.817 1.329a.05.05 0 00.056.019 13.235 13.235 0 004.001-2.02.049.049 0 00.021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 00-.02-.019zM5.346 10.339c-.79 0-1.44-.726-1.44-1.618s.638-1.618 1.44-1.618c.808 0 1.452.733 1.44 1.618 0 .892-.638 1.618-1.44 1.618zm5.316 0c-.79 0-1.44-.726-1.44-1.618s.638-1.618 1.44-1.618c.808 0 1.452.733 1.44 1.618 0 .892-.632 1.618-1.44 1.618z"/></svg>
+        Discord
+      </a>
       <a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener" class="nav-gh">
         <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
@@ -1232,12 +1241,15 @@
       <div class="hero-badge animate-in">Elixir-native AI coding assistant</div>
       <h1 class="hero-title animate-in stagger-1">AI agents shouldn&rsquo;t communicate through files on disk.</h1>
       <div class="hero-tagline animate-in stagger-2">
-        <p>Your agent teams coordinate through JSON files, polled queues, and worktree copies. They can&rsquo;t tell if teammates are alive or dead. They shred context when it gets long.</p>
-        <p class="hero-punchline">Loomkin runs on the BEAM &mdash; where agents are native processes that message in microseconds, share memory, and never lose context.</p>
+        <p>Most multi-agent coding tools coordinate through files on disk, shared workspaces, and serialized state. Even the ones that keep agents in memory have no process isolation, no fault tolerance, and no real concurrency. When an agent fails, nobody notices. Context is gone. No retry, no recovery.</p>
+        <p class="hero-punchline">Loomkin runs on the BEAM. Every agent is a lightweight process &mdash; they message in microseconds, crash independently, and get restarted by supervisors automatically. The bottleneck was never the model. It was the runtime.</p>
       </div>
       <div class="hero-metrics animate-in stagger-3">
-        <span><b>~19,000</b> LOC</span>
         <span><b>100+</b> concurrent agents</span>
+        <span><b>100M</b> tokens of context on <b>500MB</b> RAM</span>
+        <span><b>925+</b> tests</span>
+        <span id="gh-stars" style="display:none"></span>
+        <span id="gh-forks" style="display:none"></span>
       </div>
       <div class="hero-ctas animate-in stagger-4">
         <a href="#getting-started" class="btn btn--primary">Get Started</a>
@@ -1698,6 +1710,7 @@
       </div>
       <div class="footer-links">
         <a href="https://github.com/bleuropa/loomkin" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://discord.gg/WUVneqArVD" target="_blank" rel="noopener">Discord</a>
         <a href="#getting-started">Get Started</a>
         <a href="#features">Features</a>
       </div>
@@ -1731,6 +1744,23 @@
         ticking = true;
       }
     });
+
+    // Fetch GitHub repo stats
+    fetch('https://api.github.com/repos/bleuropa/loomkin')
+      .then(r => r.json())
+      .then(data => {
+        const stars = document.getElementById('gh-stars');
+        const forks = document.getElementById('gh-forks');
+        if (data.stargazers_count != null) {
+          stars.innerHTML = '<b>' + data.stargazers_count + '</b> GitHub stars';
+          stars.style.display = '';
+        }
+        if (data.forks_count != null) {
+          forks.innerHTML = '<b>' + data.forks_count + '</b> forks';
+          forks.style.display = '';
+        }
+      })
+      .catch(() => {});
   </script>
 </body>
 </html>
