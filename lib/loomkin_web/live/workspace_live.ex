@@ -1277,7 +1277,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:auth_refreshed, _provider}, socket) do
-    {:noreply, socket}
+    {:noreply, send_update_to_model_selector(socket)}
   end
 
   def handle_info({:auth_refresh_failed, _provider, _reason}, socket) do
