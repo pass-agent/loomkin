@@ -151,18 +151,28 @@ defmodule Loomkin.Session.ContextWindow do
 
     budget = allocate_budget(model, opts)
 
+    # Extract and remove any system messages from history (e.g. context offload markers)
+    # to avoid sending multiple system messages to the LLM.
+    {inline_system_msgs, history_messages} =
+      Enum.split_with(messages, fn msg -> msg[:role] in [:system, "system"] end)
+
+    inline_context =
+      inline_system_msgs
+      |> Enum.map(fn msg -> msg[:content] || "" end)
+      |> Enum.reject(&(&1 == ""))
+
     # Build enriched system prompt
     system_parts = [system_prompt]
     system_parts = inject_decision_context(system_parts, session_id)
     system_parts = inject_repo_map(system_parts, project_path, max_tokens: budget.repo_map)
     system_parts = inject_project_rules(system_parts, project_path)
-    enriched_system = Enum.join(system_parts, "\n\n")
-
-    system_msg = %{role: :system, content: enriched_system}
+    system_parts = system_parts ++ inline_context
 
     # Use explicit max_tokens if provided, otherwise compute from budget
     max_tokens = Keyword.get(opts, :max_tokens)
     reserved_output = Keyword.get(opts, :reserved_output, @default_reserved_output)
+
+    enriched_system = Enum.join(system_parts, "\n\n")
 
     available =
       if max_tokens do
@@ -174,45 +184,42 @@ defmodule Loomkin.Session.ContextWindow do
         budget.history
       end
 
-    {recent_messages, evicted} = select_recent(messages, available)
+    {recent_messages, evicted} = select_recent(history_messages, available)
 
-    # Summarize evicted messages to preserve context
-    recent_messages =
+    # Fold evicted message summary into the system prompt (not a separate system message)
+    enriched_system =
       if evicted != [] do
         summary = summarize_old_messages(evicted, Keyword.take(opts, [:model]))
 
         if summary != "" do
-          summary_msg = %{role: :system, content: summary}
-          [summary_msg | recent_messages]
+          enriched_system <> "\n\n" <> summary
         else
-          recent_messages
+          enriched_system
         end
       else
-        recent_messages
+        enriched_system
       end
 
-    messages_out = [system_msg | recent_messages]
+    # Fold context pressure warning into the system prompt (not a separate system message)
+    enriched_system =
+      if opts[:team_id] do
+        system_tokens = estimate_tokens(enriched_system)
+        history_tokens = recent_messages |> Enum.map(&estimate_message_tokens/1) |> Enum.sum()
+        total = model_limit(model)
+        usage = (system_tokens + history_tokens) / total * 100
 
-    if opts[:team_id] do
-      system_tokens = estimate_tokens(enriched_system)
-      history_tokens = recent_messages |> Enum.map(&estimate_message_tokens/1) |> Enum.sum()
-      total = model_limit(model)
-      usage = (system_tokens + history_tokens) / total * 100
-
-      if usage > 50 do
-        pressure_msg = %{
-          role: :system,
-          content:
-            "[Context pressure: #{round(usage)}%]. Consider offloading completed topics via context_offload."
-        }
-
-        messages_out ++ [pressure_msg]
+        if usage > 50 do
+          enriched_system <>
+            "\n\n[Context pressure: #{round(usage)}%]. Consider offloading completed topics via context_offload."
+        else
+          enriched_system
+        end
       else
-        messages_out
+        enriched_system
       end
-    else
-      messages_out
-    end
+
+    system_msg = %{role: :system, content: enriched_system}
+    [system_msg | recent_messages]
   end
 
   @doc """

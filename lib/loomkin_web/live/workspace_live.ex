@@ -56,6 +56,8 @@ defmodule LoomkinWeb.WorkspaceLive do
         collab_health: nil,
         # Channel bindings for the active team
         channel_bindings: [],
+        # Track subscribed PubSub teams to prevent duplicate subscriptions
+        subscribed_teams: MapSet.new(),
         # Agent picker for composer
         show_agent_picker: false,
         # Cached roster data (recomputed on roster_version changes, not per render)
@@ -102,22 +104,27 @@ defmodule LoomkinWeb.WorkspaceLive do
         _, _ -> socket.assigns.model
       end
 
-    if connected?(socket) do
-      Session.subscribe(session_id)
-      Phoenix.PubSub.subscribe(Loomkin.PubSub, "telemetry:updates")
-      Phoenix.PubSub.subscribe(Loomkin.PubSub, "auth:status")
-      ensure_index_started(project_path)
+    socket =
+      if connected?(socket) do
+        Session.subscribe(session_id)
+        Phoenix.PubSub.subscribe(Loomkin.PubSub, "telemetry:updates")
+        Phoenix.PubSub.subscribe(Loomkin.PubSub, "auth:status")
+        ensure_index_started(project_path)
 
-      team_id = socket.assigns[:team_id]
+        team_id = socket.assigns[:team_id]
 
-      if team_id do
-        subscribe_to_team(team_id)
+        if team_id do
+          socket = subscribe_to_team(socket, team_id)
 
-        # Recover child teams from previous pageloads
-        child_ids = Teams.Manager.list_sub_teams(team_id)
-        Enum.each(child_ids, &subscribe_to_team/1)
+          # Recover child teams from previous pageloads
+          child_ids = Teams.Manager.list_sub_teams(team_id)
+          Enum.reduce(child_ids, socket, &subscribe_to_team(&2, &1))
+        else
+          socket
+        end
+      else
+        socket
       end
-    end
 
     # Load existing history
     messages =
@@ -731,12 +738,11 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info({:team_available, _session_id, team_id}, socket) do
     Logger.info("[WorkspaceLive] :team_available received team_id=#{team_id}")
-    # Subscribe to backing team events (handle_info is always connected)
-    subscribe_to_team(team_id)
     bindings = load_channel_bindings(team_id)
 
     socket =
       socket
+      |> subscribe_to_team(team_id)
       |> assign(team_id: team_id, active_team_id: team_id, mode: :mission_control, channel_bindings: bindings)
       |> refresh_roster()
 
@@ -745,7 +751,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info({:child_team_available, _session_id, child_team_id}, socket) do
     Logger.info("[WorkspaceLive] :child_team_available child_team_id=#{child_team_id}")
-    subscribe_to_team(child_team_id)
+    socket = subscribe_to_team(socket, child_team_id)
 
     child_teams =
       if child_team_id in socket.assigns.child_teams do
@@ -1031,8 +1037,6 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:child_team_created, child_team_id}, socket) do
-    subscribe_to_team(child_team_id)
-
     child_teams =
       if child_team_id in socket.assigns.child_teams do
         socket.assigns.child_teams
@@ -1042,6 +1046,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
     socket =
       socket
+      |> subscribe_to_team(child_team_id)
       |> assign(:child_teams, child_teams)
       |> update(:roster_version, &((&1 || 0) + 1))
       |> refresh_roster()
@@ -1954,12 +1959,21 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
-  defp subscribe_to_team(team_id) do
-    Logger.info("[WorkspaceLive] subscribe_to_team(#{team_id}) self=#{inspect(self())}")
-    Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}")
-    Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:tasks")
-    Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:context")
-    Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:decisions")
+  # Subscribe to a team's PubSub topics, but only once per team.
+  # Returns the updated socket with the team tracked in :subscribed_teams.
+  defp subscribe_to_team(socket, team_id) do
+    subscribed = socket.assigns[:subscribed_teams] || MapSet.new()
+
+    if MapSet.member?(subscribed, team_id) do
+      socket
+    else
+      Logger.info("[WorkspaceLive] subscribe_to_team(#{team_id}) self=#{inspect(self())}")
+      Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}")
+      Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:tasks")
+      Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:context")
+      Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:decisions")
+      assign(socket, subscribed_teams: MapSet.put(subscribed, team_id))
+    end
   end
 
   defp send_update_to_model_selector(socket) do
@@ -1976,18 +1990,16 @@ defmodule LoomkinWeb.WorkspaceLive do
     assign(socket, auth_version: auth_version)
   end
 
-  # Recompute cached roster data and ensure child team subscriptions are active.
+  # Recompute cached roster data.
   # Called when roster_version bumps — avoids per-render Registry queries.
+  # NOTE: Do NOT subscribe to PubSub topics here — this is called from many
+  # event handlers and PubSub.subscribe is not idempotent (each call adds
+  # another subscription, causing duplicate event delivery).
   defp refresh_roster(socket) do
     team_id = socket.assigns[:active_team_id]
     agents = roster_agents(team_id)
     tasks = roster_tasks(team_id)
     budget = roster_budget(team_id)
-
-    # Ensure we're subscribed to all known child teams (defensive re-subscribe)
-    for child_id <- socket.assigns[:child_teams] || [] do
-      subscribe_to_team(child_id)
-    end
 
     assign(socket, cached_agents: agents, cached_tasks: tasks, cached_budget: budget)
   end
