@@ -178,7 +178,9 @@ defmodule Loomkin.Session do
         # is actually available (has API key or OAuth). Stale sessions may
         # reference providers the user never configured.
         effective_model = validate_model(db_session.model, model)
-        effective_fast_model = validate_model(db_session.fast_model, fast_model || effective_model)
+
+        effective_fast_model =
+          validate_model(db_session.fast_model, fast_model || effective_model)
 
         state = %__MODULE__{
           id: db_session.id,
@@ -553,10 +555,17 @@ defmodule Loomkin.Session do
         provider_atom = String.to_existing_atom(provider)
 
         case Loomkin.Models.api_key_status(provider_atom) do
-          {:set, _} -> model
-          {:oauth, :connected} -> model
+          {:set, _} ->
+            model
+
+          {:oauth, :connected} ->
+            model
+
           _ ->
-            Logger.warning("[Session] Persisted model #{model} unavailable — falling back to #{fallback}")
+            Logger.warning(
+              "[Session] Persisted model #{model} unavailable — falling back to #{fallback}"
+            )
+
             fallback
         end
 

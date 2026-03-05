@@ -80,9 +80,7 @@ defmodule Loomkin.Session.Manager do
   defp maybe_create_backing_team(session_id, opts) do
     project_path = Keyword.get(opts, :project_path)
 
-    Logger.debug(
-      "[Session.Manager] maybe_create_backing_team session=#{session_id}"
-    )
+    Logger.debug("[Session.Manager] maybe_create_backing_team session=#{session_id}")
 
     try do
       {:ok, team_id} =

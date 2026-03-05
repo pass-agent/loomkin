@@ -203,10 +203,16 @@ defmodule LoomkinWeb.WorkspaceLive do
         known = sock.assigns.activity_known_agents
 
         case trackable_agent_name(event.agent) do
-          nil -> assign(sock, activity_events: sock.assigns.activity_events ++ [event])
+          nil ->
+            assign(sock, activity_events: sock.assigns.activity_events ++ [event])
+
           name ->
             new_known = if name in known, do: known, else: known ++ [name]
-            assign(sock, activity_events: sock.assigns.activity_events ++ [event], activity_known_agents: new_known)
+
+            assign(sock,
+              activity_events: sock.assigns.activity_events ++ [event],
+              activity_known_agents: new_known
+            )
         end
       end)
 
