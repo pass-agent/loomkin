@@ -73,15 +73,15 @@ defmodule Loomkin.Session.Manager do
     end
   end
 
-  # Create a backing team with bootstrap agents (Concierge + Orienter) for this session.
+  # Create a backing team (without agents) for this session.
+  # Bootstrap agents (Concierge + Orienter) are spawned lazily on first user message
+  # so the user has time to select the correct project path first.
   # This is best-effort — if it fails, the session still works without teams.
   defp maybe_create_backing_team(session_id, opts) do
     project_path = Keyword.get(opts, :project_path)
-    model = Keyword.get(opts, :model)
-    fast_model = Keyword.get(opts, :fast_model) || model
 
     Logger.debug(
-      "[Session.Manager] maybe_create_backing_team session=#{session_id} model=#{inspect(model)}"
+      "[Session.Manager] maybe_create_backing_team session=#{session_id}"
     )
 
     try do
@@ -92,30 +92,6 @@ defmodule Loomkin.Session.Manager do
         )
 
       Logger.info("[Session.Manager] Team created team_id=#{team_id} for session=#{session_id}")
-
-      # Spawn Concierge (thinking model) — the primary user-facing agent
-      case Loomkin.Teams.Manager.spawn_agent(team_id, "concierge", :concierge,
-             model: model,
-             project_path: project_path
-           ) do
-        {:ok, pid} ->
-          Logger.info("[Session.Manager] Concierge spawned pid=#{inspect(pid)} team=#{team_id}")
-
-        {:error, reason} ->
-          Logger.warning("[Session.Manager] Concierge FAILED team=#{team_id}: #{inspect(reason)}")
-      end
-
-      # Spawn Orienter (fast model) — silent background scanner
-      case Loomkin.Teams.Manager.spawn_agent(team_id, "orienter", :orienter,
-             model: fast_model,
-             project_path: project_path
-           ) do
-        {:ok, pid} ->
-          Logger.info("[Session.Manager] Orienter spawned pid=#{inspect(pid)} team=#{team_id}")
-
-        {:error, reason} ->
-          Logger.warning("[Session.Manager] Orienter FAILED team=#{team_id}: #{inspect(reason)}")
-      end
 
       # Persist team_id to the session DB record
       persist_team_id(session_id, team_id)

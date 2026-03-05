@@ -258,7 +258,9 @@ defmodule Loomkin.Session.ContextWindowTest do
   end
 
   describe "summarize_old_messages/2" do
+    @tag :skip
     test "returns summary string with message count" do
+      # NOTE: Calls real LLM — skip until mocked
       messages = [
         %{role: :user, content: "first message"},
         %{role: :assistant, content: "first response"},
@@ -270,7 +272,9 @@ defmodule Loomkin.Session.ContextWindowTest do
       assert result =~ "first message"
     end
 
+    @tag :skip
     test "truncates long content in summary" do
+      # NOTE: Calls real LLM — skip until mocked
       long = String.duplicate("x", 500)
       messages = [%{role: :user, content: long}]
 

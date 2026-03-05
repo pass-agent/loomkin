@@ -5,10 +5,10 @@ defmodule Loomkin.Session.PersistenceTest do
 
   describe "create_session/1" do
     test "creates a session with valid attrs" do
-      attrs = %{model: "anthropic:claude-sonnet-4-6", project_path: "/tmp/test"}
+      attrs = %{model: "zai:glm-5", project_path: "/tmp/test"}
 
       assert {:ok, session} = Persistence.create_session(attrs)
-      assert session.model == "anthropic:claude-sonnet-4-6"
+      assert session.model == "zai:glm-5"
       assert session.project_path == "/tmp/test"
       assert session.status == :active
       assert session.prompt_tokens == 0

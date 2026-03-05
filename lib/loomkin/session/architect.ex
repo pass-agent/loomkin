@@ -223,7 +223,7 @@ defmodule Loomkin.Session.Architect do
                       content: plan_summary
                     })
 
-                  assistant_msg = %{role: :assistant, content: plan_summary}
+                  assistant_msg = %{role: :assistant, content: plan_summary, from: "Architect"}
                   state = %{state | messages: state.messages ++ [assistant_msg]}
                   broadcast(state.id, {:new_message, state.id, assistant_msg})
                   broadcast(state.id, {:architect_plan, state.id, plan_data})
@@ -342,7 +342,7 @@ defmodule Loomkin.Session.Architect do
         content: status_text
       })
 
-    assistant_msg = %{role: :assistant, content: status_text}
+    assistant_msg = %{role: :assistant, content: status_text, from: "Architect"}
     state = %{state | messages: state.messages ++ [assistant_msg]}
     broadcast(state.id, {:new_message, state.id, assistant_msg})
 
@@ -418,7 +418,7 @@ defmodule Loomkin.Session.Architect do
         {:ok, _} =
           Persistence.save_message(%{session_id: state.id, role: :assistant, content: text})
 
-        assistant_msg = %{role: :assistant, content: text}
+        assistant_msg = %{role: :assistant, content: text, from: "Architect"}
         state = %{state | messages: state.messages ++ [assistant_msg]}
         broadcast(state.id, {:new_message, state.id, assistant_msg})
         update_usage(state.id, response)
@@ -457,7 +457,7 @@ defmodule Loomkin.Session.Architect do
         content: response
       })
 
-    assistant_msg = %{role: :assistant, content: response}
+    assistant_msg = %{role: :assistant, content: response, from: "Architect"}
     state = %{state | messages: state.messages ++ [assistant_msg]}
     broadcast(state.id, {:new_message, state.id, assistant_msg})
 

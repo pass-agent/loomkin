@@ -11,7 +11,7 @@ defmodule LoomkinWeb.DecisionGraphMultiAgentTest do
     {:ok, session} =
       %Session{}
       |> Session.changeset(%{
-        model: "anthropic:claude-sonnet-4-6",
+        model: "zai:glm-5",
         project_path: "/tmp/test"
       })
       |> Repo.insert()

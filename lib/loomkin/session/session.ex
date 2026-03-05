@@ -21,7 +21,8 @@ defmodule Loomkin.Session do
     messages: [],
     tools: [],
     auto_approve: false,
-    child_team_ids: []
+    child_team_ids: [],
+    bootstrap_spawned: false
   ]
 
   # --- Public API ---
@@ -173,9 +174,11 @@ defmodule Loomkin.Session do
     case load_or_create_session(session_id, model, project_path, title) do
       {:ok, db_session, messages} ->
         # Prefer the DB-persisted model for resumed sessions so the user's
-        # last selection survives page refreshes.
-        effective_model = db_session.model || model
-        effective_fast_model = db_session.fast_model || fast_model || effective_model
+        # last selection survives page refreshes — but only if the provider
+        # is actually available (has API key or OAuth). Stale sessions may
+        # reference providers the user never configured.
+        effective_model = validate_model(db_session.model, model)
+        effective_fast_model = validate_model(db_session.fast_model, fast_model || effective_model)
 
         state = %__MODULE__{
           id: db_session.id,
@@ -199,6 +202,9 @@ defmodule Loomkin.Session do
   @impl true
   def handle_call({:send_message, text}, from, state) do
     Logger.debug("[Session] send_message session=#{state.id} model=#{state.model}")
+
+    # Spawn bootstrap agents on first message (deferred from session start)
+    state = maybe_spawn_bootstrap_agents(state)
 
     # Try routing to Concierge first (bootstrap agent pattern)
     case maybe_route_to_concierge(state, text) do
@@ -228,7 +234,7 @@ defmodule Loomkin.Session do
                     content: response_text
                   })
 
-                assistant_msg = %{role: :assistant, content: response_text}
+                assistant_msg = %{role: :assistant, content: response_text, from: "concierge"}
                 broadcast(session_id, {:new_message, session_id, assistant_msg})
                 {:ok, response_text, assistant_msg}
 
@@ -538,6 +544,32 @@ defmodule Loomkin.Session do
     Application.get_env(:loomkin, :default_model, "zai:glm-5")
   end
 
+  # Validate a persisted model string — fall back if the provider isn't available.
+  defp validate_model(nil, fallback), do: fallback
+
+  defp validate_model(model, fallback) when is_binary(model) do
+    case String.split(model, ":", parts: 2) do
+      [provider, _model_id] ->
+        provider_atom = String.to_existing_atom(provider)
+
+        case Loomkin.Models.api_key_status(provider_atom) do
+          {:set, _} -> model
+          {:oauth, :connected} -> model
+          _ ->
+            Logger.warning("[Session] Persisted model #{model} unavailable — falling back to #{fallback}")
+            fallback
+        end
+
+      _ ->
+        model
+    end
+  rescue
+    ArgumentError ->
+      # Provider atom doesn't exist — unknown provider
+      Logger.warning("[Session] Unknown provider in model #{model} — falling back to #{fallback}")
+      fallback
+  end
+
   defp check_child_team_completion(state, _event) do
     for child_team_id <- state.child_team_ids do
       tasks = Loomkin.Teams.Tasks.list_all(child_team_id)
@@ -561,7 +593,7 @@ defmodule Loomkin.Session do
         #{if results != "", do: "### Completed\n#{results}\n", else: ""}#{if failed != "", do: "### Failed\n#{failed}\n", else: ""}
         """
 
-        msg = %{role: :assistant, content: String.trim(summary)}
+        msg = %{role: :assistant, content: String.trim(summary), from: "Team"}
 
         Persistence.save_message(%{
           session_id: state.id,
@@ -582,6 +614,47 @@ defmodule Loomkin.Session do
     Phoenix.PubSub.broadcast(Loomkin.PubSub, "session:#{session_id}", event)
   rescue
     e -> Logger.warning("[Session] Broadcast failed: #{Exception.message(e)}")
+  end
+
+  defp maybe_spawn_bootstrap_agents(%{bootstrap_spawned: true} = state), do: state
+
+  defp maybe_spawn_bootstrap_agents(%{team_id: nil} = state), do: state
+
+  defp maybe_spawn_bootstrap_agents(state) do
+    team_id = state.team_id
+    project_path = state.project_path
+
+    Logger.info(
+      "[Session] Spawning bootstrap agents on first message team=#{team_id} path=#{project_path}"
+    )
+
+    # Spawn Concierge (thinking model)
+    case Loomkin.Teams.Manager.spawn_agent(team_id, "concierge", :concierge,
+           model: state.model,
+           project_path: project_path
+         ) do
+      {:ok, pid} ->
+        Logger.info("[Session] Concierge spawned pid=#{inspect(pid)} team=#{team_id}")
+
+      {:error, reason} ->
+        Logger.warning("[Session] Concierge FAILED team=#{team_id}: #{inspect(reason)}")
+    end
+
+    # Spawn Orienter (fast model)
+    fast_model = state.fast_model || state.model
+
+    case Loomkin.Teams.Manager.spawn_agent(team_id, "orienter", :orienter,
+           model: fast_model,
+           project_path: project_path
+         ) do
+      {:ok, pid} ->
+        Logger.info("[Session] Orienter spawned pid=#{inspect(pid)} team=#{team_id}")
+
+      {:error, reason} ->
+        Logger.warning("[Session] Orienter FAILED team=#{team_id}: #{inspect(reason)}")
+    end
+
+    %{state | bootstrap_spawned: true}
   end
 
   defp maybe_route_to_concierge(state, _text) do

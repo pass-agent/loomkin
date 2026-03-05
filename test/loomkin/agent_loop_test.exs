@@ -51,7 +51,7 @@ defmodule Loomkin.AgentLoopTest do
 
       result =
         AgentLoop.run(messages,
-          model: "anthropic:claude-sonnet-4-6",
+          model: "zai:glm-5",
           system_prompt: "You are a test assistant.",
           tools: []
         )
@@ -68,7 +68,7 @@ defmodule Loomkin.AgentLoopTest do
       messages = [%{role: :user, content: "Hello"}]
 
       AgentLoop.run(messages,
-        model: "anthropic:claude-sonnet-4-6",
+        model: "zai:glm-5",
         system_prompt: "You are a test assistant.",
         tools: [],
         on_event: fn event_name, payload ->

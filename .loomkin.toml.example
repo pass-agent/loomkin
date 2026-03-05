@@ -1,6 +1,6 @@
 [model]
-default = "anthropic:claude-sonnet-4-6"
-weak = "anthropic:claude-haiku-4-5"     # for summarization, commit messages
+default = "zai:glm-5"
+# weak = "zai:glm-4.5"                 # for summarization, commit messages
 
 [permissions]
 auto_approve = ["file_read", "file_search", "content_search", "directory_list"]

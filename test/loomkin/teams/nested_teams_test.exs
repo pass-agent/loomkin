@@ -151,7 +151,7 @@ defmodule Loomkin.Teams.NestedTeamsTest do
         session_id: "sess-1",
         agent_name: "lead",
         team_id: "team-abc",
-        model: "anthropic:claude-sonnet-4-6"
+        model: "zai:glm-5"
       }
 
       context = %{
@@ -165,7 +165,7 @@ defmodule Loomkin.Teams.NestedTeamsTest do
 
       assert context.parent_team_id == "team-abc"
       assert context.parent_team_id == context.team_id
-      assert context.model == "anthropic:claude-sonnet-4-6"
+      assert context.model == "zai:glm-5"
     end
 
     test "parent_team_id is nil when team_id is nil" do
@@ -174,7 +174,7 @@ defmodule Loomkin.Teams.NestedTeamsTest do
         session_id: "sess-2",
         agent_name: nil,
         team_id: nil,
-        model: "anthropic:claude-sonnet-4-6"
+        model: "zai:glm-5"
       }
 
       context = %{

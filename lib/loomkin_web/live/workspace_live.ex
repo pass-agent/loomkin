@@ -702,14 +702,16 @@ defmodule LoomkinWeb.WorkspaceLive do
     # Also add assistant messages to activity feed for mission control mode
     socket =
       if msg.role == :assistant do
+        agent_name = Map.get(msg, :from, "Architect")
+
         event = %{
           id: Ecto.UUID.generate(),
           type: :message,
-          agent: "Architect",
+          agent: agent_name,
           content: msg.content,
           timestamp: DateTime.utc_now(),
           expanded: false,
-          metadata: %{from: "Architect", role: :assistant}
+          metadata: %{from: agent_name, role: :assistant}
         }
 
         append_activity_event(socket, event)

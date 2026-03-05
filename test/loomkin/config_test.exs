@@ -14,12 +14,14 @@ defmodule Loomkin.ConfigTest do
   describe "defaults" do
     test "get/1 returns default model config" do
       model = Loomkin.Config.get(:model)
-      assert model.default == "anthropic:claude-sonnet-4-6"
+      defaults = Loomkin.Config.defaults()
+      assert model.default == defaults.model.default
       assert is_nil(model.editor)
     end
 
     test "get/2 returns nested values" do
-      assert Loomkin.Config.get(:model, :default) == "anthropic:claude-sonnet-4-6"
+      defaults = Loomkin.Config.defaults()
+      assert Loomkin.Config.get(:model, :default) == defaults.model.default
       assert is_nil(Loomkin.Config.get(:model, :editor))
     end
 
@@ -82,16 +84,16 @@ defmodule Loomkin.ConfigTest do
 
       toml_content = """
       [model]
-      default = "anthropic:claude-sonnet-4-6"
-      editor = "anthropic:claude-haiku-4-5"
+      default = "zai:glm-5"
+      editor = "zai:glm-4.5"
       """
 
       File.write!(Path.join(@test_dir, ".loomkin.toml"), toml_content)
 
       Loomkin.Config.load(@test_dir)
 
-      assert Loomkin.Config.get(:model, :default) == "anthropic:claude-sonnet-4-6"
-      assert Loomkin.Config.get(:model, :editor) == "anthropic:claude-haiku-4-5"
+      assert Loomkin.Config.get(:model, :default) == "zai:glm-5"
+      assert Loomkin.Config.get(:model, :editor) == "zai:glm-4.5"
     after
       File.rm_rf!(@test_dir)
     end

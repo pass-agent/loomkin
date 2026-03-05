@@ -43,7 +43,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
           input_tokens: 200,
           output_tokens: 100,
           cost: 0.02,
-          model: "anthropic:claude-sonnet-4-6"
+          model: "zai:glm-5"
         })
 
       usage = CostTracker.get_agent_usage(team_id, "coder")
@@ -51,7 +51,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
       assert usage.output_tokens == 150
       assert usage.cost == 0.03
       assert usage.requests == 2
-      assert usage.last_model == "anthropic:claude-sonnet-4-6"
+      assert usage.last_model == "zai:glm-5"
     end
 
     test "handles partial usage maps", %{team_id: team_id} do
@@ -69,7 +69,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
         CostTracker.record_usage(team_id, "coder", %{
           input_tokens: 1_000_000,
           output_tokens: 1_000_000,
-          model: "anthropic:claude-sonnet-4-6"
+          model: "zai:glm-5"
         })
 
       usage = CostTracker.get_agent_usage(team_id, "coder")
@@ -186,7 +186,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
     test "auto-calculates cost when not provided", %{team_id: team_id} do
       :ok =
         CostTracker.record_call(team_id, "coder", %{
-          model: "anthropic:claude-sonnet-4-6",
+          model: "zai:glm-5",
           input_tokens: 1_000_000,
           output_tokens: 1_000_000
         })
@@ -246,7 +246,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
           team_id,
           "coder",
           "zai:glm-5",
-          "anthropic:claude-sonnet-4-6"
+          "zai:glm-5"
         )
 
       escalations = CostTracker.list_escalations(team_id)
@@ -255,7 +255,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
       [event] = escalations
       assert event.agent == "coder"
       assert event.from == "zai:glm-5"
-      assert event.to == "anthropic:claude-sonnet-4-6"
+      assert event.to == "zai:glm-5"
       assert %DateTime{} = event.at
     end
 
@@ -267,7 +267,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
           team_id,
           "coder",
           "zai:glm-5",
-          "anthropic:claude-sonnet-4-6"
+          "zai:glm-5"
         )
 
       escalations = CostTracker.list_escalations(team_id)
@@ -304,7 +304,7 @@ defmodule Loomkin.Teams.CostTrackerTest do
           team_id,
           "coder",
           "zai:glm-5",
-          "anthropic:claude-sonnet-4-6"
+          "zai:glm-5"
         )
 
       :ok = CostTracker.reset_team(team_id)
