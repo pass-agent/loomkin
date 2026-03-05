@@ -55,7 +55,10 @@ defmodule Loomkin.Decisions.Cascade do
             count + 1
 
           {:error, reason} ->
-            Logger.warning("[Cascade] Failed to update node #{downstream_node.id}: #{inspect(reason)}")
+            Logger.warning(
+              "[Cascade] Failed to update node #{downstream_node.id}: #{inspect(reason)}"
+            )
+
             count
         end
       end
@@ -67,15 +70,17 @@ defmodule Loomkin.Decisions.Cascade do
     agent_name = downstream_node.agent_name
 
     if team_id && agent_name do
-      warning = {:confidence_warning, %{
-        source_node_id: source_node.id,
-        source_title: source_node.title,
-        source_confidence: source_node.confidence,
-        affected_node_id: downstream_node.id,
-        affected_title: downstream_node.title,
-        keeper_id: source_node.metadata["keeper_id"],
-        edge_path: [edge_type]
-      }}
+      warning =
+        {:confidence_warning,
+         %{
+           source_node_id: source_node.id,
+           source_title: source_node.title,
+           source_confidence: source_node.confidence,
+           affected_node_id: downstream_node.id,
+           affected_title: downstream_node.title,
+           keeper_id: source_node.metadata["keeper_id"],
+           edge_path: [edge_type]
+         }}
 
       Comms.send_to(team_id, agent_name, warning)
     end

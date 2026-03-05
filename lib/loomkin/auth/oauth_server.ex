@@ -23,7 +23,9 @@ defmodule Loomkin.Auth.OAuthServer do
   use GenServer
   require Logger
 
-  alias Loomkin.Auth.{Provider, ProviderRegistry, TokenStore}
+  alias Loomkin.Auth.Provider
+  alias Loomkin.Auth.ProviderRegistry
+  alias Loomkin.Auth.TokenStore
 
   @flow_timeout_ms :timer.minutes(10)
 

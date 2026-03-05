@@ -3,7 +3,8 @@ defmodule Loomkin.Decisions.Narrative do
 
   import Ecto.Query
   alias Loomkin.Repo
-  alias Loomkin.Schemas.{DecisionNode, DecisionEdge}
+  alias Loomkin.Schemas.DecisionEdge
+  alias Loomkin.Schemas.DecisionNode
 
   def for_session(session_id) do
     DecisionNode

@@ -41,7 +41,8 @@ defmodule Loomkin.Teams.ModelRouterTest do
     end
 
     test "task without model_hint falls back to default" do
-      assert ModelRouter.default_model() == ModelRouter.select(:coder, %{description: "some task"})
+      assert ModelRouter.default_model() ==
+               ModelRouter.select(:coder, %{description: "some task"})
     end
 
     test "nil task falls back to default" do

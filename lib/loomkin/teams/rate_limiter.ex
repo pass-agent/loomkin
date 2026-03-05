@@ -118,9 +118,10 @@ defmodule Loomkin.Teams.RateLimiter do
       spent: team.spent,
       limit: team.limit,
       remaining: team.limit - team.spent,
-      agents: Map.new(team.agents, fn {name, agent} ->
-        {name, %{spent: agent.spent, limit: agent.limit, tokens_used: agent.tokens_used}}
-      end)
+      agents:
+        Map.new(team.agents, fn {name, agent} ->
+          {name, %{spent: agent.spent, limit: agent.limit, tokens_used: agent.tokens_used}}
+        end)
     }
 
     {:reply, result, state}
@@ -152,12 +153,13 @@ defmodule Loomkin.Teams.RateLimiter do
     now = System.monotonic_time(:millisecond)
 
     Map.new(@default_buckets, fn {provider, config} ->
-      {provider, %{
-        tokens: config.max,
-        max: config.max,
-        refill_rate: config.refill_rate,
-        last_refill: now
-      }}
+      {provider,
+       %{
+         tokens: config.max,
+         max: config.max,
+         refill_rate: config.refill_rate,
+         last_refill: now
+       }}
     end)
   end
 

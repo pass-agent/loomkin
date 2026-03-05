@@ -213,6 +213,7 @@ defmodule LoomkinWeb.CostDashboardLive do
 
   defp success_color(successes, total) when total > 0 do
     pct = successes / total * 100
+
     cond do
       pct >= 90 -> "text-green-400"
       pct >= 70 -> "text-yellow-400"

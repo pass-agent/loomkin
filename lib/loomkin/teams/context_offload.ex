@@ -1,7 +1,10 @@
 defmodule Loomkin.Teams.ContextOffload do
   @moduledoc "Logic for when and how agents offload context to keepers."
 
-  alias Loomkin.Teams.{ContextKeeper, Manager}
+  require Logger
+
+  alias Loomkin.Teams.ContextKeeper
+  alias Loomkin.Teams.Manager
   alias Loomkin.Session.ContextWindow
 
   @offload_threshold 0.60
@@ -156,7 +159,9 @@ defmodule Loomkin.Teams.ContextOffload do
       end
     end
   rescue
-    _ -> infer_topic(messages)
+    e ->
+      Logger.warning("[ContextOffload] Topic generation failed: #{Exception.message(e)}")
+      infer_topic(messages)
   end
 
   # --- Private ---

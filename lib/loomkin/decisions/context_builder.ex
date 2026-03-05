@@ -1,7 +1,8 @@
 defmodule Loomkin.Decisions.ContextBuilder do
   @moduledoc "Builds structured decision context for system prompt injection."
 
-  alias Loomkin.Decisions.{Graph, Narrative}
+  alias Loomkin.Decisions.Graph
+  alias Loomkin.Decisions.Narrative
 
   @default_max_tokens 1024
 

@@ -67,13 +67,28 @@ defmodule LoomkinWeb.ChatComponent do
               <p class="text-sm text-gray-500 mt-1">Send a message to start your coding session.</p>
             </div>
             <div class="flex flex-wrap gap-2 justify-center pt-2">
-              <button phx-click="select_prompt" phx-value-prompt="Explore this codebase" phx-target={@myself} class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer">
+              <button
+                phx-click="select_prompt"
+                phx-value-prompt="Explore this codebase"
+                phx-target={@myself}
+                class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer"
+              >
                 Explore this codebase
               </button>
-              <button phx-click="select_prompt" phx-value-prompt="Fix a bug" phx-target={@myself} class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer">
+              <button
+                phx-click="select_prompt"
+                phx-value-prompt="Fix a bug"
+                phx-target={@myself}
+                class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer"
+              >
                 Fix a bug
               </button>
-              <button phx-click="select_prompt" phx-value-prompt="Add a feature" phx-target={@myself} class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer">
+              <button
+                phx-click="select_prompt"
+                phx-value-prompt="Add a feature"
+                phx-target={@myself}
+                class="px-3 py-1.5 text-xs bg-gray-800/80 text-gray-400 rounded-full border border-gray-700/50 hover:border-violet-500/30 hover:text-gray-300 transition-all duration-200 cursor-pointer"
+              >
                 Add a feature
               </button>
             </div>
@@ -93,7 +108,6 @@ defmodule LoomkinWeb.ChatComponent do
                     <span class="text-xs font-bold text-white">U</span>
                   </div>
                 </div>
-
               <% :assistant -> %>
                 <div class="flex items-start gap-3 max-w-[85%]">
                   <div class="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/30">
@@ -105,7 +119,6 @@ defmodule LoomkinWeb.ChatComponent do
                     </div>
                   </div>
                 </div>
-
               <% :tool -> %>
                 <div class="max-w-[85%] ml-10 animate-fade-in-up">
                   <%= if String.starts_with?(msg.content || "", "Error:") do %>
@@ -124,7 +137,9 @@ defmodule LoomkinWeb.ChatComponent do
                       >
                         <span class="tool-card-icon">{tool_icon(msg)}</span>
                         <span>{tool_display_name(msg)}</span>
-                        <span class="ml-auto text-gray-500 tool-card-chevron transition-transform duration-200">&#9656;</span>
+                        <span class="ml-auto text-gray-500 tool-card-chevron transition-transform duration-200">
+                          &#9656;
+                        </span>
                       </div>
                       <div class="tool-card-body px-3 py-2 border-t border-gray-800/50 bg-gray-900/30">
                         <pre class="text-xs text-gray-400 whitespace-pre-wrap overflow-x-auto font-mono leading-relaxed tool-file-paths">{truncate_result(msg.content)}</pre>
@@ -132,7 +147,6 @@ defmodule LoomkinWeb.ChatComponent do
                     </div>
                   <% end %>
                 </div>
-
               <% _ -> %>
                 <div class="text-xs text-gray-500 px-3">
                   {inspect(msg)}
@@ -142,7 +156,10 @@ defmodule LoomkinWeb.ChatComponent do
         </div>
 
         <%!-- Streaming / Thinking State --%>
-        <div :if={@streaming || @status == :thinking} class="flex items-start gap-3 max-w-[85%] animate-fade-in-up">
+        <div
+          :if={@streaming || @status == :thinking}
+          class="flex items-start gap-3 max-w-[85%] animate-fade-in-up"
+        >
           <div class="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/30">
             <span class="text-xs font-bold text-white">L</span>
           </div>
@@ -174,7 +191,10 @@ defmodule LoomkinWeb.ChatComponent do
               </span>
             </div>
             <div class="p-3 space-y-1.5">
-              <div :for={{step, idx} <- Enum.with_index(@plan_steps)} class="flex items-center gap-2 text-xs">
+              <div
+                :for={{step, idx} <- Enum.with_index(@plan_steps)}
+                class="flex items-center gap-2 text-xs"
+              >
                 <%= cond do %>
                   <% @current_step != nil && idx < @current_step -> %>
                     <span class="text-green-400">&#10003;</span>
@@ -194,11 +214,24 @@ defmodule LoomkinWeb.ChatComponent do
         <%!-- Tool Executing State --%>
         <div :if={@current_tool} class="flex items-center gap-2 ml-10 animate-fade-in-up">
           <div class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/40 rounded-lg border border-violet-500/10 shadow-sm shadow-violet-500/5">
-            <svg class="animate-spin h-3.5 w-3.5 text-violet-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            <svg
+              class="animate-spin h-3.5 w-3.5 text-violet-400"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+              </circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              >
+              </path>
             </svg>
-            <span class="text-xs text-gray-400">Running <span class="text-violet-400 font-medium">{@current_tool}</span></span>
+            <span class="text-xs text-gray-400">
+              Running <span class="text-violet-400 font-medium">{@current_tool}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -241,11 +274,23 @@ defmodule LoomkinWeb.ChatComponent do
     id = tool_call_id(msg)
 
     cond do
-      String.contains?(id, "file") or String.contains?(id, "read") or String.contains?(id, "write") or String.contains?(id, "edit") -> :file
-      String.contains?(id, "shell") or String.contains?(id, "bash") or String.contains?(id, "exec") -> :shell
-      String.contains?(id, "search") or String.contains?(id, "grep") or String.contains?(id, "glob") -> :search
-      String.contains?(id, "decision") or String.contains?(id, "plan") -> :decision
-      true -> :default
+      String.contains?(id, "file") or String.contains?(id, "read") or
+        String.contains?(id, "write") or String.contains?(id, "edit") ->
+        :file
+
+      String.contains?(id, "shell") or String.contains?(id, "bash") or
+          String.contains?(id, "exec") ->
+        :shell
+
+      String.contains?(id, "search") or String.contains?(id, "grep") or
+          String.contains?(id, "glob") ->
+        :search
+
+      String.contains?(id, "decision") or String.contains?(id, "plan") ->
+        :decision
+
+      true ->
+        :default
     end
   end
 

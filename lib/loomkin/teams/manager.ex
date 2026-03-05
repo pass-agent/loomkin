@@ -1,8 +1,13 @@
 defmodule Loomkin.Teams.Manager do
   @moduledoc "Public API for team lifecycle management."
 
-  alias Loomkin.Decisions.{AutoLogger, Broadcaster}
-  alias Loomkin.Teams.{Comms, ConflictDetector, Distributed, Rebalancer, TableRegistry}
+  alias Loomkin.Decisions.AutoLogger
+  alias Loomkin.Decisions.Broadcaster
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.ConflictDetector
+  alias Loomkin.Teams.Distributed
+  alias Loomkin.Teams.Rebalancer
+  alias Loomkin.Teams.TableRegistry
 
   require Logger
 
@@ -25,14 +30,18 @@ defmodule Loomkin.Teams.Manager do
     {:ok, ref} = TableRegistry.create_table(team_id)
 
     # Store team metadata
-    :ets.insert(ref, {:meta, %{
-      id: team_id,
-      name: name,
-      project_path: opts[:project_path],
-      parent_team_id: nil,
-      depth: 0,
-      created_at: DateTime.utc_now()
-    }})
+    :ets.insert(
+      ref,
+      {:meta,
+       %{
+         id: team_id,
+         name: name,
+         project_path: opts[:project_path],
+         parent_team_id: nil,
+         depth: 0,
+         created_at: DateTime.utc_now()
+       }}
+    )
 
     # Start decision graph nervous system processes
     start_nervous_system(team_id)
@@ -66,15 +75,19 @@ defmodule Loomkin.Teams.Manager do
           project_path = opts[:project_path] || parent_meta[:project_path]
           {:ok, ref} = TableRegistry.create_table(sub_team_id)
 
-          :ets.insert(ref, {:meta, %{
-            id: sub_team_id,
-            name: name,
-            project_path: project_path,
-            parent_team_id: parent_team_id,
-            depth: parent_depth + 1,
-            spawning_agent: spawning_agent,
-            created_at: DateTime.utc_now()
-          }})
+          :ets.insert(
+            ref,
+            {:meta,
+             %{
+               id: sub_team_id,
+               name: name,
+               project_path: project_path,
+               parent_team_id: parent_team_id,
+               depth: parent_depth + 1,
+               spawning_agent: spawning_agent,
+               created_at: DateTime.utc_now()
+             }}
+          )
 
           # Register sub-team relationship in parent's ETS
           parent_table = TableRegistry.get_table!(parent_team_id)
@@ -180,7 +193,7 @@ defmodule Loomkin.Teams.Manager do
 
         # Notify all running agents in this team
         for %{pid: pid} <- list_agents(team_id) do
-          GenServer.cast(pid, {:update_project_path, new_path})
+          Loomkin.Teams.Agent.update_project_path(pid, new_path)
         end
 
         # Recursively update sub-teams
@@ -234,7 +247,12 @@ defmodule Loomkin.Teams.Manager do
         (Map.has_key?(meta, :role) or Map.has_key?(meta, "role"))
     end)
     |> Enum.map(fn %{name: name, pid: pid, meta: meta} ->
-      %{name: name, pid: pid, role: meta[:role] || meta["role"], status: meta[:status] || meta["status"] || :idle}
+      %{
+        name: name,
+        pid: pid,
+        role: meta[:role] || meta["role"],
+        status: meta[:status] || meta["status"] || :idle
+      }
     end)
   end
 
@@ -275,6 +293,7 @@ defmodule Loomkin.Teams.Manager do
 
     # Stop all context keepers
     keepers = list_keepers(team_id)
+
     Enum.each(keepers, fn keeper ->
       if Process.alive?(keeper.pid), do: Distributed.terminate_child(keeper.pid)
     end)
@@ -304,7 +323,9 @@ defmodule Loomkin.Teams.Manager do
   # Private helpers
 
   defp generate_team_id(name) do
-    sanitized = name |> String.downcase() |> String.replace(~r/[^a-z0-9-]/, "-") |> String.slice(0, 20)
+    sanitized =
+      name |> String.downcase() |> String.replace(~r/[^a-z0-9-]/, "-") |> String.slice(0, 20)
+
     suffix = :crypto.strong_rand_bytes(4) |> Base.url_encode64(padding: false)
     "#{sanitized}-#{suffix}"
   end
@@ -375,7 +396,12 @@ defmodule Loomkin.Teams.Manager do
   end
 
   defp stop_nervous_system(team_id) do
-    for key <- [{:auto_logger, team_id}, {:broadcaster, team_id}, {:rebalancer, team_id}, {:conflict_detector, team_id}] do
+    for key <- [
+          {:auto_logger, team_id},
+          {:broadcaster, team_id},
+          {:rebalancer, team_id},
+          {:conflict_detector, team_id}
+        ] do
       case Registry.lookup(Loomkin.Teams.AgentRegistry, key) do
         [{pid, _}] -> Distributed.terminate_child(pid)
         [] -> :ok
@@ -385,7 +411,8 @@ defmodule Loomkin.Teams.Manager do
 
   defp notify_parent_on_dissolution(team_id) do
     case get_team_meta(team_id) do
-      {:ok, %{parent_team_id: parent_id, spawning_agent: agent}} when is_binary(parent_id) and not is_nil(agent) ->
+      {:ok, %{parent_team_id: parent_id, spawning_agent: agent}}
+      when is_binary(parent_id) and not is_nil(agent) ->
         Comms.send_to(parent_id, agent, {:sub_team_completed, team_id})
 
       _ ->

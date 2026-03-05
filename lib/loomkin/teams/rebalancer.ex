@@ -10,7 +10,8 @@ defmodule Loomkin.Teams.Rebalancer do
 
   require Logger
 
-  alias Loomkin.Teams.{Comms, Context}
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.Context
 
   @pubsub Loomkin.PubSub
   @check_interval_ms 60_000
@@ -141,7 +142,9 @@ defmodule Loomkin.Teams.Rebalancer do
 
       Comms.send_to(state.team_id, agent_name, {:peer_message, "rebalancer", nudge_msg})
 
-      Logger.info("[Rebalancer] Nudged #{agent_name} in team #{state.team_id} (#{idle_min}m idle, nudge #{nudge_count + 1})")
+      Logger.info(
+        "[Rebalancer] Nudged #{agent_name} in team #{state.team_id} (#{idle_min}m idle, nudge #{nudge_count + 1})"
+      )
 
       put_in(state.nudge_counts[agent_name], nudge_count + 1)
     else

@@ -12,7 +12,9 @@ defmodule Loomkin.Teams.Migration do
   See `docs/clustering-deps.md`.
   """
 
-  alias Loomkin.Teams.{Cluster, Distributed, Manager}
+  alias Loomkin.Teams.Cluster
+  alias Loomkin.Teams.Distributed
+  alias Loomkin.Teams.Manager
 
   require Logger
 
@@ -46,7 +48,7 @@ defmodule Loomkin.Teams.Migration do
     case Manager.find_agent(team_id, agent_name) do
       {:ok, pid} ->
         try do
-          state = GenServer.call(pid, :get_state, 5_000)
+          state = Loomkin.Teams.Agent.get_state(pid)
 
           serialized = %{
             team_id: team_id,
@@ -90,9 +92,7 @@ defmodule Loomkin.Teams.Migration do
     with {:ok, state} <- serialize_agent_state(team_id, agent_name),
          :ok <- stop_agent_on_source(team_id, agent_name),
          {:ok, pid} <- start_agent_on_target(state, target_node) do
-      Logger.info(
-        "[Migration] Migrated #{agent_name} from #{Node.self()} to #{target_node}"
-      )
+      Logger.info("[Migration] Migrated #{agent_name} from #{Node.self()} to #{target_node}")
 
       {:ok, pid}
     else

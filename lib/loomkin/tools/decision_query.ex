@@ -6,14 +6,19 @@ defmodule Loomkin.Tools.DecisionQuery do
     description:
       "Query the decision graph for active goals, recent decisions, pulse reports, or search by keyword",
     schema: [
-      query_type: [type: :string, required: true, doc: "Type of query to run (active_goals, recent_decisions, pulse, search)"],
+      query_type: [
+        type: :string,
+        required: true,
+        doc: "Type of query to run (active_goals, recent_decisions, pulse, search)"
+      ],
       search_term: [type: :string, doc: "Search term for 'search' query type"],
       limit: [type: :integer, doc: "Maximum results to return (default 10)"]
     ]
 
   import Loomkin.Tool, only: [param!: 2, param: 3]
 
-  alias Loomkin.Decisions.{Graph, Pulse}
+  alias Loomkin.Decisions.Graph
+  alias Loomkin.Decisions.Pulse
 
   @impl true
   def run(params, _context) do
@@ -39,7 +44,8 @@ defmodule Loomkin.Tools.DecisionQuery do
         {:ok, %{result: format_nodes("Search Results for '#{search_term}'", results)}}
 
       other ->
-        {:error, "Unknown query_type '#{other}'. Valid types: active_goals, recent_decisions, pulse, search"}
+        {:error,
+         "Unknown query_type '#{other}'. Valid types: active_goals, recent_decisions, pulse, search"}
     end
   end
 

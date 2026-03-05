@@ -9,7 +9,11 @@ defmodule Loomkin.Tools.PeerChangeRole do
     schema: [
       team_id: [type: :string, required: true, doc: "Team ID"],
       target: [type: :string, required: true, doc: "Name of the agent to change (can be self)"],
-      new_role: [type: :string, required: true, doc: "New role name (lead, researcher, coder, reviewer, tester)"],
+      new_role: [
+        type: :string,
+        required: true,
+        doc: "New role name (lead, researcher, coder, reviewer, tester)"
+      ],
       require_approval: [type: :boolean, doc: "If true, request lead approval before changing"]
     ]
 

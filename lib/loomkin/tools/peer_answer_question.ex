@@ -8,7 +8,11 @@ defmodule Loomkin.Tools.PeerAnswerQuestion do
         "The answer is delivered back to the original asker.",
     schema: [
       team_id: [type: :string, required: true, doc: "Team ID"],
-      query_id: [type: :string, required: true, doc: "The query ID from the question you received"],
+      query_id: [
+        type: :string,
+        required: true,
+        doc: "The query ID from the question you received"
+      ],
       answer: [type: :string, required: true, doc: "Your answer to the question"]
     ]
 

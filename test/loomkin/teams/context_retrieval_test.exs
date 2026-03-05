@@ -28,11 +28,7 @@ defmodule Loomkin.Teams.ContextRetrievalTest do
       DynamicSupervisor.start_child(
         Loomkin.Teams.AgentSupervisor,
         {ContextKeeper,
-         id: id,
-         team_id: team_id,
-         topic: topic,
-         source_agent: source_agent,
-         messages: messages}
+         id: id, team_id: team_id, topic: topic, source_agent: source_agent, messages: messages}
       )
 
     %{pid: pid, id: id}
@@ -143,7 +139,9 @@ defmodule Loomkin.Teams.ContextRetrievalTest do
       messages = [%{role: :user, content: "raw content here"}]
       %{id: id} = spawn_keeper(team_id, topic: "raw test", messages: messages)
 
-      {:ok, result} = ContextRetrieval.retrieve(team_id, "what is raw test?", keeper_id: id, mode: :raw)
+      {:ok, result} =
+        ContextRetrieval.retrieve(team_id, "what is raw test?", keeper_id: id, mode: :raw)
+
       assert length(result) == 1
       assert hd(result).content == "raw content here"
     end
@@ -154,7 +152,9 @@ defmodule Loomkin.Teams.ContextRetrievalTest do
 
       # This test depends on ContextKeeper.smart_retrieve/2 from Task #1.
       # It will fail until that function is available.
-      {:ok, result} = ContextRetrieval.retrieve(team_id, "keywords only", keeper_id: id, mode: :smart)
+      {:ok, result} =
+        ContextRetrieval.retrieve(team_id, "keywords only", keeper_id: id, mode: :smart)
+
       assert is_binary(result) or is_list(result)
     end
   end

@@ -152,7 +152,8 @@ defmodule Loomkin.Channels.Telegram.AdapterTest do
         }
       }
 
-      assert {:callback, "q-42", %{raw: "ask_user:q-42:1", from_id: nil}} = Adapter.parse_inbound(update)
+      assert {:callback, "q-42", %{raw: "ask_user:q-42:1", from_id: nil}} =
+               Adapter.parse_inbound(update)
     end
 
     test "parses callback query with legacy unstructured data" do
@@ -169,7 +170,8 @@ defmodule Loomkin.Channels.Telegram.AdapterTest do
       }
 
       # Legacy fallback: data is used as callback_id, wrapped with user metadata
-      assert {:callback, "Option A", %{raw: "Option A", from_id: nil}} = Adapter.parse_inbound(update)
+      assert {:callback, "Option A", %{raw: "Option A", from_id: nil}} =
+               Adapter.parse_inbound(update)
     end
 
     test "ignores unknown update types" do

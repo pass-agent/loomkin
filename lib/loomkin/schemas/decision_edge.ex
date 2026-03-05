@@ -11,7 +11,18 @@ defmodule Loomkin.Schemas.DecisionEdge do
     belongs_to :to_node, Loomkin.Schemas.DecisionNode
 
     field :edge_type, Ecto.Enum,
-      values: [:leads_to, :chosen, :rejected, :requires, :blocks, :enables, :supersedes, :supports, :revises, :summarizes]
+      values: [
+        :leads_to,
+        :chosen,
+        :rejected,
+        :requires,
+        :blocks,
+        :enables,
+        :supersedes,
+        :supports,
+        :revises,
+        :summarizes
+      ]
 
     field :weight, :float, default: 1.0
     field :rationale, :string

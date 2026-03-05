@@ -12,6 +12,7 @@ defmodule Loomkin.Decisions.SupervisionTest do
 
     on_exit(fn ->
       Manager.dissolve_team(team_id)
+
       if is_nil(prev),
         do: Application.delete_env(:loomkin, :start_nervous_system),
         else: Application.put_env(:loomkin, :start_nervous_system, prev)

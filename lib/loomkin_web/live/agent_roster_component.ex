@@ -8,17 +8,6 @@ defmodule LoomkinWeb.AgentRosterComponent do
 
   use LoomkinWeb, :live_component
 
-  @agent_colors [
-    "#818cf8",
-    "#34d399",
-    "#f472b6",
-    "#fb923c",
-    "#22d3ee",
-    "#a78bfa",
-    "#fbbf24",
-    "#4ade80"
-  ]
-
   @impl true
   def mount(socket) do
     {:ok, assign(socket, tasks_collapsed: false)}
@@ -108,7 +97,8 @@ defmodule LoomkinWeb.AgentRosterComponent do
               >
                 {agent.name}
               </span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded font-medium text-muted"
+              <span
+                class="text-[10px] px-1.5 py-0.5 rounded font-medium text-muted"
                 style="background: var(--brand-muted);"
               >
                 {format_role(agent.role)}
@@ -180,7 +170,9 @@ defmodule LoomkinWeb.AgentRosterComponent do
               style="transition: background var(--transition-base);"
             >
               <span class="flex-shrink-0 w-4 text-center">{task_status_icon(task.status)}</span>
-              <span class="text-xs truncate flex-1" style="color: var(--text-secondary);">{task.title}</span>
+              <span class="text-xs truncate flex-1" style="color: var(--text-secondary);">
+                {task.title}
+              </span>
               <span
                 :if={task.owner not in [nil, ""]}
                 class="text-[10px] truncate max-w-[4rem] text-right font-mono text-muted"
@@ -199,7 +191,9 @@ defmodule LoomkinWeb.AgentRosterComponent do
         <div class="flex items-center justify-between mb-2">
           <span class="text-[10px] font-semibold text-muted uppercase tracking-widest">Budget</span>
           <span class="text-[11px] font-mono tabular-nums" style="color: var(--text-secondary);">
-            <span>$</span>{format_decimal(@budget.spent)}<span class="text-muted">&nbsp;/&nbsp;$</span>{format_decimal(@budget.limit)}
+            <span>$</span>{format_decimal(@budget.spent)}<span class="text-muted">&nbsp;/&nbsp;$</span>{format_decimal(
+              @budget.limit
+            )}
           </span>
         </div>
         <div class="w-full rounded-full h-1.5 overflow-hidden" style="background: var(--surface-3);">
@@ -259,10 +253,7 @@ defmodule LoomkinWeb.AgentRosterComponent do
 
   # --- Agent color hash ---
 
-  defp agent_color(name) do
-    index = :erlang.phash2(name, length(@agent_colors))
-    Enum.at(@agent_colors, index)
-  end
+  defp agent_color(name), do: LoomkinWeb.AgentColors.agent_color(name)
 
   # --- Status helpers ---
 
@@ -293,8 +284,7 @@ defmodule LoomkinWeb.AgentRosterComponent do
     do: Phoenix.HTML.raw(~s(<span class="text-green-400">&#10003;</span>))
 
   defp task_status_icon(:in_progress),
-    do:
-      Phoenix.HTML.raw(~s(<span class="text-brand animate-spin inline-block">&#9684;</span>))
+    do: Phoenix.HTML.raw(~s(<span class="text-brand animate-spin inline-block">&#9684;</span>))
 
   defp task_status_icon(:assigned),
     do: Phoenix.HTML.raw(~s[<span style="color: var(--accent-cyan);">&#8594;</span>])

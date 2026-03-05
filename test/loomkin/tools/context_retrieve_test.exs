@@ -105,7 +105,13 @@ defmodule Loomkin.Tools.ContextRetrieveTest do
           messages: [%{role: :user, content: "smart content here"}]
         )
 
-      params = %{team_id: team_id, query: "what is the smart content?", keeper_id: id, mode: "smart"}
+      params = %{
+        team_id: team_id,
+        query: "what is the smart content?",
+        keeper_id: id,
+        mode: "smart"
+      }
+
       assert {:ok, %{result: result}} = ContextRetrieve.run(params, context())
       assert is_binary(result)
     end

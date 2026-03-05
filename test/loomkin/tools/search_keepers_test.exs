@@ -96,7 +96,9 @@ defmodule Loomkin.Tools.SearchKeepersTest do
       assert {:ok, %{result: result}} = SearchKeepers.run(params, context(team_id))
 
       # The keeper with "auth database implementation" in its topic should appear first (relevance=2)
-      lines = result |> String.split("\n", trim: true) |> Enum.filter(&String.starts_with?(&1, "- "))
+      lines =
+        result |> String.split("\n", trim: true) |> Enum.filter(&String.starts_with?(&1, "- "))
+
       [first_entry, second_entry] = lines
       assert first_entry =~ "relevance=2"
       assert second_entry =~ "relevance=1"

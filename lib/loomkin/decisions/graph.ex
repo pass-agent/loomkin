@@ -4,7 +4,8 @@ defmodule Loomkin.Decisions.Graph do
   import Ecto.Query
   alias Loomkin.Repo
   alias Loomkin.Decisions.Cascade
-  alias Loomkin.Schemas.{DecisionNode, DecisionEdge}
+  alias Loomkin.Schemas.DecisionEdge
+  alias Loomkin.Schemas.DecisionNode
 
   # --- Nodes ---
 
@@ -176,7 +177,10 @@ defmodule Loomkin.Decisions.Graph do
   def walk_downstream(node_id, edge_types, opts \\ []) do
     max_depth = Keyword.get(opts, :max_depth, 5)
     edge_types = List.wrap(edge_types)
-    {results, _visited} = do_walk(node_id, edge_types, max_depth, 1, :downstream, MapSet.new(), [])
+
+    {results, _visited} =
+      do_walk(node_id, edge_types, max_depth, 1, :downstream, MapSet.new(), [])
+
     results
   end
 
@@ -236,7 +240,9 @@ defmodule Loomkin.Decisions.Graph do
       # Thread visited set across sibling branches to prevent duplicates on diamond paths
       {deeper, visited} =
         Enum.reduce(next_ids, {[], visited}, fn id, {deep_acc, vis} ->
-          {results, vis} = do_walk(id, edge_types, max_depth, current_depth + 1, direction, vis, [])
+          {results, vis} =
+            do_walk(id, edge_types, max_depth, current_depth + 1, direction, vis, [])
+
           {deep_acc ++ results, vis}
         end)
 

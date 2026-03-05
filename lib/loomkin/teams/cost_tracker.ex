@@ -7,6 +7,8 @@ defmodule Loomkin.Teams.CostTracker do
   alias Loomkin.Teams.Pricing
 
   @table :loomkin_cost_tracker
+  @max_call_history 500
+  @max_escalations 500
 
   def init do
     if :ets.whereis(@table) == :undefined do
@@ -74,7 +76,7 @@ defmodule Loomkin.Teams.CostTracker do
       end)
 
     current = lookup_or_default(key, [])
-    :ets.insert(@table, {key, [call | current]})
+    :ets.insert(@table, {key, Enum.take([call | current], @max_call_history)})
     :ok
   end
 
@@ -92,7 +94,13 @@ defmodule Loomkin.Teams.CostTracker do
 
     case :ets.lookup(@table, key) do
       [{^key, in_t, out_t, cost_micros, reqs, model}] ->
-        %{input_tokens: in_t, output_tokens: out_t, cost: cost_micros / @cost_scale, requests: reqs, last_model: model}
+        %{
+          input_tokens: in_t,
+          output_tokens: out_t,
+          cost: cost_micros / @cost_scale,
+          requests: reqs,
+          last_model: model
+        }
 
       _ ->
         default_agent_usage()
@@ -102,13 +110,21 @@ defmodule Loomkin.Teams.CostTracker do
   @doc "Get per-agent usage breakdown for a team."
   def get_team_usage(team_id) do
     init_if_needed()
+
     :ets.tab2list(@table)
     |> Enum.filter(fn
       {{:agent, ^team_id, _name}, _, _, _, _, _} -> true
       _ -> false
     end)
     |> Map.new(fn {{:agent, ^team_id, name}, in_t, out_t, cost_micros, reqs, model} ->
-      {name, %{input_tokens: in_t, output_tokens: out_t, cost: cost_micros / @cost_scale, requests: reqs, last_model: model}}
+      {name,
+       %{
+         input_tokens: in_t,
+         output_tokens: out_t,
+         cost: cost_micros / @cost_scale,
+         requests: reqs,
+         last_model: model
+       }}
     end)
   end
 
@@ -153,7 +169,7 @@ defmodule Loomkin.Teams.CostTracker do
       at: DateTime.utc_now()
     }
 
-    :ets.insert(@table, {key, [entry | current]})
+    :ets.insert(@table, {key, Enum.take([entry | current], @max_escalations)})
     :ok
   end
 

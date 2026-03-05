@@ -14,7 +14,8 @@ defmodule Loomkin.Tools.PeerDiscovery do
 
   import Loomkin.Tool, only: [param!: 2, param: 2]
 
-  alias Loomkin.Teams.{Comms, Context}
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.Context
 
   @impl true
   def run(params, context) do
@@ -32,7 +33,8 @@ defmodule Loomkin.Tools.PeerDiscovery do
         {:ok, %{result: "Discovery broadcast to team: #{String.slice(content, 0, 80)}"}}
 
       {:error, :not_found} ->
-        {:error, "No active team session for team '#{team_id}'. PeerDiscovery requires a running team."}
+        {:error,
+         "No active team session for team '#{team_id}'. PeerDiscovery requires a running team."}
     end
   end
 end

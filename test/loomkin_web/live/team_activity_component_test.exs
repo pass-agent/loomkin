@@ -7,19 +7,21 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
 
   describe "rendering" do
     test "renders empty activity feed" do
-      html = render_component(LoomkinWeb.TeamActivityComponent, %{
-        id: "test-activity",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamActivityComponent, %{
+          id: "test-activity",
+          team_id: @team_id
+        })
 
       assert html =~ "No activity yet"
     end
 
     test "renders All agent filter button active by default" do
-      html = render_component(LoomkinWeb.TeamActivityComponent, %{
-        id: "test-activity",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamActivityComponent, %{
+          id: "test-activity",
+          team_id: @team_id
+        })
 
       # All button should be highlighted (active) when no agent filter is set
       assert html =~ "All"
@@ -27,10 +29,11 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "renders type filter buttons" do
-      html = render_component(LoomkinWeb.TeamActivityComponent, %{
-        id: "test-activity",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamActivityComponent, %{
+          id: "test-activity",
+          team_id: @team_id
+        })
 
       assert html =~ "tool"
       assert html =~ "message"
@@ -48,10 +51,11 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
 
   describe "event filtering" do
     test "events list is initially empty" do
-      html = render_component(LoomkinWeb.TeamActivityComponent, %{
-        id: "test-activity",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamActivityComponent, %{
+          id: "test-activity",
+          team_id: @team_id
+        })
 
       assert html =~ "No activity yet"
     end
@@ -117,19 +121,29 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "task_created card renders title and created label" do
-      html = render_with_events([make_event(:task_created, "system", %{metadata: %{title: "Implement feature"}})])
+      html =
+        render_with_events([
+          make_event(:task_created, "system", %{metadata: %{title: "Implement feature"}})
+        ])
+
       assert html =~ "created"
       assert html =~ "Implement feature"
     end
 
     test "message card renders agent and content" do
-      html = render_with_events([make_event(:message, "researcher", %{metadata: %{from: "researcher", to: "Team"}})])
+      html =
+        render_with_events([
+          make_event(:message, "researcher", %{metadata: %{from: "researcher", to: "Team"}})
+        ])
+
       assert html =~ "researcher"
       assert html =~ "test content"
     end
 
     test "tool_call card renders tool name" do
-      html = render_with_events([make_event(:tool_call, "coder", %{metadata: %{tool_name: "Bash"}})])
+      html =
+        render_with_events([make_event(:tool_call, "coder", %{metadata: %{tool_name: "Bash"}})])
+
       assert html =~ "Bash"
       assert html =~ "coder"
     end
@@ -163,7 +177,12 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     test "task_assigned card shows title and owner from metadata" do
       event =
         make_task_event(:task_assigned, "lead", %{
-          metadata: %{title: "Fix login bug", owner: "researcher", priority: "2", status: "assigned"}
+          metadata: %{
+            title: "Fix login bug",
+            owner: "researcher",
+            priority: "2",
+            status: "assigned"
+          }
         })
 
       html = render_task_events([event])
@@ -300,7 +319,11 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "tool_call card has violet border and tool badge" do
-      html = render_typed_events([make_typed_event(:tool_call, "coder", %{metadata: %{tool_name: "Bash"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:tool_call, "coder", %{metadata: %{tool_name: "Bash"}})
+        ])
+
       # Uses inline style with accent hex (#818cf8) for left border
       assert html =~ "#818cf8"
       assert html =~ "rgba(129, 140, 248"
@@ -308,12 +331,22 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "tool_call card shows file basename in header" do
-      html = render_typed_events([make_typed_event(:tool_call, "coder", %{metadata: %{tool_name: "Read", file_path: "/app/lib/foo.ex"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:tool_call, "coder", %{
+            metadata: %{tool_name: "Read", file_path: "/app/lib/foo.ex"}
+          })
+        ])
+
       assert html =~ "foo.ex"
     end
 
     test "message card has emerald border and shows recipient" do
-      html = render_typed_events([make_typed_event(:message, "lead", %{metadata: %{from: "lead", to: "researcher"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:message, "lead", %{metadata: %{from: "lead", to: "researcher"}})
+        ])
+
       # Uses inline style with accent hex (#34d399) for left border
       assert html =~ "#34d399"
       assert html =~ "researcher"
@@ -351,14 +384,24 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "agent_spawn card shows role inline" do
-      html = render_typed_events([make_typed_event(:agent_spawn, "coder", %{metadata: %{agent_name: "coder", role: "developer"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:agent_spawn, "coder", %{
+            metadata: %{agent_name: "coder", role: "developer"}
+          })
+        ])
+
       assert html =~ "coder"
       assert html =~ "joined"
       assert html =~ "developer"
     end
 
     test "task_complete card has green tinted background" do
-      html = render_typed_events([make_typed_event(:task_complete, "coder", %{metadata: %{title: "Done"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:task_complete, "coder", %{metadata: %{title: "Done"}})
+        ])
+
       # Uses inline style with accent hex (#4ade80) and green-tinted accent_bg
       assert html =~ "#4ade80"
       assert html =~ "done"
@@ -372,7 +415,14 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "context_offload card shows content and topic inline" do
-      html = render_typed_events([make_typed_event(:context_offload, "coder", %{content: "Stored context", metadata: %{topic: "architecture"}})])
+      html =
+        render_typed_events([
+          make_typed_event(:context_offload, "coder", %{
+            content: "Stored context",
+            metadata: %{topic: "architecture"}
+          })
+        ])
+
       assert html =~ "offload"
       assert html =~ "Stored context"
       assert html =~ "architecture"
@@ -380,7 +430,12 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
 
     test "long message content is truncated with show more" do
       long_content = String.duplicate("Hello world. ", 30)
-      html = render_typed_events([make_typed_event(:message, "lead", %{content: long_content, metadata: %{from: "lead"}})])
+
+      html =
+        render_typed_events([
+          make_typed_event(:message, "lead", %{content: long_content, metadata: %{from: "lead"}})
+        ])
+
       assert html =~ "show more"
       assert html =~ "line-clamp-3"
     end
@@ -416,36 +471,67 @@ defmodule LoomkinWeb.TeamActivityComponentTest do
     end
 
     test "card headers use min-w-0 for flex truncation" do
-      html = render_dense_events([make_dense_event(:tool_call, "coder", %{metadata: %{tool_name: "Read"}})])
+      html =
+        render_dense_events([
+          make_dense_event(:tool_call, "coder", %{metadata: %{tool_name: "Read"}})
+        ])
+
       assert html =~ "min-w-0"
     end
 
     test "agent names use flex-shrink-0 to prevent collapsing" do
-      html = render_dense_events([make_dense_event(:message, "lead", %{metadata: %{from: "lead"}})])
+      html =
+        render_dense_events([make_dense_event(:message, "lead", %{metadata: %{from: "lead"}})])
+
       assert html =~ "flex-shrink-0"
     end
 
     test "content text uses break-words for narrow viewports" do
-      html = render_dense_events([make_dense_event(:message, "lead", %{content: "A long message", metadata: %{from: "lead"}})])
+      html =
+        render_dense_events([
+          make_dense_event(:message, "lead", %{
+            content: "A long message",
+            metadata: %{from: "lead"}
+          })
+        ])
+
       assert html =~ "break-word"
     end
 
     test "tool_call file path shows only basename" do
-      html = render_dense_events([make_dense_event(:tool_call, "coder", %{metadata: %{tool_name: "Edit", file_path: "/very/long/path/to/some/deeply/nested/file.ex"}})])
+      html =
+        render_dense_events([
+          make_dense_event(:tool_call, "coder", %{
+            metadata: %{
+              tool_name: "Edit",
+              file_path: "/very/long/path/to/some/deeply/nested/file.ex"
+            }
+          })
+        ])
+
       # Should show basename, not the full path in the header
       assert html =~ "file.ex"
     end
 
     test "task card with long title truncates" do
       long_title = String.duplicate("very long task title ", 10)
-      html = render_dense_events([make_dense_event(:task_assigned, "lead", %{metadata: %{title: long_title, owner: "coder"}})])
+
+      html =
+        render_dense_events([
+          make_dense_event(:task_assigned, "lead", %{
+            metadata: %{title: long_title, owner: "coder"}
+          })
+        ])
+
       # Title should have truncate class
       assert html =~ "truncate"
       assert html =~ "coder"
     end
 
     test "error card with long content uses break-words" do
-      long_content = String.duplicate("Error: something went wrong with a very long explanation ", 5)
+      long_content =
+        String.duplicate("Error: something went wrong with a very long explanation ", 5)
+
       html = render_dense_events([make_dense_event(:error, "coder", %{content: long_content})])
       # Long error content is shown in body (not header), and uses word-break
       assert html =~ "break-word"

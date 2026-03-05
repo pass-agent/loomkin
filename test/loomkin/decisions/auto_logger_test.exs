@@ -123,12 +123,16 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
     test "creates observation node with keeper_id in metadata", %{team_id: team_id} do
       keeper_id = Ecto.UUID.generate()
 
-      Comms.broadcast(team_id, {:keeper_created, %{
-        id: keeper_id,
-        topic: "auth-research",
-        source: "alice",
-        tokens: 500
-      }})
+      Comms.broadcast(
+        team_id,
+        {:keeper_created,
+         %{
+           id: keeper_id,
+           topic: "auth-research",
+           source: "alice",
+           tokens: 500
+         }}
+      )
 
       Process.sleep(50)
 
@@ -153,7 +157,13 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
   describe "active goal linking" do
     test "edges action nodes to active goal when one exists", %{team_id: team_id} do
       # Create an active goal node with team_id so AutoLogger's scoped query finds it
-      {:ok, goal} = Graph.add_node(%{node_type: :goal, title: "Ship v1", status: :active, metadata: %{"team_id" => team_id}})
+      {:ok, goal} =
+        Graph.add_node(%{
+          node_type: :goal,
+          title: "Ship v1",
+          status: :active,
+          metadata: %{"team_id" => team_id}
+        })
 
       Comms.broadcast(team_id, {:agent_status, "alice", :working})
       Process.sleep(50)

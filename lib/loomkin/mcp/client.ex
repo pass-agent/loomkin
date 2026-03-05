@@ -127,7 +127,12 @@ defmodule Loomkin.MCP.Client do
             _ -> {:error, :not_connected}
           end
 
-        {id, %{config: config, status: endpoint_status, tool_count: length(Map.get(state.tools, id, []))}}
+        {id,
+         %{
+           config: config,
+           status: endpoint_status,
+           tool_count: length(Map.get(state.tools, id, []))
+         }}
       end)
 
     {:reply, statuses, state}
@@ -162,15 +167,13 @@ defmodule Loomkin.MCP.Client do
     name = server_config[:name] || server_config["name"]
 
     unless name do
-      Logger.warning("[MCP Client] Server config missing :name, skipping: #{inspect(server_config)}")
+      Logger.warning(
+        "[MCP Client] Server config missing :name, skipping: #{inspect(server_config)}"
+      )
+
       state
     else
-      endpoint_id =
-        try do
-          String.to_existing_atom(name)
-        rescue
-          ArgumentError -> :"mcp_#{name}"
-        end
+      endpoint_id = {:mcp, name}
       transport = build_transport(server_config)
 
       endpoint_config = %{
@@ -183,7 +186,11 @@ defmodule Loomkin.MCP.Client do
       existing = Application.get_env(:jido_mcp, :endpoints, [])
 
       unless Keyword.has_key?(existing, endpoint_id) do
-        Application.put_env(:jido_mcp, :endpoints, Keyword.put(existing, endpoint_id, endpoint_config))
+        Application.put_env(
+          :jido_mcp,
+          :endpoints,
+          Keyword.put(existing, endpoint_id, endpoint_config)
+        )
       end
 
       state = %{state | endpoints: Map.put(state.endpoints, endpoint_id, server_config)}
@@ -217,11 +224,17 @@ defmodule Loomkin.MCP.Client do
 
         case build_proxy_modules(endpoint_id, tools) do
           {:ok, modules} ->
-            Logger.info("[MCP Client] Registered #{length(modules)} proxy tools from #{endpoint_id}")
+            Logger.info(
+              "[MCP Client] Registered #{length(modules)} proxy tools from #{endpoint_id}"
+            )
+
             %{state | tools: Map.put(state.tools, endpoint_id, modules)}
 
           {:error, reason} ->
-            Logger.warning("[MCP Client] Failed to build proxies for #{endpoint_id}: #{inspect(reason)}")
+            Logger.warning(
+              "[MCP Client] Failed to build proxies for #{endpoint_id}: #{inspect(reason)}"
+            )
+
             state
         end
 
@@ -230,18 +243,26 @@ defmodule Loomkin.MCP.Client do
         state
 
       {:error, reason} ->
-        Logger.warning("[MCP Client] Failed to list tools from #{endpoint_id}: #{inspect(reason)}")
+        Logger.warning(
+          "[MCP Client] Failed to list tools from #{endpoint_id}: #{inspect(reason)}"
+        )
+
         state
     end
   rescue
     e ->
-      Logger.warning("[MCP Client] Error syncing tools from #{endpoint_id}: #{Exception.message(e)}")
+      Logger.warning(
+        "[MCP Client] Error syncing tools from #{endpoint_id}: #{Exception.message(e)}"
+      )
+
       state
   end
 
   defp build_proxy_modules(endpoint_id, tools) do
     {:ok, modules, _warnings, _skipped} =
-      Jido.MCP.JidoAI.ProxyGenerator.build_modules(endpoint_id, tools, prefix: "mcp_#{endpoint_id}")
+      Jido.MCP.JidoAI.ProxyGenerator.build_modules(endpoint_id, tools,
+        prefix: "mcp_#{endpoint_id}"
+      )
 
     {:ok, modules}
   rescue

@@ -12,7 +12,9 @@ defmodule Loomkin.Teams.Debate do
   """
 
   alias Loomkin.Decisions.Graph
-  alias Loomkin.Teams.{Comms, ConsensusPolicy, ConsensusTrail}
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.ConsensusPolicy
+  alias Loomkin.Teams.ConsensusTrail
 
   @default_max_rounds 3
   @default_round_timeout_ms 30_000
@@ -578,8 +580,7 @@ defmodule Loomkin.Teams.Debate do
       weighted_top_pct: weighted.winning_weight_pct,
       unique_positions: map_size(position_groups),
       delta: delta,
-      position_groups:
-        Map.new(position_groups, fn {pos, members} -> {pos, length(members)} end),
+      position_groups: Map.new(position_groups, fn {pos, members} -> {pos, length(members)} end),
       quorum_met: agreement_pct >= 100.0 and length(current_positions) == total and total > 0,
       stalled: abs(delta) < @convergence_epsilon and length(prior_rounds) > 0
     }

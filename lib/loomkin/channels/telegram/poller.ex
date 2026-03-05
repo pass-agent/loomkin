@@ -52,7 +52,10 @@ defmodule Loomkin.Channels.Telegram.Poller do
         {:noreply, state}
 
       {:error, reason} ->
-        Logger.error("[Telegram.Poller] get_updates error: #{inspect(reason)}, retrying in #{@retry_delay_ms}ms")
+        Logger.error(
+          "[Telegram.Poller] get_updates error: #{inspect(reason)}, retrying in #{@retry_delay_ms}ms"
+        )
+
         Process.send_after(self(), :poll, @retry_delay_ms)
         {:noreply, state}
     end

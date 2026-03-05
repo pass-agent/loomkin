@@ -16,38 +16,42 @@ defmodule LoomkinWeb.TeamCostComponentTest do
 
   describe "rendering" do
     test "renders budget gauge section" do
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "Budget"
       assert html =~ "spent"
     end
 
     test "renders agent token usage section" do
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "Agent Token Usage"
     end
 
     test "renders model costs section" do
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "Model Costs"
     end
 
     test "shows no agent data message when empty" do
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "No agent data yet"
       assert html =~ "No model data yet"
@@ -61,10 +65,11 @@ defmodule LoomkinWeb.TeamCostComponentTest do
         model: "anthropic:claude-sonnet-4-6"
       })
 
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "researcher"
       assert html =~ "tok"
@@ -74,10 +79,11 @@ defmodule LoomkinWeb.TeamCostComponentTest do
   describe "budget color thresholds" do
     test "shows green for low usage (no agent spending)" do
       # No agent costs recorded = 0% usage = green
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "bg-green-500"
       assert html =~ "text-green-400"
@@ -92,10 +98,11 @@ defmodule LoomkinWeb.TeamCostComponentTest do
         model: "anthropic:claude-opus-4-6"
       })
 
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "bg-yellow-500"
       assert html =~ "text-yellow-400"
@@ -110,10 +117,11 @@ defmodule LoomkinWeb.TeamCostComponentTest do
         model: "anthropic:claude-opus-4-6"
       })
 
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "bg-red-500"
       assert html =~ "text-red-400"
@@ -137,10 +145,11 @@ defmodule LoomkinWeb.TeamCostComponentTest do
         timestamp: DateTime.utc_now()
       })
 
-      html = render_component(LoomkinWeb.TeamCostComponent, %{
-        id: "test-cost",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamCostComponent, %{
+          id: "test-cost",
+          team_id: @team_id
+        })
 
       assert html =~ "claude-opus-4-6"
     end

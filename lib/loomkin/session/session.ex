@@ -94,7 +94,7 @@ defmodule Loomkin.Session do
   @doc "Get the current session status."
   @spec get_status(pid() | String.t()) :: {:ok, atom()}
   def get_status(pid) when is_pid(pid) do
-    GenServer.call(pid, :get_status)
+    GenServer.call(pid, :get_status, 15_000)
   end
 
   def get_status(session_id) when is_binary(session_id) do
@@ -214,6 +214,8 @@ defmodule Loomkin.Session do
         state = update_status(state, :thinking)
 
         # Run concierge call in an async Task so the Session stays responsive
+        session_id = state.id
+
         task =
           Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
             case Loomkin.Teams.Agent.send_message(concierge_pid, text) do
@@ -221,18 +223,17 @@ defmodule Loomkin.Session do
                 # Persist and broadcast the assistant response
                 {:ok, _} =
                   Persistence.save_message(%{
-                    session_id: state.id,
+                    session_id: session_id,
                     role: :assistant,
                     content: response_text
                   })
 
                 assistant_msg = %{role: :assistant, content: response_text}
-                updated_messages = state.messages ++ [assistant_msg]
-                broadcast(state.id, {:new_message, state.id, assistant_msg})
-                {:ok, response_text, %{state | messages: updated_messages}}
+                broadcast(session_id, {:new_message, session_id, assistant_msg})
+                {:ok, response_text, assistant_msg}
 
               {:error, reason} ->
-                {:error, reason, state}
+                {:error, reason}
             end
           end)
 
@@ -343,8 +344,29 @@ defmodule Loomkin.Session do
 
   # --- Async Architect Task completion ---
 
+  # Concierge route: Task returns {:ok, response_text, assistant_msg} (just the new message)
   @impl true
-  def handle_info({ref, {:ok, response_text, new_state}}, state) when is_reference(ref) do
+  def handle_info({ref, {:ok, response_text, %{role: _} = assistant_msg}}, state)
+      when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    case state.architect_task do
+      {%Task{ref: ^ref}, from} ->
+        Logger.info("[Session] Concierge call succeeded session=#{state.id}")
+        state = %{state | messages: state.messages ++ [assistant_msg], architect_task: nil}
+        state = update_status(state, :idle)
+        GenServer.reply(from, {:ok, response_text})
+        {:noreply, state}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
+  # Architect route: Task returns {:ok, response_text, updated_state}
+  @impl true
+  def handle_info({ref, {:ok, response_text, %__MODULE__{} = new_state}}, state)
+      when is_reference(ref) do
     Process.demonitor(ref, [:flush])
 
     case state.architect_task do
@@ -360,6 +382,26 @@ defmodule Loomkin.Session do
     end
   end
 
+  # Concierge error: Task returns {:error, reason} (no state)
+  @impl true
+  def handle_info({ref, {:error, reason}}, state) when is_reference(ref) do
+    Process.demonitor(ref, [:flush])
+
+    case state.architect_task do
+      {%Task{ref: ^ref}, from} ->
+        Logger.error("[Session] Async task failed session=#{state.id}: #{inspect(reason)}")
+        broadcast(state.id, {:llm_error, state.id, format_error(reason)})
+        state = %{state | architect_task: nil}
+        state = update_status(state, :idle)
+        GenServer.reply(from, {:error, reason})
+        {:noreply, state}
+
+      _ ->
+        {:noreply, state}
+    end
+  end
+
+  # Architect error: Task returns {:error, reason, updated_state}
   @impl true
   def handle_info({ref, {:error, reason, new_state}}, state) when is_reference(ref) do
     Process.demonitor(ref, [:flush])

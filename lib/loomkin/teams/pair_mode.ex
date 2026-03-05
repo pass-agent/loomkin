@@ -7,7 +7,8 @@ defmodule Loomkin.Teams.PairMode do
   """
 
   alias Loomkin.Decisions.Graph
-  alias Loomkin.Teams.{Comms, TableRegistry}
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.TableRegistry
 
   @type pair_event ::
           :intent_broadcast

@@ -37,7 +37,8 @@ defmodule Loomkin.Teams.ConflictDetector do
   end
 
   @doc "Check two task descriptions for approach conflicts. Returns nil or a conflict description."
-  @spec check_approach_conflict(String.t(), String.t(), String.t(), String.t()) :: String.t() | nil
+  @spec check_approach_conflict(String.t(), String.t(), String.t(), String.t()) ::
+          String.t() | nil
   def check_approach_conflict(desc_a, desc_b, agent_a \\ "agent_a", agent_b \\ "agent_b") do
     intent_a = extract_intent(desc_a)
     intent_b = extract_intent(desc_b)
@@ -128,7 +129,10 @@ defmodule Loomkin.Teams.ConflictDetector do
   # AgentLoop emits {:tool_executing, agent_name, %{tool_name: name, tool_target: path}}
   # and {:tool_complete, agent_name, %{tool_name: name, result: text}}
   @impl true
-  def handle_info({:tool_executing, agent_name, %{tool_name: tool, tool_target: file_path}}, state)
+  def handle_info(
+        {:tool_executing, agent_name, %{tool_name: tool, tool_target: file_path}},
+        state
+      )
       when tool in ["file_write", "file_edit"] do
     if file_path && file_path != "*" do
       state = track_file_edit(state, to_string(agent_name), file_path)
@@ -327,7 +331,9 @@ defmodule Loomkin.Teams.ConflictDetector do
         state
     end
   rescue
-    _ -> state
+    e ->
+      Logger.warning("[ConflictDetector] Decision conflict check failed: #{Exception.message(e)}")
+      state
   end
 
   defp decision_conflict_key(id_a, id_b) do
@@ -368,7 +374,10 @@ defmodule Loomkin.Teams.ConflictDetector do
 
   # --- Broadcast ---
 
-  defp broadcast_conflict(team_id, %{agent_a: agent_a, agent_b: agent_b, type: type, description: desc} = details) do
+  defp broadcast_conflict(
+         team_id,
+         %{agent_a: agent_a, agent_b: agent_b, type: type, description: desc} = details
+       ) do
     Logger.warning("[ConflictDetector] #{type} in team #{team_id}: #{desc}")
 
     Comms.broadcast(team_id, {:conflict_detected, details})

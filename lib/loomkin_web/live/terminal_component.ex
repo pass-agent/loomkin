@@ -11,9 +11,12 @@ defmodule LoomkinWeb.TerminalComponent do
       <%!-- Terminal Chrome --%>
       <div class="px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-800/80 border-b border-gray-800/80 flex items-center gap-2">
         <div class="flex gap-1.5">
-          <div class="w-2.5 h-2.5 rounded-full bg-red-500/70 hover:bg-red-500 transition-colors duration-200"></div>
-          <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/70 hover:bg-yellow-500 transition-colors duration-200"></div>
-          <div class="w-2.5 h-2.5 rounded-full bg-green-500/70 hover:bg-green-500 transition-colors duration-200"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-red-500/70 hover:bg-red-500 transition-colors duration-200">
+          </div>
+          <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/70 hover:bg-yellow-500 transition-colors duration-200">
+          </div>
+          <div class="w-2.5 h-2.5 rounded-full bg-green-500/70 hover:bg-green-500 transition-colors duration-200">
+          </div>
         </div>
         <span class="text-gray-500 text-[10px] ml-1">Terminal</span>
       </div>
@@ -46,11 +49,17 @@ defmodule LoomkinWeb.TerminalComponent do
             :if={cmd.output && cmd.output != ""}
             class={["pl-4 whitespace-pre-wrap break-all leading-relaxed", output_color(cmd.exit_code)]}
           >{cmd.output}</pre>
-          <div :if={cmd.exit_code == 0} class="pl-4 flex items-center gap-1 text-[10px] text-emerald-500/70">
+          <div
+            :if={cmd.exit_code == 0}
+            class="pl-4 flex items-center gap-1 text-[10px] text-emerald-500/70"
+          >
             <span>&#10003;</span>
             <span>exit 0</span>
           </div>
-          <div :if={cmd.exit_code != 0} class="pl-4 flex items-center gap-1 text-[10px] text-rose-400/80">
+          <div
+            :if={cmd.exit_code != 0}
+            class="pl-4 flex items-center gap-1 text-[10px] text-rose-400/80"
+          >
             <span>&#10007;</span>
             <span>exit {cmd.exit_code}</span>
           </div>

@@ -94,7 +94,9 @@ defmodule Loomkin.Teams.ContextOffloadTest do
       ]
 
       {:ok, pid, entry} =
-        ContextOffload.offload_to_keeper(team_id, "researcher", messages, topic: "codebase exploration")
+        ContextOffload.offload_to_keeper(team_id, "researcher", messages,
+          topic: "codebase exploration"
+        )
 
       assert Process.alive?(pid)
       assert entry =~ "topic=codebase exploration"
@@ -147,6 +149,7 @@ defmodule Loomkin.Teams.ContextOffloadTest do
     test "marker includes priority: :high", %{team_id: team_id} do
       # Create messages large enough to trigger offload (60% of 128k = 76.8k tokens)
       large_content = String.duplicate("x", 320_000)
+
       large_messages =
         Enum.map(1..10, fn i ->
           role = if rem(i, 2) == 1, do: :user, else: :assistant

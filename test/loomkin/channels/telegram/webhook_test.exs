@@ -69,7 +69,13 @@ defmodule Loomkin.Channels.Telegram.WebhookTest do
       })
 
       conn =
-        conn(:post, "/", Jason.encode!(%{"message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}}))
+        conn(
+          :post,
+          "/",
+          Jason.encode!(%{
+            "message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}
+          })
+        )
         |> put_req_header("content-type", "application/json")
         |> put_req_header("x-telegram-bot-api-secret-token", "correct-secret")
 
@@ -89,7 +95,13 @@ defmodule Loomkin.Channels.Telegram.WebhookTest do
       })
 
       conn =
-        conn(:post, "/", Jason.encode!(%{"message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}}))
+        conn(
+          :post,
+          "/",
+          Jason.encode!(%{
+            "message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}
+          })
+        )
         |> put_req_header("content-type", "application/json")
 
       conn = Webhook.call(conn, Webhook.init([]))
@@ -108,7 +120,13 @@ defmodule Loomkin.Channels.Telegram.WebhookTest do
       })
 
       conn =
-        conn(:post, "/", Jason.encode!(%{"message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}}))
+        conn(
+          :post,
+          "/",
+          Jason.encode!(%{
+            "message" => %{"chat" => %{"id" => 123}, "text" => "hi", "from" => %{"id" => 1}}
+          })
+        )
         |> put_req_header("content-type", "application/json")
 
       conn = Webhook.call(conn, Webhook.init([]))

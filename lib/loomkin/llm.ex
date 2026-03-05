@@ -21,7 +21,8 @@ defmodule Loomkin.LLM do
 
   require Logger
 
-  alias Loomkin.Auth.{ProviderRegistry, TokenStore}
+  alias Loomkin.Auth.ProviderRegistry
+  alias Loomkin.Auth.TokenStore
 
   @doc """
   Stream text from an LLM provider, transparently using OAuth when available.

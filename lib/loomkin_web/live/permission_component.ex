@@ -16,7 +16,9 @@ defmodule LoomkinWeb.PermissionComponent do
           </div>
           <div>
             <h3 class="text-sm font-semibold text-gray-100">Permission Required</h3>
-            <p class="text-[10px] text-gray-500 mt-0.5">Review this tool execution before proceeding</p>
+            <p class="text-[10px] text-gray-500 mt-0.5">
+              Review this tool execution before proceeding
+            </p>
           </div>
         </div>
 
@@ -71,7 +73,11 @@ defmodule LoomkinWeb.PermissionComponent do
   end
 
   def handle_event("permission_response", %{"action" => action}, socket) do
-    send(self(), {:permission_response, action, socket.assigns.tool_name, socket.assigns.tool_path})
+    send(
+      self(),
+      {:permission_response, action, socket.assigns.tool_name, socket.assigns.tool_path}
+    )
+
     {:noreply, socket}
   end
 end

@@ -30,6 +30,8 @@ defmodule Loomkin.Channels.Binding do
     binding
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> unique_constraint([:channel, :channel_id], name: :channel_bindings_channel_channel_id_index)
+    |> unique_constraint([:channel, :channel_id],
+      name: :channel_bindings_channel_channel_id_index
+    )
   end
 end

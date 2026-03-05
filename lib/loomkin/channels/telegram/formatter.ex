@@ -7,7 +7,26 @@ defmodule Loomkin.Channels.Telegram.Formatter do
   """
 
   # Characters that must be escaped in MarkdownV2 outside of entities
-  @special_chars ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
+  @special_chars [
+    "_",
+    "*",
+    "[",
+    "]",
+    "(",
+    ")",
+    "~",
+    "`",
+    ">",
+    "#",
+    "+",
+    "-",
+    "=",
+    "|",
+    "{",
+    "}",
+    ".",
+    "!"
+  ]
 
   @telegram_max_length 4096
 

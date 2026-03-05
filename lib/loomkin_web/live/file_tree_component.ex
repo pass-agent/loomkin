@@ -97,9 +97,14 @@ defmodule LoomkinWeb.FileTreeComponent do
     ~H"""
     <div class="flex flex-col h-full bg-gray-950 text-gray-100">
       <div class="px-3 py-2.5 border-b border-gray-800">
-        <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Explorer</h3>
+        <h3 class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          Explorer
+        </h3>
         <div class="relative">
-          <.icon name="hero-magnifying-glass-mini" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <.icon
+            name="hero-magnifying-glass-mini"
+            class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500"
+          />
           <form phx-change="filter" phx-target={@myself} phx-submit="filter">
             <input
               type="text"
@@ -125,7 +130,8 @@ defmodule LoomkinWeb.FileTreeComponent do
       <div class="flex-1 overflow-y-auto px-1 py-1 text-sm font-mono">
         <%= if @loading do %>
           <div class="flex items-center justify-center gap-2 px-3 py-6">
-            <div class="w-4 h-4 border-2 border-violet-500/30 border-t-violet-400 rounded-full animate-spin"></div>
+            <div class="w-4 h-4 border-2 border-violet-500/30 border-t-violet-400 rounded-full animate-spin">
+            </div>
             <span class="text-gray-500 text-xs">Scanning files...</span>
           </div>
         <% else %>
@@ -164,8 +170,13 @@ defmodule LoomkinWeb.FileTreeComponent do
             <span class={"text-gray-500 w-3.5 text-center text-[10px] chevron-rotate " <> if(MapSet.member?(@expanded_dirs, entry.path), do: "expanded", else: "")}>
               &#9654;
             </span>
-            <.icon name="hero-folder-mini" class={"w-3.5 h-3.5 flex-shrink-0 transition-colors " <> if(MapSet.member?(@expanded_dirs, entry.path), do: "text-violet-400", else: "text-violet-500/60 group-hover:text-violet-400")} />
-            <span class="text-gray-300 group-hover:text-gray-200 text-xs transition-colors">{entry.name}</span>
+            <.icon
+              name="hero-folder-mini"
+              class={"w-3.5 h-3.5 flex-shrink-0 transition-colors " <> if(MapSet.member?(@expanded_dirs, entry.path), do: "text-violet-400", else: "text-violet-500/60 group-hover:text-violet-400")}
+            />
+            <span class="text-gray-300 group-hover:text-gray-200 text-xs transition-colors">
+              {entry.name}
+            </span>
           </div>
           <%= if MapSet.member?(@expanded_dirs, entry.path) do %>
             <.tree_entries
@@ -184,7 +195,9 @@ defmodule LoomkinWeb.FileTreeComponent do
             phx-target={@myself}
           >
             <span class={"w-1.5 h-1.5 rounded-full flex-shrink-0 " <> file_dot_color(entry.name)} />
-            <span class={"text-xs transition-colors group-hover:text-gray-200 " <> file_color(entry.name)}>{entry.name}</span>
+            <span class={"text-xs transition-colors group-hover:text-gray-200 " <> file_color(entry.name)}>
+              {entry.name}
+            </span>
           </div>
         <% end %>
       </div>
@@ -199,9 +212,13 @@ defmodule LoomkinWeb.FileTreeComponent do
     parent_pid = self()
 
     {:ok, pid} =
-      Task.start(fn ->
+      Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
         {tree, file_count, total_size} = build_tree(project_path)
-        send_update(parent_pid, __MODULE__, id: component_id, __async_result__: {project_path, tree, file_count, total_size})
+
+        send_update(parent_pid, __MODULE__,
+          id: component_id,
+          __async_result__: {project_path, tree, file_count, total_size}
+        )
       end)
 
     assign(socket, loading: true, scan_task: pid)
@@ -209,7 +226,7 @@ defmodule LoomkinWeb.FileTreeComponent do
 
   defp cancel_scan(%{assigns: %{scan_task: pid}} = socket) when is_pid(pid) do
     Process.exit(pid, :kill)
-    assign(socket, scan_task: nil)
+    assign(socket, scan_task: nil, loading: false)
   end
 
   defp cancel_scan(socket), do: socket
@@ -238,10 +255,12 @@ defmodule LoomkinWeb.FileTreeComponent do
             children = scan_dir(root, rel_path)
             %{name: name, path: rel_path, type: :dir, children: sort_entries(children), size: 0}
           else
-            size = case File.stat(abs_path) do
-              {:ok, %{size: s}} -> s
-              _ -> 0
-            end
+            size =
+              case File.stat(abs_path) do
+                {:ok, %{size: s}} -> s
+                _ -> 0
+              end
+
             %{name: name, path: rel_path, type: :file, children: [], size: size}
           end
         end)

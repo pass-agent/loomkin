@@ -20,7 +20,15 @@ defmodule Loomkin.Channels.AuditLogTest do
 
   describe "log_command/7" do
     test "logs a command and retrieves it" do
-      AuditLog.log_command(:telegram, "12345", %{from_id: 42}, "bind", "team-1", :ok, "Bound to team team-1.")
+      AuditLog.log_command(
+        :telegram,
+        "12345",
+        %{from_id: 42},
+        "bind",
+        "team-1",
+        :ok,
+        "Bound to team team-1."
+      )
 
       # Give the cast time to process
       Process.sleep(10)

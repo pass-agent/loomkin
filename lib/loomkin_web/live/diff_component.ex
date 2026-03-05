@@ -44,15 +44,29 @@ defmodule LoomkinWeb.DiffComponent do
           <div class="flex items-center justify-center h-full">
             <div class="text-center space-y-2">
               <div class="text-gray-600 text-2xl">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-8 w-8 mx-auto text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  />
                 </svg>
               </div>
               <p class="text-gray-500 text-xs">No changes to review</p>
             </div>
           </div>
         <% else %>
-          <div :for={{diff, idx} <- Enum.with_index(@parsed_diffs)} class="border-b border-gray-800/60 animate-fade-in-up">
+          <div
+            :for={{diff, idx} <- Enum.with_index(@parsed_diffs)}
+            class="border-b border-gray-800/60 animate-fade-in-up"
+          >
             <%!-- File Header --%>
             <div
               class="flex items-center gap-2 px-3 py-2.5 bg-gray-900/40 cursor-pointer hover:bg-gray-800/50 sticky top-0 z-10 transition-colors duration-200 border-b border-gray-800/40"
@@ -61,16 +75,41 @@ defmodule LoomkinWeb.DiffComponent do
               phx-target={@myself}
             >
               <span class="text-gray-500 transition-transform duration-200">
-                <%= if MapSet.member?(@collapsed, idx) do %>&#9656;<% else %>&#9662;<% end %>
+                <%= if MapSet.member?(@collapsed, idx) do %>
+                  &#9656;
+                <% else %>
+                  &#9662;
+                <% end %>
               </span>
               <%!-- File Icon --%>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-gray-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3.5 w-3.5 text-gray-500 flex-shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
               </svg>
               <span class="text-violet-400 truncate text-xs">{diff.file_path}</span>
               <div class="ml-auto flex items-center gap-1.5">
-                <span :if={diff.additions > 0} class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">+{diff.additions}</span>
-                <span :if={diff.deletions > 0} class="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 font-medium">-{diff.deletions}</span>
+                <span
+                  :if={diff.additions > 0}
+                  class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium"
+                >
+                  +{diff.additions}
+                </span>
+                <span
+                  :if={diff.deletions > 0}
+                  class="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 font-medium"
+                >
+                  -{diff.deletions}
+                </span>
               </div>
             </div>
 
@@ -79,10 +118,16 @@ defmodule LoomkinWeb.DiffComponent do
               <table class="w-full border-collapse">
                 <tbody>
                   <tr :for={line <- diff.lines} class={line_row_class(line.type)}>
-                    <td class={["w-10 text-right pr-2 select-none text-[10px] border-r border-gray-800/30", line_number_class(line.type)]}>
+                    <td class={[
+                      "w-10 text-right pr-2 select-none text-[10px] border-r border-gray-800/30",
+                      line_number_class(line.type)
+                    ]}>
                       {line.old_num || ""}
                     </td>
-                    <td class={["w-10 text-right pr-2 select-none text-[10px] border-r border-gray-800/30", line_number_class(line.type)]}>
+                    <td class={[
+                      "w-10 text-right pr-2 select-none text-[10px] border-r border-gray-800/30",
+                      line_number_class(line.type)
+                    ]}>
                       {line.new_num || ""}
                     </td>
                     <td class={["px-3 py-0 whitespace-pre text-xs", line_class(line.type)]}>
@@ -178,7 +223,9 @@ defmodule LoomkinWeb.DiffComponent do
 
   defp extract_file_path(text) do
     case Regex.run(~r/(?:^|\n)[-+]{3}\s+[ab]\/(.+)/, text) do
-      [_, path] -> {path, text}
+      [_, path] ->
+        {path, text}
+
       nil ->
         case Regex.run(~r/^File:\s*(.+)/m, text) do
           [_, path] -> {String.trim(path), text}

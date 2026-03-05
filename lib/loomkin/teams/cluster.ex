@@ -53,10 +53,14 @@ defmodule Loomkin.Teams.Cluster do
       # Stub when libcluster is not installed — logs warning on start
       %{
         id: __MODULE__,
-        start: {Task, :start_link, [fn ->
-          Logger.warning("[Cluster] libcluster not available — clustering disabled")
-          Process.sleep(:infinity)
-        end]}
+        start:
+          {Task, :start_link,
+           [
+             fn ->
+               Logger.warning("[Cluster] libcluster not available — clustering disabled")
+               Process.sleep(:infinity)
+             end
+           ]}
       }
     end
   end

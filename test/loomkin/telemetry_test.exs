@@ -44,10 +44,10 @@ defmodule Loomkin.TelemetryTest do
       assert result == {:ok, %{}}
 
       assert_received {:telemetry_event, [:loomkin, :llm, :request, :start], %{system_time: _},
-                        %{session_id: "test-session", model: "anthropic:test"}}
+                       %{session_id: "test-session", model: "anthropic:test"}}
 
       assert_received {:telemetry_event, [:loomkin, :llm, :request, :stop], %{duration: duration},
-                        stop_meta}
+                       stop_meta}
 
       assert is_integer(duration)
       assert stop_meta.session_id == "test-session"
@@ -64,7 +64,7 @@ defmodule Loomkin.TelemetryTest do
       assert result == {:error, :timeout}
 
       assert_received {:telemetry_event, [:loomkin, :llm, :request, :stop], %{duration: _},
-                        %{error: true}}
+                       %{error: true}}
     end
   end
 
@@ -80,10 +80,10 @@ defmodule Loomkin.TelemetryTest do
       assert result == {:ok, "file contents"}
 
       assert_received {:telemetry_event, [:loomkin, :tool, :execute, :start], %{system_time: _},
-                        %{tool_name: "file_read"}}
+                       %{tool_name: "file_read"}}
 
       assert_received {:telemetry_event, [:loomkin, :tool, :execute, :stop], %{duration: _},
-                        %{success: true, tool_name: "file_read"}}
+                       %{success: true, tool_name: "file_read"}}
     end
 
     test "marks success as false on error" do
@@ -94,7 +94,7 @@ defmodule Loomkin.TelemetryTest do
       end)
 
       assert_received {:telemetry_event, [:loomkin, :tool, :execute, :stop], _,
-                        %{success: false, tool_name: "shell"}}
+                       %{success: false, tool_name: "shell"}}
     end
 
     test "marks string results as successful" do
@@ -104,8 +104,7 @@ defmodule Loomkin.TelemetryTest do
         "file contents as string"
       end)
 
-      assert_received {:telemetry_event, [:loomkin, :tool, :execute, :stop], _,
-                        %{success: true}}
+      assert_received {:telemetry_event, [:loomkin, :tool, :execute, :stop], _, %{success: true}}
     end
   end
 
@@ -118,7 +117,7 @@ defmodule Loomkin.TelemetryTest do
       })
 
       assert_received {:telemetry_event, [:loomkin, :session, :message], %{system_time: _},
-                        %{session_id: "test-session", role: :user, token_count: 42}}
+                       %{session_id: "test-session", role: :user, token_count: 42}}
     end
   end
 
@@ -131,7 +130,7 @@ defmodule Loomkin.TelemetryTest do
       })
 
       assert_received {:telemetry_event, [:loomkin, :decision, :logged], %{system_time: _},
-                        %{node_type: :decision, confidence: 85}}
+                       %{node_type: :decision, confidence: 85}}
     end
   end
 end

@@ -1,7 +1,8 @@
 defmodule Loomkin.Teams.CollaborationEvents do
   @moduledoc "Emit standardized collaboration events for the activity feed."
 
-  alias Loomkin.Teams.{Comms, CollaborationMetrics}
+  alias Loomkin.Teams.CollaborationMetrics
+  alias Loomkin.Teams.Comms
 
   @type collab_event :: %{
           type: atom(),
@@ -18,7 +19,8 @@ defmodule Loomkin.Teams.CollaborationEvents do
     broadcast_collab(team_id, %{
       type: :discovery_shared,
       agents: [from_agent | to_list],
-      description: "#{from_agent} shared a #{discovery_type} discovery with #{format_agents(to_list)}",
+      description:
+        "#{from_agent} shared a #{discovery_type} discovery with #{format_agents(to_list)}",
       metadata: %{from: from_agent, to: to_list, discovery_type: discovery_type}
     })
   end
@@ -95,7 +97,8 @@ defmodule Loomkin.Teams.CollaborationEvents do
       metadata:
         Map.merge(metadata || %{}, %{
           debate_id: debate_id,
-          winner: if(is_map(winner), do: Map.take(winner, [:from, :content, :node_id]), else: nil),
+          winner:
+            if(is_map(winner), do: Map.take(winner, [:from, :content, :node_id]), else: nil),
           policy: policy_name(policy)
         })
     })
@@ -145,7 +148,8 @@ defmodule Loomkin.Teams.CollaborationEvents do
     broadcast_collab(team_id, %{
       type: :knowledge_propagated,
       agents: [],
-      description: "Discovery (#{discovery_type}) propagated from sub-team #{String.slice(source_team_id, 0, 12)}",
+      description:
+        "Discovery (#{discovery_type}) propagated from sub-team #{String.slice(source_team_id, 0, 12)}",
       metadata: %{source_team_id: source_team_id, discovery_type: discovery_type}
     })
   end

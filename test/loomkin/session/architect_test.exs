@@ -15,17 +15,18 @@ defmodule Loomkin.Session.ArchitectTest do
 
   describe "plan parsing" do
     test "parses valid JSON plan" do
-      json = Jason.encode!(%{
-        "summary" => "Add a hello function",
-        "plan" => [
-          %{
-            "file" => "lib/app.ex",
-            "action" => "edit",
-            "description" => "Add hello function",
-            "details" => "Add def hello, do: :world to the module"
-          }
-        ]
-      })
+      json =
+        Jason.encode!(%{
+          "summary" => "Add a hello function",
+          "plan" => [
+            %{
+              "file" => "lib/app.ex",
+              "action" => "edit",
+              "description" => "Add hello function",
+              "details" => "Add def hello, do: :world to the module"
+            }
+          ]
+        })
 
       # We test the internal parse_plan function indirectly by checking
       # the architect module can handle this kind of response
@@ -36,23 +37,24 @@ defmodule Loomkin.Session.ArchitectTest do
     end
 
     test "plan with multiple steps" do
-      json = Jason.encode!(%{
-        "summary" => "Refactor module",
-        "plan" => [
-          %{
-            "file" => "lib/app.ex",
-            "action" => "edit",
-            "description" => "Extract helper",
-            "details" => "Move helper function to helper.ex"
-          },
-          %{
-            "file" => "lib/helper.ex",
-            "action" => "create",
-            "description" => "Create helper module",
-            "details" => "Create new file with extracted function"
-          }
-        ]
-      })
+      json =
+        Jason.encode!(%{
+          "summary" => "Refactor module",
+          "plan" => [
+            %{
+              "file" => "lib/app.ex",
+              "action" => "edit",
+              "description" => "Extract helper",
+              "details" => "Move helper function to helper.ex"
+            },
+            %{
+              "file" => "lib/helper.ex",
+              "action" => "create",
+              "description" => "Create helper module",
+              "details" => "Create new file with extracted function"
+            }
+          ]
+        })
 
       assert {:ok, data} = Jason.decode(json)
       assert length(data["plan"]) == 2
@@ -112,11 +114,12 @@ defmodule Loomkin.Session.ArchitectTest do
       # The format function is private, but we verify the plan data structure is valid
       assert is_binary(plan_data["summary"])
       assert length(plan_data["plan"]) == 2
+
       assert Enum.all?(plan_data["plan"], fn step ->
-        Map.has_key?(step, "file") and
-        Map.has_key?(step, "action") and
-        Map.has_key?(step, "description")
-      end)
+               Map.has_key?(step, "file") and
+                 Map.has_key?(step, "action") and
+                 Map.has_key?(step, "description")
+             end)
     end
   end
 end

@@ -9,7 +9,10 @@ defmodule Loomkin.Tools.ContentSearch do
         "Results are capped at 100 matches.",
     schema: [
       pattern: [type: :string, required: true, doc: "Regex pattern to search for"],
-      path: [type: :string, doc: "Directory to search in (relative to project root, defaults to root)"],
+      path: [
+        type: :string,
+        doc: "Directory to search in (relative to project root, defaults to root)"
+      ],
       glob: [type: :string, doc: "File filter glob pattern (e.g. \"*.ex\", \"*.{ex,exs}\")"]
     ]
 

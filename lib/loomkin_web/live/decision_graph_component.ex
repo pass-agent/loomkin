@@ -3,7 +3,10 @@ defmodule LoomkinWeb.DecisionGraphComponent do
 
   use LoomkinWeb, :live_component
 
-  alias Loomkin.Decisions.{Graph, Pulse}
+  require Logger
+
+  alias Loomkin.Decisions.Graph
+  alias Loomkin.Decisions.Pulse
 
   @layer_order %{
     goal: 0,
@@ -19,17 +22,6 @@ defmodule LoomkinWeb.DecisionGraphComponent do
   @node_height 56
   @layer_gap 120
   @node_gap 180
-
-  @agent_colors [
-    "#818cf8",
-    "#34d399",
-    "#f472b6",
-    "#fb923c",
-    "#22d3ee",
-    "#a78bfa",
-    "#fbbf24",
-    "#4ade80"
-  ]
 
   # Softer node type colors (reduced saturation ~20%)
   @node_type_colors %{
@@ -113,16 +105,18 @@ defmodule LoomkinWeb.DecisionGraphComponent do
     {:ok,
      assign(
        socket,
-       [{:nodes, nodes},
-        {:edges, relevant_edges},
-        {:positioned, positioned},
-        {:pulse, pulse},
-        {:agents, agents},
-        {:conflict_ids, conflict_ids},
-        {:visible_edges, visible_edges},
-        {:svg_width, max(svg_w, 400)},
-        {:svg_height, max(svg_h, 200)}
-        | pulse_assigns]
+       [
+         {:nodes, nodes},
+         {:edges, relevant_edges},
+         {:positioned, positioned},
+         {:pulse, pulse},
+         {:agents, agents},
+         {:conflict_ids, conflict_ids},
+         {:visible_edges, visible_edges},
+         {:svg_width, max(svg_w, 400)},
+         {:svg_height, max(svg_h, 200)}
+         | pulse_assigns
+       ]
      )}
   end
 
@@ -638,10 +632,7 @@ defmodule LoomkinWeb.DecisionGraphComponent do
 
   # --- Agent helpers ---
 
-  defp agent_color(agent_name) do
-    index = :erlang.phash2(agent_name, length(@agent_colors))
-    Enum.at(@agent_colors, index)
-  end
+  defp agent_color(agent_name), do: LoomkinWeb.AgentColors.agent_color(agent_name)
 
   defp detect_conflicts(nodes, edges) do
     # Find nodes connected by :supersedes edges where they share a title but have different agents
@@ -752,7 +743,12 @@ defmodule LoomkinWeb.DecisionGraphComponent do
       pulse = maybe_generate_pulse(socket)
       {nodes, edges, pulse}
     rescue
-      _ -> {[], [], nil}
+      e ->
+        Logger.warning(
+          "[DecisionGraphComponent] Failed to load graph data: #{Exception.message(e)}"
+        )
+
+        {[], [], nil}
     end
   end
 

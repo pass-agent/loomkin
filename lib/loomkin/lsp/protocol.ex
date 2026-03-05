@@ -58,6 +58,7 @@ defmodule Loomkin.LSP.Protocol do
       {:ok, content_length, rest} ->
         if byte_size(rest) >= content_length do
           <<body::binary-size(content_length), remaining::binary>> = rest
+
           case decode_message(body) do
             {:ok, msg} -> {:ok, msg, remaining}
             {:error, _} = err -> err

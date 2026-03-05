@@ -3,8 +3,7 @@ defmodule Loomkin.Tools.TeamDissolve do
 
   use Jido.Action,
     name: "team_dissolve",
-    description:
-      "Dissolve a team: stop all agents, clean up state, and broadcast dissolution.",
+    description: "Dissolve a team: stop all agents, clean up state, and broadcast dissolution.",
     schema: [
       team_id: [type: :string, required: true, doc: "Team ID to dissolve"]
     ]

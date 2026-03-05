@@ -39,7 +39,8 @@ defmodule Loomkin.Tools.PeerForwardQuestion do
           {:ok, %{result: "Query #{query_id} not found (may have expired)."}}
 
         {:error, :max_hops_reached} ->
-          {:ok, %{result: "Maximum forwarding hops reached. Consider answering with what you know."}}
+          {:ok,
+           %{result: "Maximum forwarding hops reached. Consider answering with what you know."}}
       end
     else
       {:error, :not_found} ->

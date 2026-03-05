@@ -44,13 +44,19 @@ defmodule Loomkin.Teams.ConflictDetectorTest do
 
   describe "extract_targets/1" do
     test "extracts file paths" do
-      targets = ConflictDetector.extract_targets("Edit lib/loomkin/teams/agent.ex and test/teams_test.exs")
+      targets =
+        ConflictDetector.extract_targets(
+          "Edit lib/loomkin/teams/agent.ex and test/teams_test.exs"
+        )
+
       assert MapSet.member?(targets, "lib/loomkin/teams/agent.ex")
       assert MapSet.member?(targets, "test/teams_test.exs")
     end
 
     test "extracts module names" do
-      targets = ConflictDetector.extract_targets("Modify Loomkin.Teams.Agent to support new feature")
+      targets =
+        ConflictDetector.extract_targets("Modify Loomkin.Teams.Agent to support new feature")
+
       assert MapSet.member?(targets, "Loomkin.Teams.Agent")
     end
 
@@ -105,10 +111,20 @@ defmodule Loomkin.Teams.ConflictDetectorTest do
       # Simulate tool_complete events from two different agents
       pid = find_conflict_detector(team_id)
 
-      send(pid, {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}})
-      send(pid, {:tool_executing, "coder-2", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}})
+      send(
+        pid,
+        {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}}
+      )
 
-      assert_receive {:conflict_detected, %{type: :file_conflict, agent_a: _, agent_b: _, description: desc}}, 1_000
+      send(
+        pid,
+        {:tool_executing, "coder-2", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}}
+      )
+
+      assert_receive {:conflict_detected,
+                      %{type: :file_conflict, agent_a: _, agent_b: _, description: desc}},
+                     1_000
+
       assert desc =~ "lib/foo.ex"
     end
 
@@ -117,8 +133,15 @@ defmodule Loomkin.Teams.ConflictDetectorTest do
 
       pid = find_conflict_detector(team_id)
 
-      send(pid, {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}})
-      send(pid, {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}})
+      send(
+        pid,
+        {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}}
+      )
+
+      send(
+        pid,
+        {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}}
+      )
 
       refute_receive {:conflict_detected, _}, 200
     end
@@ -128,8 +151,15 @@ defmodule Loomkin.Teams.ConflictDetectorTest do
 
       pid = find_conflict_detector(team_id)
 
-      send(pid, {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}})
-      send(pid, {:tool_executing, "coder-2", %{tool_name: "file_edit", tool_target: "lib/bar.ex"}})
+      send(
+        pid,
+        {:tool_executing, "coder-1", %{tool_name: "file_edit", tool_target: "lib/foo.ex"}}
+      )
+
+      send(
+        pid,
+        {:tool_executing, "coder-2", %{tool_name: "file_edit", tool_target: "lib/bar.ex"}}
+      )
 
       refute_receive {:conflict_detected, _}, 200
     end

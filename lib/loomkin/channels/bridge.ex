@@ -95,7 +95,9 @@ defmodule Loomkin.Channels.Bridge do
         MapSet.new()
       end
 
-    Logger.info("[Bridge] Started for #{binding.channel}:#{binding.channel_id} -> team:#{team_id}")
+    Logger.info(
+      "[Bridge] Started for #{binding.channel}:#{binding.channel_id} -> team:#{team_id}"
+    )
 
     {:ok,
      %__MODULE__{
@@ -114,7 +116,12 @@ defmodule Loomkin.Channels.Bridge do
         elem(msg, 1)
 
       case rate_limited_send(state, fn ->
-             state.adapter.send_question(state.binding, question_id, "[#{agent_name}] #{question}", options)
+             state.adapter.send_question(
+               state.binding,
+               question_id,
+               "[#{agent_name}] #{question}",
+               options
+             )
            end) do
         {:ok, new_state} ->
           pending = Map.put(new_state.pending_questions, question_id, %{agent_name: agent_name})
@@ -173,12 +180,17 @@ defmodule Loomkin.Channels.Bridge do
         team_id = state.binding.team_id
         channel = state.binding.channel
 
-        Phoenix.PubSub.broadcast(@pubsub, "team:#{team_id}", {:channel_message, %{
-          direction: :outbound,
-          channel: channel,
-          agent_name: agent_name,
-          text: String.slice(content, 0, 200)
-        }})
+        Phoenix.PubSub.broadcast(
+          @pubsub,
+          "team:#{team_id}",
+          {:channel_message,
+           %{
+             direction: :outbound,
+             channel: channel,
+             agent_name: agent_name,
+             text: String.slice(content, 0, 200)
+           }}
+        )
 
         send_if_allowed(state, fn ->
           formatted = state.adapter.format_agent_message(agent_name, content)
@@ -204,7 +216,10 @@ defmodule Loomkin.Channels.Bridge do
     end
   end
 
-  def handle_info({:permission_request, team_id, tool_name, tool_path, {:agent, _tid, agent_name}} = msg, state) do
+  def handle_info(
+        {:permission_request, team_id, tool_name, tool_path, {:agent, _tid, agent_name}} = msg,
+        state
+      ) do
     if should_notify?(msg, state) do
       request_id =
         Loomkin.Channels.PermissionRegistry.register_request(
@@ -271,7 +286,9 @@ defmodule Loomkin.Channels.Bridge do
       agent_name = Map.get(payload, :agent_name, "unknown")
       model = Map.get(payload, :model, "?")
       cost = Float.round((Map.get(payload, :cost, 0) || 0) / 1, 4)
-      tokens = (Map.get(payload, :input_tokens, 0) || 0) + (Map.get(payload, :output_tokens, 0) || 0)
+
+      tokens =
+        (Map.get(payload, :input_tokens, 0) || 0) + (Map.get(payload, :output_tokens, 0) || 0)
 
       text = "[#{agent_name}] LLM call: #{model} ($#{cost}, #{tokens} tokens)"
 
@@ -400,7 +417,9 @@ defmodule Loomkin.Channels.Bridge do
     else
       Phoenix.PubSub.subscribe(@pubsub, "session:#{session_id}")
       Logger.info("[Bridge] Subscribed to session:#{session_id}")
-      {:noreply, %{state | subscribed_sessions: MapSet.put(state.subscribed_sessions, session_id)}}
+
+      {:noreply,
+       %{state | subscribed_sessions: MapSet.put(state.subscribed_sessions, session_id)}}
     end
   end
 
@@ -411,11 +430,16 @@ defmodule Loomkin.Channels.Bridge do
     channel = state.binding.channel
 
     # Broadcast channel activity for the UI activity feed
-    Phoenix.PubSub.broadcast(@pubsub, "team:#{team_id}", {:channel_message, %{
-      direction: :inbound,
-      channel: channel,
-      text: text
-    }})
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      "team:#{team_id}",
+      {:channel_message,
+       %{
+         direction: :inbound,
+         channel: channel,
+         text: text
+       }}
+    )
 
     # Route to the team lead agent if one exists
     case Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "lead"}) do

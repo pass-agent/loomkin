@@ -106,7 +106,10 @@ defmodule Loomkin.Decisions.Broadcaster do
   end
 
   defp mark_notified(state, goal_id, agent_name, now) do
-    %{state | recent_notifications: Map.put(state.recent_notifications, {goal_id, agent_name}, now)}
+    %{
+      state
+      | recent_notifications: Map.put(state.recent_notifications, {goal_id, agent_name}, now)
+    }
   end
 
   defp expire_stale_notifications(state, now) do

@@ -135,7 +135,9 @@ defmodule Loomkin.Teams.QueryRouterTest do
         )
 
       Comms.subscribe(team_id, "bob")
-      {:ok, query_id} = QueryRouter.ask(team_id, "alice", "What auth token format?", target: "bob")
+
+      {:ok, query_id} =
+        QueryRouter.ask(team_id, "alice", "What auth token format?", target: "bob")
 
       # Smart retrieval falls back to keyword matching (no LLM in test env),
       # which is now formatted as a text string. The enrichment should be

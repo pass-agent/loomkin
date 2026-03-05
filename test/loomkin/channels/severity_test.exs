@@ -17,7 +17,8 @@ defmodule Loomkin.Channels.SeverityTest do
     end
 
     test "permission_request is urgent" do
-      assert :urgent = Severity.classify({:permission_request, "t", "tool", "/p", {:agent, "t", "a"}})
+      assert :urgent =
+               Severity.classify({:permission_request, "t", "tool", "/p", {:agent, "t", "a"}})
     end
 
     test "new_message is action" do

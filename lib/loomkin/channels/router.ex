@@ -8,7 +8,10 @@ defmodule Loomkin.Channels.Router do
 
   require Logger
 
-  alias Loomkin.Channels.{AuditLog, Bindings, Bridge, BridgeSupervisor}
+  alias Loomkin.Channels.AuditLog
+  alias Loomkin.Channels.Bindings
+  alias Loomkin.Channels.Bridge
+  alias Loomkin.Channels.BridgeSupervisor
 
   @adapters %{
     telegram: Loomkin.Channels.Telegram.Adapter,
@@ -57,7 +60,8 @@ defmodule Loomkin.Channels.Router do
   end
 
   @doc "Route a button/keyboard callback to the appropriate bridge."
-  @spec handle_callback(atom(), String.t(), String.t(), term()) :: {:ok, term()} | {:error, term()}
+  @spec handle_callback(atom(), String.t(), String.t(), term()) ::
+          {:ok, term()} | {:error, term()}
   def handle_callback(channel, channel_id, callback_id, data) do
     case Bridge.handle_callback(channel, channel_id, callback_id, data) do
       :ok -> {:ok, :callback_routed}

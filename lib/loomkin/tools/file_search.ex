@@ -8,8 +8,15 @@ defmodule Loomkin.Tools.FileSearch do
         "Returns matching file paths sorted by modification time (most recent first). " <>
         "Common directories like .git, _build, deps, and node_modules are excluded.",
     schema: [
-      pattern: [type: :string, required: true, doc: "Glob pattern to match (e.g. \"**/*.ex\", \"lib/**/*.ex\")"],
-      path: [type: :string, doc: "Directory to search in (relative to project root, defaults to root)"]
+      pattern: [
+        type: :string,
+        required: true,
+        doc: "Glob pattern to match (e.g. \"**/*.ex\", \"lib/**/*.ex\")"
+      ],
+      path: [
+        type: :string,
+        doc: "Directory to search in (relative to project root, defaults to root)"
+      ]
     ]
 
   import Loomkin.Tool, only: [safe_path!: 2, param!: 2, param: 2]

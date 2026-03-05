@@ -66,7 +66,8 @@ defmodule Loomkin.Teams.Comms do
   Falls back to full broadcast if no agents are registered or scoring fails.
   """
   def broadcast_context_targeted(team_id, %{from: from} = payload, threshold \\ 0.3) do
-    alias Loomkin.Teams.{Context, RelevanceScorer}
+    alias Loomkin.Teams.Context
+    alias Loomkin.Teams.RelevanceScorer
 
     agents = Context.list_agents(team_id)
 

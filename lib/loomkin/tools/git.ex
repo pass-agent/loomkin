@@ -103,8 +103,11 @@ defmodule Loomkin.Tools.Git do
     else
       # Always soft reset — never --hard
       case Git.reset(repo, ["HEAD" | files]) do
-        {:ok, _} -> {:ok, %{result: "Unstaged #{length(files)} file(s): #{Enum.join(files, ", ")}"}}
-        {:error, %Git.Error{message: msg}} -> {:error, "git reset failed: #{msg}"}
+        {:ok, _} ->
+          {:ok, %{result: "Unstaged #{length(files)} file(s): #{Enum.join(files, ", ")}"}}
+
+        {:error, %Git.Error{message: msg}} ->
+          {:error, "git reset failed: #{msg}"}
       end
     end
   end

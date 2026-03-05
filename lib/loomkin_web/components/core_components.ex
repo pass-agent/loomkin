@@ -108,7 +108,8 @@ defmodule LoomkinWeb.CoreComponents do
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
-  attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength
+  attr :rest, :global,
+    include: ~w(accept autocomplete capture cols disabled form list max maxlength
                                     min minlength multiple pattern placeholder readonly required
                                     rows size step)
 
@@ -241,6 +242,9 @@ defmodule LoomkinWeb.CoreComponents do
   end
 
   defp hide(js, selector) do
-    JS.hide(js, to: selector, transition: {"transition-opacity duration-200", "opacity-100", "opacity-0"})
+    JS.hide(js,
+      to: selector,
+      transition: {"transition-opacity duration-200", "opacity-100", "opacity-0"}
+    )
   end
 end

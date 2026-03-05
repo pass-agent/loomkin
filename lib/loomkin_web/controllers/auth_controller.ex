@@ -13,7 +13,9 @@ defmodule LoomkinWeb.AuthController do
 
   use LoomkinWeb, :controller
 
-  alias Loomkin.Auth.{OAuthServer, ProviderRegistry, TokenStore}
+  alias Loomkin.Auth.OAuthServer
+  alias Loomkin.Auth.ProviderRegistry
+  alias Loomkin.Auth.TokenStore
 
   require Logger
 

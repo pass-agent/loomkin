@@ -14,17 +14,6 @@ defmodule LoomkinWeb.ToolCallsComponent do
 
   use LoomkinWeb, :live_component
 
-  @agent_colors [
-    "#818cf8",
-    "#34d399",
-    "#f472b6",
-    "#fb923c",
-    "#22d3ee",
-    "#a78bfa",
-    "#fbbf24",
-    "#4ade80"
-  ]
-
   @tool_config %{
     "file_read" => %{icon: "&#128196;", color: "#818cf8"},
     "file_write" => %{icon: "&#9997;", color: "#34d399"},
@@ -84,13 +73,14 @@ defmodule LoomkinWeb.ToolCallsComponent do
 
   @impl true
   def render(assigns) do
-    recent_count = min(length(assigns.events), assigns.max_visible)
+    total_count = length(assigns.events)
+    recent_count = min(total_count, assigns.max_visible)
     recent_events = Enum.take(assigns.events, -recent_count) |> Enum.reverse()
 
     assigns =
       assigns
       |> assign(:recent_events, recent_events)
-      |> assign(:total_count, length(assigns.events))
+      |> assign(:total_count, total_count)
 
     ~H"""
     <div class="flex flex-col" style="border-top: 1px solid var(--border-subtle);">
@@ -119,7 +109,10 @@ defmodule LoomkinWeb.ToolCallsComponent do
           <span class="text-[11px] font-medium text-muted">
             Tool Calls
           </span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded-full" style="background: var(--surface-3); color: var(--text-muted);">
+          <span
+            class="text-[10px] px-1.5 py-0.5 rounded-full"
+            style="background: var(--surface-3); color: var(--text-muted);"
+          >
             {@total_count}
           </span>
         </div>
@@ -174,7 +167,10 @@ defmodule LoomkinWeb.ToolCallsComponent do
 
     ~H"""
     <div
-      class={["flex items-start gap-2 py-1.5 px-2 rounded transition-colors", @has_result && "cursor-pointer hover:bg-white/5"]}
+      class={[
+        "flex items-start gap-2 py-1.5 px-2 rounded transition-colors",
+        @has_result && "cursor-pointer hover:bg-white/5"
+      ]}
       style="background: transparent;"
       phx-click={if @has_result, do: "expand_event"}
       phx-target={if @has_result, do: @myself}
@@ -237,10 +233,7 @@ defmodule LoomkinWeb.ToolCallsComponent do
     end)
   end
 
-  defp agent_color(agent_name) do
-    index = :erlang.phash2(agent_name, length(@agent_colors))
-    Enum.at(@agent_colors, index)
-  end
+  defp agent_color(agent_name), do: LoomkinWeb.AgentColors.agent_color(agent_name)
 
   defp relative_time(datetime) do
     diff = DateTime.diff(DateTime.utc_now(), datetime, :second)

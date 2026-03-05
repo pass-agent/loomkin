@@ -75,7 +75,7 @@ defmodule Loomkin.Teams.Agent do
 
   @doc "Get current agent status."
   def get_status(pid) do
-    GenServer.call(pid, :get_status)
+    GenServer.call(pid, :get_status, 15_000)
   end
 
   @doc "Get conversation history."
@@ -84,7 +84,22 @@ defmodule Loomkin.Teams.Agent do
   end
 
   @doc "Cancel an in-progress agent loop."
-  def cancel(pid), do: GenServer.call(pid, :cancel)
+  def cancel(pid), do: GenServer.call(pid, :cancel, 15_000)
+
+  @doc "Send a permission response to this agent."
+  def permission_response(pid, action, tool_name, tool_path) do
+    GenServer.cast(pid, {:permission_response, action, tool_name, tool_path})
+  end
+
+  @doc "Update the project path for this agent."
+  def update_project_path(pid, new_path) do
+    GenServer.cast(pid, {:update_project_path, new_path})
+  end
+
+  @doc "Get the full GenServer state (for serialization/migration)."
+  def get_state(pid, timeout \\ 5_000) do
+    GenServer.call(pid, :get_state, timeout)
+  end
 
   @doc """
   Change the role of this agent.
@@ -640,7 +655,9 @@ defmodule Loomkin.Teams.Agent do
             ""
         end
       rescue
-        _ -> ""
+        e ->
+          Logger.warning("[Agent] Failed to format sub-team results: #{Exception.message(e)}")
+          ""
       end
 
     summary = if results != "", do: "\nResults:\n#{results}", else: ""
@@ -973,7 +990,9 @@ defmodule Loomkin.Teams.Agent do
       session_id: team_id
     })
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Agent] Graph role-change log failed: #{Exception.message(e)}")
+      :ok
   end
 
   defp spawn_vote_response(state, vote_id, _topic, options, prompt) do
@@ -1335,7 +1354,9 @@ defmodule Loomkin.Teams.Agent do
       end
     end
   rescue
-    _ -> state.messages
+    e ->
+      Logger.warning("[Agent] Context window management failed: #{Exception.message(e)}")
+      state.messages
   end
 
   defp inject_keeper_index(prompt, team_id) do
@@ -1406,7 +1427,9 @@ defmodule Loomkin.Teams.Agent do
         :ok
     end
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Agent] Broadcast failed: #{Exception.message(e)}")
+      :ok
   end
 
   defp track_usage(state, %{usage: usage}) do
@@ -1484,6 +1507,8 @@ defmodule Loomkin.Teams.Agent do
   defp broadcast_team(state, event) do
     Phoenix.PubSub.broadcast(Loomkin.PubSub, "team:#{state.team_id}", event)
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Agent] Broadcast failed: #{Exception.message(e)}")
+      :ok
   end
 end

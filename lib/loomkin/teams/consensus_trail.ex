@@ -11,7 +11,8 @@ defmodule Loomkin.Teams.ConsensusTrail do
   """
 
   alias Loomkin.Decisions.Graph
-  alias Loomkin.Teams.{CollaborationEvents, ConsensusPolicy}
+  alias Loomkin.Teams.CollaborationEvents
+  alias Loomkin.Teams.ConsensusPolicy
 
   @type escalation_payload :: %{
           debate_id: String.t(),
@@ -314,7 +315,8 @@ defmodule Loomkin.Teams.ConsensusTrail do
       %{
         option_a: a.agent,
         option_b: b.agent,
-        tradeoff: "Score difference: #{diff} (#{a.agent}: #{a.weighted_score} vs #{b.agent}: #{b.weighted_score})"
+        tradeoff:
+          "Score difference: #{diff} (#{a.agent}: #{a.weighted_score} vs #{b.agent}: #{b.weighted_score})"
       }
     end)
   end
@@ -324,11 +326,10 @@ defmodule Loomkin.Teams.ConsensusTrail do
     |> Enum.map(fn round ->
       proposals = round.proposals || []
       revisions = round.revisions || []
+      proposal_count = length(proposals)
 
-      # Convergence heuristic: ratio of revisions to proposals
-      # Higher ratio = more participants are converging/revising
-      if length(proposals) > 0 do
-        Float.round(length(revisions) / length(proposals) * 100, 1)
+      if proposal_count > 0 do
+        Float.round(length(revisions) / proposal_count * 100, 1)
       else
         0.0
       end
@@ -355,8 +356,12 @@ defmodule Loomkin.Teams.ConsensusTrail do
     scores = Map.values(weighted.weighted_tallies)
 
     case scores do
-      [] -> 0.0
-      [_] -> 100.0
+      [] ->
+        0.0
+
+      [_] ->
+        100.0
+
       _ ->
         sorted = Enum.sort(scores, :desc)
         total = Enum.sum(sorted)

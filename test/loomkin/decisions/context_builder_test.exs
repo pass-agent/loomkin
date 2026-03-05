@@ -37,11 +37,13 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       for i <- 1..50 do
-        Graph.add_node(node_attrs(%{
-          title: "Goal #{i} with a very long title to use up space",
-          description: String.duplicate("x", 200),
-          session_id: session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal #{i} with a very long title to use up space",
+            description: String.duplicate("x", 200),
+            session_id: session.id
+          })
+        )
       end
 
       assert {:ok, result} = ContextBuilder.build(session.id, max_tokens: 64)
@@ -60,19 +62,23 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       for i <- 1..20 do
-        Graph.add_node(node_attrs(%{
-          node_type: :revisit,
-          title: "Revisit item #{i} with long title padding",
-          status: :active
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :revisit,
+            title: "Revisit item #{i} with long title padding",
+            status: :active
+          })
+        )
       end
 
       for i <- 1..20 do
-        Graph.add_node(node_attrs(%{
-          node_type: :decision,
-          title: "Abandoned decision #{i} with long title padding",
-          status: :abandoned
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :decision,
+            title: "Abandoned decision #{i} with long title padding",
+            status: :abandoned
+          })
+        )
       end
 
       assert {:ok, result} = ContextBuilder.build(session.id, max_tokens: 64)
@@ -87,12 +93,14 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          node_type: :revisit,
-          title: "Retry caching strategy",
-          confidence: 40,
-          status: :active
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :revisit,
+            title: "Retry caching strategy",
+            confidence: 40,
+            status: :active
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "## Prior Attempts & Lessons"
@@ -103,12 +111,14 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          node_type: :decision,
-          title: "Use Redis",
-          description: "Too complex for current scale",
-          status: :abandoned
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :decision,
+            title: "Use Redis",
+            description: "Too complex for current scale",
+            status: :abandoned
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "[ABANDONED] Use Redis — Too complex for current scale"
@@ -118,11 +128,13 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          node_type: :decision,
-          title: "Old API design",
-          status: :superseded
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :decision,
+            title: "Old API design",
+            status: :superseded
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "[SUPERSEDED] Old API design → replaced"
@@ -141,16 +153,20 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       other_session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Session-bound goal",
-          session_id: session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Session-bound goal",
+            session_id: session.id
+          })
+        )
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Other session goal",
-          session_id: other_session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Other session goal",
+            session_id: other_session.id
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "Session-bound goal"
@@ -162,16 +178,20 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       other_session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Goal A",
-          session_id: session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal A",
+            session_id: session.id
+          })
+        )
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Goal B",
-          session_id: other_session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal B",
+            session_id: other_session.id
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id, cross_session: true)
       assert result =~ "Goal A"
@@ -184,11 +204,13 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Goal with keeper",
-          session_id: session.id,
-          metadata: %{"keeper_id" => "keeper-abc-123"}
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal with keeper",
+            session_id: session.id,
+            metadata: %{"keeper_id" => "keeper-abc-123"}
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "Goal with keeper"
@@ -199,11 +221,13 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          node_type: :decision,
-          title: "Decision with keeper",
-          metadata: %{"keeper_id" => "keeper-def-456"}
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :decision,
+            title: "Decision with keeper",
+            metadata: %{"keeper_id" => "keeper-def-456"}
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "Deep context available in keeper keeper-def-456"
@@ -213,12 +237,14 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          node_type: :decision,
-          title: "Abandoned with keeper",
-          status: :abandoned,
-          metadata: %{"keeper_id" => "keeper-ghi-789"}
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            node_type: :decision,
+            title: "Abandoned with keeper",
+            status: :abandoned,
+            metadata: %{"keeper_id" => "keeper-ghi-789"}
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "[ABANDONED] Abandoned with keeper"
@@ -229,11 +255,13 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Goal without keeper",
-          session_id: session.id,
-          metadata: %{"some_other" => "value"}
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal without keeper",
+            session_id: session.id,
+            metadata: %{"some_other" => "value"}
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "Goal without keeper"
@@ -244,10 +272,12 @@ defmodule Loomkin.Decisions.ContextBuilderTest do
       session = create_session()
 
       {:ok, _} =
-        Graph.add_node(node_attrs(%{
-          title: "Goal empty metadata",
-          session_id: session.id
-        }))
+        Graph.add_node(
+          node_attrs(%{
+            title: "Goal empty metadata",
+            session_id: session.id
+          })
+        )
 
       assert {:ok, result} = ContextBuilder.build(session.id)
       assert result =~ "Goal empty metadata"

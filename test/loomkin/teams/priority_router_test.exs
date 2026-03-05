@@ -13,7 +13,8 @@ defmodule Loomkin.Teams.PriorityRouterTest do
     end
 
     test "file_conflict is urgent" do
-      assert {:urgent, :file_conflict} = PriorityRouter.classify({:file_conflict, %{file: "foo.ex"}})
+      assert {:urgent, :file_conflict} =
+               PriorityRouter.classify({:file_conflict, %{file: "foo.ex"}})
     end
   end
 
@@ -55,7 +56,8 @@ defmodule Loomkin.Teams.PriorityRouterTest do
     end
 
     test "peer_message is normal" do
-      assert {:normal, :peer_message} = PriorityRouter.classify({:peer_message, "from", "content"})
+      assert {:normal, :peer_message} =
+               PriorityRouter.classify({:peer_message, "from", "content"})
     end
 
     test "query is normal" do
@@ -111,7 +113,9 @@ defmodule Loomkin.Teams.PriorityRouterTest do
                PriorityRouter.classify({:pair_stopped, "id"})
 
       assert {:normal, :pair_event} =
-               PriorityRouter.classify({:pair_event, %{event: :file_edited, from: "a", payload: %{}}})
+               PriorityRouter.classify(
+                 {:pair_event, %{event: :file_edited, from: "a", payload: %{}}}
+               )
     end
   end
 

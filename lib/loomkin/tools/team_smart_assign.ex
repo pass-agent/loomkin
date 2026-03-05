@@ -31,7 +31,8 @@ defmodule Loomkin.Tools.TeamSmartAssign do
           Reason: #{reason}
         """
 
-        {:ok, %{result: String.trim(summary), task_id: task.id, agent: task.owner, reason: reason}}
+        {:ok,
+         %{result: String.trim(summary), task_id: task.id, agent: task.owner, reason: reason}}
 
       {:error, :no_idle_agents} ->
         {:error, "No idle agents available for assignment"}

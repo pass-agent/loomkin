@@ -15,6 +15,8 @@ defmodule Loomkin.Telemetry.Metrics do
   - Budget warning broadcasts
   """
 
+  require Logger
+
   alias Loomkin.Teams.CostTracker
 
   use GenServer
@@ -147,8 +149,10 @@ defmodule Loomkin.Telemetry.Metrics do
 
   defp attach_handlers do
     handlers = [
-      {"loomkin-metrics-llm-stop", [:loomkin, :llm, :request, :stop], &__MODULE__.handle_llm_stop/4},
-      {"loomkin-metrics-tool-stop", [:loomkin, :tool, :execute, :stop], &__MODULE__.handle_tool_stop/4},
+      {"loomkin-metrics-llm-stop", [:loomkin, :llm, :request, :stop],
+       &__MODULE__.handle_llm_stop/4},
+      {"loomkin-metrics-tool-stop", [:loomkin, :tool, :execute, :stop],
+       &__MODULE__.handle_tool_stop/4},
       {"loomkin-metrics-session-message", [:loomkin, :session, :message],
        &__MODULE__.handle_session_message/4},
       {"loomkin-metrics-decision-logged", [:loomkin, :decision, :logged],
@@ -218,14 +222,19 @@ defmodule Loomkin.Telemetry.Metrics do
     end)
 
     # Update tool stats
-    update_map(:tools, tool_name, fn stats ->
-      %{
-        stats
-        | count: stats.count + 1,
-          total_duration_ms: stats.total_duration_ms + duration_ms,
-          successes: stats.successes + if(success, do: 1, else: 0)
-      }
-    end, %{count: 1, total_duration_ms: duration_ms, successes: if(success, do: 1, else: 0)})
+    update_map(
+      :tools,
+      tool_name,
+      fn stats ->
+        %{
+          stats
+          | count: stats.count + 1,
+            total_duration_ms: stats.total_duration_ms + duration_ms,
+            successes: stats.successes + if(success, do: 1, else: 0)
+        }
+      end,
+      %{count: 1, total_duration_ms: duration_ms, successes: if(success, do: 1, else: 0)}
+    )
 
     broadcast_update()
   end
@@ -268,14 +277,18 @@ defmodule Loomkin.Telemetry.Metrics do
     # NOTE: CostTracker.record_usage is called directly in Agent.track_usage/2.
     # This handler only broadcasts for LiveView dashboards — no double-counting.
 
-    broadcast_team(team_id, {:team_llm_stop, %{
-      team_id: team_id,
-      agent_name: agent_name,
-      model: model,
-      input_tokens: input_tokens,
-      output_tokens: output_tokens,
-      cost: cost
-    }})
+    broadcast_team(
+      team_id,
+      {:team_llm_stop,
+       %{
+         team_id: team_id,
+         agent_name: agent_name,
+         model: model,
+         input_tokens: input_tokens,
+         output_tokens: output_tokens,
+         cost: cost
+       }}
+    )
   end
 
   def handle_team_escalation(_event, _measurements, metadata, _config) do
@@ -287,12 +300,16 @@ defmodule Loomkin.Telemetry.Metrics do
     # NOTE: CostTracker.record_escalation is called directly in Agent.attempt_escalation/2.
     # This handler only broadcasts for LiveView dashboards — no double-counting.
 
-    broadcast_team(team_id, {:team_escalation, %{
-      team_id: team_id,
-      agent_name: agent_name,
-      from_model: from_model,
-      to_model: to_model
-    }})
+    broadcast_team(
+      team_id,
+      {:team_escalation,
+       %{
+         team_id: team_id,
+         agent_name: agent_name,
+         from_model: from_model,
+         to_model: to_model
+       }}
+    )
   end
 
   def handle_team_budget_warning(_event, _measurements, metadata, _config) do
@@ -301,12 +318,16 @@ defmodule Loomkin.Telemetry.Metrics do
     limit = metadata[:limit]
     threshold = metadata[:threshold]
 
-    broadcast_team(team_id, {:team_budget_warning, %{
-      team_id: team_id,
-      spent: spent,
-      limit: limit,
-      threshold: threshold
-    }})
+    broadcast_team(
+      team_id,
+      {:team_budget_warning,
+       %{
+         team_id: team_id,
+         spent: spent,
+         limit: limit,
+         threshold: threshold
+       }}
+    )
   end
 
   # --- Internal helpers ---
@@ -350,12 +371,16 @@ defmodule Loomkin.Telemetry.Metrics do
   defp broadcast_update do
     Phoenix.PubSub.broadcast(Loomkin.PubSub, "telemetry:updates", :metrics_updated)
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Metrics] Broadcast failed: #{Exception.message(e)}")
+      :ok
   end
 
   defp broadcast_team(team_id, event) do
     Phoenix.PubSub.broadcast(Loomkin.PubSub, "telemetry:team:#{team_id}", event)
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Metrics] Team broadcast failed: #{Exception.message(e)}")
+      :ok
   end
 end

@@ -82,11 +82,12 @@ defmodule Loomkin.Teams.ManagerTest do
       {:ok, team_id} = Manager.create_team(name: "find-reg-test")
 
       # Manually register a process in the AgentRegistry to simulate an agent
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "test-agent"},
-        %{role: :coder, status: :idle}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "test-agent"},
+          %{role: :coder, status: :idle}
+        )
 
       assert {:ok, pid} = Manager.find_agent(team_id, "test-agent")
       assert pid == self()
@@ -98,11 +99,12 @@ defmodule Loomkin.Teams.ManagerTest do
       {:ok, team_id} = Manager.create_team(name: "list-reg-test")
 
       # Register a process to simulate an agent
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "agent-1"},
-        %{role: :coder, status: :idle}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "agent-1"},
+          %{role: :coder, status: :idle}
+        )
 
       agents = Manager.list_agents(team_id)
       assert length(agents) == 1
@@ -157,11 +159,12 @@ defmodule Loomkin.Teams.ManagerTest do
       {:ok, team_id} = Manager.create_team(name: "only-keepers")
 
       # Register a keeper entry (same shape as ContextKeeper.start_link registers)
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "keeper:abc-123"},
-        %{type: :keeper, topic: "test topic", tokens: 100, source_agent: "coder"}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "keeper:abc-123"},
+          %{type: :keeper, topic: "test topic", tokens: 100, source_agent: "coder"}
+        )
 
       assert Manager.list_agents(team_id) == []
     end
@@ -170,24 +173,28 @@ defmodule Loomkin.Teams.ManagerTest do
       {:ok, team_id} = Manager.create_team(name: "mixed-team")
 
       # Register a real agent
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "coder-1"},
-        %{role: :coder, status: :idle}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "coder-1"},
+          %{role: :coder, status: :idle}
+        )
 
       # Spawn keeper in a separate process with explicit handshake
       parent = self()
 
-      keeper_pid = spawn_link(fn ->
-        {:ok, _} = Registry.register(
-          Loomkin.Teams.AgentRegistry,
-          {team_id, "keeper:def-456"},
-          %{type: :keeper, topic: "context", tokens: 50, source_agent: "coder-1"}
-        )
-        send(parent, :keeper_registered)
-        Process.sleep(:infinity)
-      end)
+      keeper_pid =
+        spawn_link(fn ->
+          {:ok, _} =
+            Registry.register(
+              Loomkin.Teams.AgentRegistry,
+              {team_id, "keeper:def-456"},
+              %{type: :keeper, topic: "context", tokens: 50, source_agent: "coder-1"}
+            )
+
+          send(parent, :keeper_registered)
+          Process.sleep(:infinity)
+        end)
 
       assert_receive :keeper_registered
       on_exit(fn -> Process.exit(keeper_pid, :kill) end)
@@ -200,11 +207,12 @@ defmodule Loomkin.Teams.ManagerTest do
     test "returns all agents when no keepers are present" do
       {:ok, team_id} = Manager.create_team(name: "agents-only")
 
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "researcher-1"},
-        %{role: :researcher, status: :working}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "researcher-1"},
+          %{role: :researcher, status: :working}
+        )
 
       agents = Manager.list_agents(team_id)
       assert length(agents) == 1
@@ -215,26 +223,30 @@ defmodule Loomkin.Teams.ManagerTest do
       {:ok, team_id} = Manager.create_team(name: "multi-keeper")
 
       # Register an agent from the test process
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "lead-1"},
-        %{role: :lead, status: :idle}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "lead-1"},
+          %{role: :lead, status: :idle}
+        )
 
       # Register multiple keepers with explicit handshake
       parent = self()
 
-      keeper_pids = Enum.map(1..3, fn i ->
-        spawn_link(fn ->
-          {:ok, _} = Registry.register(
-            Loomkin.Teams.AgentRegistry,
-            {team_id, "keeper:keeper-#{i}"},
-            %{type: :keeper, topic: "topic-#{i}", tokens: i * 100, source_agent: "lead-1"}
-          )
-          send(parent, {:keeper_registered, i})
-          Process.sleep(:infinity)
+      keeper_pids =
+        Enum.map(1..3, fn i ->
+          spawn_link(fn ->
+            {:ok, _} =
+              Registry.register(
+                Loomkin.Teams.AgentRegistry,
+                {team_id, "keeper:keeper-#{i}"},
+                %{type: :keeper, topic: "topic-#{i}", tokens: i * 100, source_agent: "lead-1"}
+              )
+
+            send(parent, {:keeper_registered, i})
+            Process.sleep(:infinity)
+          end)
         end)
-      end)
 
       for i <- 1..3, do: assert_receive({:keeper_registered, ^i})
       on_exit(fn -> Enum.each(keeper_pids, &Process.exit(&1, :kill)) end)

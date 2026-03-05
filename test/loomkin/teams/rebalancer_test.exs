@@ -70,7 +70,13 @@ defmodule Loomkin.Teams.RebalancerTest do
       old_activity = old_state.last_activity["alice"]
 
       Process.sleep(10)
-      Phoenix.PubSub.broadcast(@pubsub, "team:#{team_id}", {:tool_complete, "alice", %{tool_name: "file_read", result: "ok"}})
+
+      Phoenix.PubSub.broadcast(
+        @pubsub,
+        "team:#{team_id}",
+        {:tool_complete, "alice", %{tool_name: "file_read", result: "ok"}}
+      )
+
       Process.sleep(50)
 
       new_state = :sys.get_state(pid)
@@ -87,7 +93,12 @@ defmodule Loomkin.Teams.RebalancerTest do
         %{state | nudge_counts: Map.put(state.nudge_counts, "alice", 1)}
       end)
 
-      Phoenix.PubSub.broadcast(@pubsub, "team:#{team_id}", {:tool_complete, "alice", %{tool_name: "shell", result: "ok"}})
+      Phoenix.PubSub.broadcast(
+        @pubsub,
+        "team:#{team_id}",
+        {:tool_complete, "alice", %{tool_name: "shell", result: "ok"}}
+      )
+
       Process.sleep(50)
 
       state = :sys.get_state(pid)
@@ -108,10 +119,7 @@ defmodule Loomkin.Teams.RebalancerTest do
       old_time = System.monotonic_time(:millisecond) - 6 * 60_000
 
       :sys.replace_state(pid, fn state ->
-        %{state |
-          working_since: %{"alice" => old_time},
-          last_activity: %{"alice" => old_time}
-        }
+        %{state | working_since: %{"alice" => old_time}, last_activity: %{"alice" => old_time}}
       end)
 
       # Trigger check
@@ -133,10 +141,11 @@ defmodule Loomkin.Teams.RebalancerTest do
       old_time = System.monotonic_time(:millisecond) - 6 * 60_000
 
       :sys.replace_state(pid, fn state ->
-        %{state |
-          working_since: %{"alice" => old_time},
-          last_activity: %{"alice" => old_time},
-          nudge_counts: %{"alice" => 2}
+        %{
+          state
+          | working_since: %{"alice" => old_time},
+            last_activity: %{"alice" => old_time},
+            nudge_counts: %{"alice" => 2}
         }
       end)
 
@@ -160,9 +169,10 @@ defmodule Loomkin.Teams.RebalancerTest do
       now = System.monotonic_time(:millisecond)
 
       :sys.replace_state(pid, fn state ->
-        %{state |
-          working_since: %{"alice" => now - 10 * 60_000},
-          last_activity: %{"alice" => now - 1_000}
+        %{
+          state
+          | working_since: %{"alice" => now - 10 * 60_000},
+            last_activity: %{"alice" => now - 1_000}
         }
       end)
 

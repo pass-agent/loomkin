@@ -5,7 +5,8 @@ defmodule Loomkin.Teams.TableRegistryTest do
 
   describe "get_table/1" do
     test "returns {:error, :not_found} for nonexistent team" do
-      assert {:error, :not_found} = TableRegistry.get_table("does-not-exist-#{System.unique_integer()}")
+      assert {:error, :not_found} =
+               TableRegistry.get_table("does-not-exist-#{System.unique_integer()}")
     end
 
     test "returns {:ok, ref} for existing team" do

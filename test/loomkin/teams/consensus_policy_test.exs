@@ -96,7 +96,9 @@ defmodule Loomkin.Teams.ConsensusPolicyTest do
     end
 
     test "returns multiple errors for multiple invalid fields" do
-      assert {:error, errors} = ConsensusPolicy.new(quorum: :bad, max_rounds: -1, on_deadlock: :nope)
+      assert {:error, errors} =
+               ConsensusPolicy.new(quorum: :bad, max_rounds: -1, on_deadlock: :nope)
+
       assert length(errors) == 3
     end
   end
@@ -112,7 +114,12 @@ defmodule Loomkin.Teams.ConsensusPolicyTest do
     end
 
     test "parses valid config with string keys" do
-      config = %{"quorum" => "supermajority", "max_rounds" => 2, "on_deadlock" => "random_tiebreak"}
+      config = %{
+        "quorum" => "supermajority",
+        "max_rounds" => 2,
+        "on_deadlock" => "random_tiebreak"
+      }
+
       assert {:ok, policy} = ConsensusPolicy.from_config(config)
       assert policy.quorum == :supermajority
       assert policy.max_rounds == 2

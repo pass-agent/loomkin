@@ -202,9 +202,7 @@ defmodule Loomkin.Decisions.BroadcasterTest do
         )
 
       {:ok, obs} =
-        Graph.add_node(
-          node_attrs(%{node_type: :observation, title: "Discovery"})
-        )
+        Graph.add_node(node_attrs(%{node_type: :observation, title: "Discovery"}))
 
       {:ok, _} = Graph.add_edge(goal.id, obs.id, :enables)
       Phoenix.PubSub.broadcast(@pubsub, "decision_graph", {:node_added, obs})
@@ -227,9 +225,7 @@ defmodule Loomkin.Decisions.BroadcasterTest do
       Phoenix.PubSub.subscribe(@pubsub, "team:#{@team_id}:agent:coder-1")
 
       {:ok, obs} =
-        Graph.add_node(
-          node_attrs(%{node_type: :observation, title: "Finding"})
-        )
+        Graph.add_node(node_attrs(%{node_type: :observation, title: "Finding"}))
 
       {:ok, _} = Graph.add_edge(goal.id, obs.id, :enables)
       Phoenix.PubSub.broadcast(@pubsub, "decision_graph", {:node_added, obs})
@@ -256,9 +252,7 @@ defmodule Loomkin.Decisions.BroadcasterTest do
 
       # First observation
       {:ok, obs1} =
-        Graph.add_node(
-          node_attrs(%{node_type: :observation, title: "First finding"})
-        )
+        Graph.add_node(node_attrs(%{node_type: :observation, title: "First finding"}))
 
       {:ok, _} = Graph.add_edge(goal.id, obs1.id, :enables)
       Phoenix.PubSub.broadcast(@pubsub, "decision_graph", {:node_added, obs1})
@@ -267,9 +261,7 @@ defmodule Loomkin.Decisions.BroadcasterTest do
 
       # Second observation immediately after (should be debounced)
       {:ok, obs2} =
-        Graph.add_node(
-          node_attrs(%{node_type: :observation, title: "Second finding"})
-        )
+        Graph.add_node(node_attrs(%{node_type: :observation, title: "Second finding"}))
 
       {:ok, _} = Graph.add_edge(goal.id, obs2.id, :enables)
       Phoenix.PubSub.broadcast(@pubsub, "decision_graph", {:node_added, obs2})

@@ -89,12 +89,16 @@ defmodule Loomkin.Decisions.NervousSystemIntegrationTest do
       keeper_id = Ecto.UUID.generate()
 
       # Simulate a keeper_created event (normally from ContextOffload)
-      Comms.broadcast(team_id, {:keeper_created, %{
-        id: keeper_id,
-        topic: "authentication-research",
-        source: "agent-b",
-        tokens: 1200
-      }})
+      Comms.broadcast(
+        team_id,
+        {:keeper_created,
+         %{
+           id: keeper_id,
+           topic: "authentication-research",
+           source: "agent-b",
+           tokens: 1200
+         }}
+      )
 
       Process.sleep(100)
 

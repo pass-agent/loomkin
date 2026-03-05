@@ -29,7 +29,9 @@ defmodule Loomkin.Tools.DecisionQueryTest do
   test "recent_decisions returns formatted decisions" do
     {:ok, _} = Graph.add_node(node_attrs(%{node_type: :decision, title: "Use Ecto"}))
 
-    assert {:ok, %{result: result}} = DecisionQuery.run(%{"query_type" => "recent_decisions"}, %{})
+    assert {:ok, %{result: result}} =
+             DecisionQuery.run(%{"query_type" => "recent_decisions"}, %{})
+
     assert result =~ "Recent Decisions"
     assert result =~ "Use Ecto"
   end

@@ -25,7 +25,12 @@ defmodule Loomkin.Providers.OAuthAdaptersTest do
   describe "prepare_request returns {:error, :no_oauth_token} when no token stored" do
     test "AnthropicOAuth" do
       assert {:error, :no_oauth_token} =
-               AnthropicOAuth.prepare_request(:chat, "anthropic_oauth:claude-sonnet-4-6", "hi", [])
+               AnthropicOAuth.prepare_request(
+                 :chat,
+                 "anthropic_oauth:claude-sonnet-4-6",
+                 "hi",
+                 []
+               )
     end
 
     test "OpenAIOAuth" do

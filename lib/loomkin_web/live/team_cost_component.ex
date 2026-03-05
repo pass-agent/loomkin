@@ -5,8 +5,6 @@ defmodule LoomkinWeb.TeamCostComponent do
 
   alias Loomkin.Teams.CostTracker
 
-  @agent_colors ["#818cf8", "#34d399", "#f472b6", "#fb923c", "#22d3ee", "#a78bfa", "#fbbf24", "#4ade80"]
-
   @impl true
   def mount(socket) do
     {:ok,
@@ -128,7 +126,9 @@ defmodule LoomkinWeb.TeamCostComponent do
               calls
               |> Enum.filter(fn c ->
                 t = c[:timestamp]
-                t && DateTime.compare(t, bucket_start) != :lt && DateTime.compare(t, bucket_end) == :lt
+
+                t && DateTime.compare(t, bucket_start) != :lt &&
+                  DateTime.compare(t, bucket_end) == :lt
               end)
               |> Enum.map(fn c -> c[:cost] || 0 end)
               |> Enum.sum()
@@ -178,7 +178,7 @@ defmodule LoomkinWeb.TeamCostComponent do
 
     {:noreply,
      socket
-     |> assign(:escalations, socket.assigns.escalations ++ [escalation])
+     |> assign(:escalations, Enum.take(socket.assigns.escalations ++ [escalation], -500))
      |> load_cost_data()}
   end
 
@@ -264,8 +264,12 @@ defmodule LoomkinWeb.TeamCostComponent do
               class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-3"
             >
               <div class="flex items-start justify-between">
-                <span class={"text-xs font-mono font-medium #{model_accent(model.model)}"}>{short_model(model.model)}</span>
-                <span class="text-sm font-bold text-green-400 font-mono">${format_cost(model.cost)}</span>
+                <span class={"text-xs font-mono font-medium #{model_accent(model.model)}"}>
+                  {short_model(model.model)}
+                </span>
+                <span class="text-sm font-bold text-green-400 font-mono">
+                  ${format_cost(model.cost)}
+                </span>
               </div>
               <span class="text-[10px] text-gray-500">{model.requests} requests</span>
             </div>
@@ -317,10 +321,7 @@ defmodule LoomkinWeb.TeamCostComponent do
 
   # --- Helpers ---
 
-  defp agent_color(agent_name) do
-    index = :erlang.phash2(agent_name, length(@agent_colors))
-    Enum.at(@agent_colors, index)
-  end
+  defp agent_color(agent_name), do: LoomkinWeb.AgentColors.agent_color(agent_name)
 
   defp token_bar_pct(_tokens, []), do: 0
 
@@ -388,7 +389,9 @@ defmodule LoomkinWeb.TeamCostComponent do
   defp format_cost(cost) when is_number(cost), do: :erlang.float_to_binary(cost / 1, decimals: 4)
   defp format_cost(_), do: "0.0000"
 
-  defp format_number(n) when is_integer(n) and n >= 1_000_000, do: "#{Float.round(n / 1_000_000, 1)}M"
+  defp format_number(n) when is_integer(n) and n >= 1_000_000,
+    do: "#{Float.round(n / 1_000_000, 1)}M"
+
   defp format_number(n) when is_integer(n) and n >= 1_000, do: "#{Float.round(n / 1_000, 1)}k"
   defp format_number(n) when is_number(n), do: to_string(trunc(n))
   defp format_number(_), do: "0"

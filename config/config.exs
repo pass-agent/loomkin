@@ -63,8 +63,12 @@ config :req_llm,
   finch: [
     name: ReqLLM.Finch,
     pools: %{
-      :default => [protocols: [:http1], size: 1, count: 8,
-                   conn_opts: [transport_opts: [timeout: 120_000]]]
+      :default => [
+        protocols: [:http1],
+        size: 1,
+        count: 8,
+        conn_opts: [transport_opts: [timeout: 120_000]]
+      ]
     }
   ]
 

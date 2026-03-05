@@ -8,10 +8,17 @@ defmodule Loomkin.Tools.FileEdit do
         "exactly once in the file (to prevent ambiguous edits). Set replace_all to true " <>
         "to replace every occurrence.",
     schema: [
-      file_path: [type: :string, required: true, doc: "Path to the file (relative to project root)"],
+      file_path: [
+        type: :string,
+        required: true,
+        doc: "Path to the file (relative to project root)"
+      ],
       old_string: [type: :string, required: true, doc: "The exact text to find and replace"],
       new_string: [type: :string, required: true, doc: "The text to replace it with"],
-      replace_all: [type: :boolean, doc: "Replace all occurrences (default: false, requires unique match)"]
+      replace_all: [
+        type: :boolean,
+        doc: "Replace all occurrences (default: false, requires unique match)"
+      ]
     ]
 
   import Loomkin.Tool, only: [safe_path!: 2, param!: 2, param: 3]
@@ -45,8 +52,12 @@ defmodule Loomkin.Tools.FileEdit do
 
     cond do
       # No tracking available (e.g. direct tool call outside agent loop)
-      is_nil(read_files) -> ""
-      MapSet.member?(read_files, full_path) -> ""
+      is_nil(read_files) ->
+        ""
+
+      MapSet.member?(read_files, full_path) ->
+        ""
+
       true ->
         "Warning: You are editing a file you haven't read yet. " <>
           "Consider reading it first to understand the existing code.\n"

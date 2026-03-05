@@ -19,35 +19,160 @@ defmodule LoomkinWeb.TeamActivityComponent do
 
   use LoomkinWeb, :live_component
 
-  @agent_colors [
-    "#818cf8",
-    "#34d399",
-    "#f472b6",
-    "#fb923c",
-    "#22d3ee",
-    "#a78bfa",
-    "#fbbf24",
-    "#4ade80"
-  ]
-
   @type_config %{
-    tool_call: %{label: "tool", icon: "&#9881;", accent: "#818cf8", accent_bg: "rgba(129, 140, 248, 0.10)", accent_border: "rgba(129, 140, 248, 0.35)", accent_text: "#a5b4fc", dot_color: "#818cf8"},
-    message: %{label: "message", icon: "&#9993;", accent: "#34d399", accent_bg: "rgba(52, 211, 153, 0.08)", accent_border: "rgba(52, 211, 153, 0.30)", accent_text: "#6ee7b7", dot_color: "#34d399"},
-    decision: %{label: "decision", icon: "&#129504;", accent: "#a78bfa", accent_bg: "rgba(167, 139, 250, 0.10)", accent_border: "rgba(167, 139, 250, 0.35)", accent_text: "#c4b5fd", dot_color: "#a78bfa"},
-    task_created: %{label: "created", icon: "&#10010;", accent: "#22d3ee", accent_bg: "rgba(34, 211, 238, 0.08)", accent_border: "rgba(34, 211, 238, 0.30)", accent_text: "#67e8f9", dot_color: "#22d3ee"},
-    task_assigned: %{label: "assigned", icon: "&#10132;", accent: "#60a5fa", accent_bg: "rgba(96, 165, 250, 0.08)", accent_border: "rgba(96, 165, 250, 0.30)", accent_text: "#93bbfd", dot_color: "#60a5fa"},
-    task_started: %{label: "started", icon: "&#9654;", accent: "#818cf8", accent_bg: "rgba(129, 140, 248, 0.08)", accent_border: "rgba(129, 140, 248, 0.30)", accent_text: "#a5b4fc", dot_color: "#818cf8"},
-    task_complete: %{label: "done", icon: "&#10004;", accent: "#4ade80", accent_bg: "rgba(74, 222, 128, 0.08)", accent_border: "rgba(74, 222, 128, 0.30)", accent_text: "#86efac", dot_color: "#4ade80"},
-    task_failed: %{label: "failed", icon: "&#10006;", accent: "#f87171", accent_bg: "rgba(248, 113, 113, 0.10)", accent_border: "rgba(248, 113, 113, 0.35)", accent_text: "#fca5a5", dot_color: "#f87171"},
-    discovery: %{label: "discovery", icon: "&#11088;", accent: "#fbbf24", accent_bg: "rgba(251, 191, 36, 0.08)", accent_border: "rgba(251, 191, 36, 0.30)", accent_text: "#fcd34d", dot_color: "#fbbf24"},
-    error: %{label: "error", icon: "&#9888;", accent: "#f87171", accent_bg: "rgba(248, 113, 113, 0.10)", accent_border: "rgba(248, 113, 113, 0.35)", accent_text: "#fca5a5", dot_color: "#f87171"},
-    thinking: %{label: "thinking", icon: "&#8230;", accent: "#818cf8", accent_bg: "rgba(129, 140, 248, 0.06)", accent_border: "rgba(129, 140, 248, 0.20)", accent_text: "#a5b4fc", dot_color: "#818cf8"},
-    streaming: %{label: "thinking", icon: "&#8230;", accent: "#818cf8", accent_bg: "rgba(129, 140, 248, 0.06)", accent_border: "rgba(129, 140, 248, 0.20)", accent_text: "#a5b4fc", dot_color: "#818cf8"},
-    agent_spawn: %{label: "joined", icon: "&#10035;", accent: "#2dd4bf", accent_bg: "rgba(45, 212, 191, 0.06)", accent_border: "rgba(45, 212, 191, 0.25)", accent_text: "#5eead4", dot_color: "#2dd4bf"},
-    context_offload: %{label: "offload", icon: "&#128230;", accent: "#f59e0b", accent_bg: "rgba(245, 158, 11, 0.08)", accent_border: "rgba(245, 158, 11, 0.25)", accent_text: "#fcd34d", dot_color: "#f59e0b"},
-    question: %{label: "question", icon: "&#10068;", accent: "#38bdf8", accent_bg: "rgba(56, 189, 248, 0.10)", accent_border: "rgba(56, 189, 248, 0.35)", accent_text: "#7dd3fc", dot_color: "#38bdf8"},
-    answer: %{label: "answer", icon: "&#10069;", accent: "#38bdf8", accent_bg: "rgba(56, 189, 248, 0.08)", accent_border: "rgba(56, 189, 248, 0.25)", accent_text: "#7dd3fc", dot_color: "#38bdf8"},
-    channel_message: %{label: "channel", icon: "&#128172;", accent: "#22d3ee", accent_bg: "rgba(34, 211, 238, 0.08)", accent_border: "rgba(34, 211, 238, 0.25)", accent_text: "#67e8f9", dot_color: "#22d3ee"}
+    tool_call: %{
+      label: "tool",
+      icon: "&#9881;",
+      accent: "#818cf8",
+      accent_bg: "rgba(129, 140, 248, 0.10)",
+      accent_border: "rgba(129, 140, 248, 0.35)",
+      accent_text: "#a5b4fc",
+      dot_color: "#818cf8"
+    },
+    message: %{
+      label: "message",
+      icon: "&#9993;",
+      accent: "#34d399",
+      accent_bg: "rgba(52, 211, 153, 0.08)",
+      accent_border: "rgba(52, 211, 153, 0.30)",
+      accent_text: "#6ee7b7",
+      dot_color: "#34d399"
+    },
+    decision: %{
+      label: "decision",
+      icon: "&#129504;",
+      accent: "#a78bfa",
+      accent_bg: "rgba(167, 139, 250, 0.10)",
+      accent_border: "rgba(167, 139, 250, 0.35)",
+      accent_text: "#c4b5fd",
+      dot_color: "#a78bfa"
+    },
+    task_created: %{
+      label: "created",
+      icon: "&#10010;",
+      accent: "#22d3ee",
+      accent_bg: "rgba(34, 211, 238, 0.08)",
+      accent_border: "rgba(34, 211, 238, 0.30)",
+      accent_text: "#67e8f9",
+      dot_color: "#22d3ee"
+    },
+    task_assigned: %{
+      label: "assigned",
+      icon: "&#10132;",
+      accent: "#60a5fa",
+      accent_bg: "rgba(96, 165, 250, 0.08)",
+      accent_border: "rgba(96, 165, 250, 0.30)",
+      accent_text: "#93bbfd",
+      dot_color: "#60a5fa"
+    },
+    task_started: %{
+      label: "started",
+      icon: "&#9654;",
+      accent: "#818cf8",
+      accent_bg: "rgba(129, 140, 248, 0.08)",
+      accent_border: "rgba(129, 140, 248, 0.30)",
+      accent_text: "#a5b4fc",
+      dot_color: "#818cf8"
+    },
+    task_complete: %{
+      label: "done",
+      icon: "&#10004;",
+      accent: "#4ade80",
+      accent_bg: "rgba(74, 222, 128, 0.08)",
+      accent_border: "rgba(74, 222, 128, 0.30)",
+      accent_text: "#86efac",
+      dot_color: "#4ade80"
+    },
+    task_failed: %{
+      label: "failed",
+      icon: "&#10006;",
+      accent: "#f87171",
+      accent_bg: "rgba(248, 113, 113, 0.10)",
+      accent_border: "rgba(248, 113, 113, 0.35)",
+      accent_text: "#fca5a5",
+      dot_color: "#f87171"
+    },
+    discovery: %{
+      label: "discovery",
+      icon: "&#11088;",
+      accent: "#fbbf24",
+      accent_bg: "rgba(251, 191, 36, 0.08)",
+      accent_border: "rgba(251, 191, 36, 0.30)",
+      accent_text: "#fcd34d",
+      dot_color: "#fbbf24"
+    },
+    error: %{
+      label: "error",
+      icon: "&#9888;",
+      accent: "#f87171",
+      accent_bg: "rgba(248, 113, 113, 0.10)",
+      accent_border: "rgba(248, 113, 113, 0.35)",
+      accent_text: "#fca5a5",
+      dot_color: "#f87171"
+    },
+    thinking: %{
+      label: "thinking",
+      icon: "&#8230;",
+      accent: "#818cf8",
+      accent_bg: "rgba(129, 140, 248, 0.06)",
+      accent_border: "rgba(129, 140, 248, 0.20)",
+      accent_text: "#a5b4fc",
+      dot_color: "#818cf8"
+    },
+    streaming: %{
+      label: "thinking",
+      icon: "&#8230;",
+      accent: "#818cf8",
+      accent_bg: "rgba(129, 140, 248, 0.06)",
+      accent_border: "rgba(129, 140, 248, 0.20)",
+      accent_text: "#a5b4fc",
+      dot_color: "#818cf8"
+    },
+    agent_spawn: %{
+      label: "joined",
+      icon: "&#10035;",
+      accent: "#2dd4bf",
+      accent_bg: "rgba(45, 212, 191, 0.06)",
+      accent_border: "rgba(45, 212, 191, 0.25)",
+      accent_text: "#5eead4",
+      dot_color: "#2dd4bf"
+    },
+    context_offload: %{
+      label: "offload",
+      icon: "&#128230;",
+      accent: "#f59e0b",
+      accent_bg: "rgba(245, 158, 11, 0.08)",
+      accent_border: "rgba(245, 158, 11, 0.25)",
+      accent_text: "#fcd34d",
+      dot_color: "#f59e0b"
+    },
+    question: %{
+      label: "question",
+      icon: "&#10068;",
+      accent: "#38bdf8",
+      accent_bg: "rgba(56, 189, 248, 0.10)",
+      accent_border: "rgba(56, 189, 248, 0.35)",
+      accent_text: "#7dd3fc",
+      dot_color: "#38bdf8"
+    },
+    answer: %{
+      label: "answer",
+      icon: "&#10069;",
+      accent: "#38bdf8",
+      accent_bg: "rgba(56, 189, 248, 0.08)",
+      accent_border: "rgba(56, 189, 248, 0.25)",
+      accent_text: "#7dd3fc",
+      dot_color: "#38bdf8"
+    },
+    channel_message: %{
+      label: "channel",
+      icon: "&#128172;",
+      accent: "#22d3ee",
+      accent_bg: "rgba(34, 211, 238, 0.08)",
+      accent_border: "rgba(34, 211, 238, 0.25)",
+      accent_text: "#67e8f9",
+      dot_color: "#22d3ee"
+    }
   }
 
   @impl true
@@ -103,7 +228,9 @@ defmodule LoomkinWeb.TeamActivityComponent do
     {:noreply, assign(socket, agent_filter: new_filter, focused_agent: nil)}
   end
 
-  def handle_event("toggle_type", %{"type" => type_str}, socket) do
+  @valid_event_types ~w(tool_call message task_created task_assigned task_complete discovery error thinking agent_spawn context_offload question channel_message)
+  def handle_event("toggle_type", %{"type" => type_str}, socket)
+      when type_str in @valid_event_types do
     type = String.to_existing_atom(type_str)
     filter = socket.assigns.type_filter
 
@@ -168,7 +295,8 @@ defmodule LoomkinWeb.TeamActivityComponent do
             <span
               class="flex-shrink-0"
               style={"width: 6px; height: 6px; border-radius: 9999px; background-color: #{agent_color(agent)};"}
-            ></span>
+            >
+            </span>
             {agent}
           </button>
         </div>
@@ -189,7 +317,8 @@ defmodule LoomkinWeb.TeamActivityComponent do
             <span
               class="flex-shrink-0"
               style={"width: 6px; height: 6px; border-radius: 9999px; background-color: #{config.dot_color};"}
-            ></span>
+            >
+            </span>
             {config.label}
           </button>
         </div>
@@ -205,7 +334,9 @@ defmodule LoomkinWeb.TeamActivityComponent do
             <div class="text-center space-y-3">
               <div class="text-muted" style="font-size: 2rem; opacity: 0.3;">&#9673;</div>
               <p class="text-sm text-muted">No activity yet</p>
-              <p class="text-xs" style="color: var(--text-muted); opacity: 0.6;">Events will appear here as your team works</p>
+              <p class="text-xs" style="color: var(--text-muted); opacity: 0.6;">
+                Events will appear here as your team works
+              </p>
             </div>
           </div>
 
@@ -246,7 +377,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -272,7 +407,10 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {Path.basename(@file_path)}
         </button>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -305,7 +443,9 @@ defmodule LoomkinWeb.TeamActivityComponent do
       </div>
       <%!-- Fallback: show content if no result --%>
       <div :if={!@has_result && String.length(@event.content) > 0} class="px-3 pb-2">
-        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">{@event.content}</p>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">
+          {@event.content}
+        </p>
       </div>
     </div>
     """
@@ -338,7 +478,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@from}
@@ -349,8 +493,16 @@ defmodule LoomkinWeb.TeamActivityComponent do
           {@from}
         </button>
         <span style="font-size: 0.6875rem; color: var(--text-muted);">&#8594;</span>
-        <span style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"} class="truncate">{@display_to}</span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}
+          class="truncate"
+        >
+          {@display_to}
+        </span>
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -411,7 +563,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -427,17 +583,32 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {Phoenix.HTML.raw(@config.icon)} {@config.label}
         </span>
-        <span :if={@title} class="truncate min-w-0" style="font-size: 0.75rem; font-weight: 500; color: var(--text-primary);">{@title}</span>
-        <span :if={@owner} class="flex-shrink-0" style="font-size: 0.6875rem; color: var(--text-muted);">
+        <span
+          :if={@title}
+          class="truncate min-w-0"
+          style="font-size: 0.75rem; font-weight: 500; color: var(--text-primary);"
+        >
+          {@title}
+        </span>
+        <span
+          :if={@owner}
+          class="flex-shrink-0"
+          style="font-size: 0.6875rem; color: var(--text-muted);"
+        >
           &#8594; <span style="color: var(--text-secondary);">{@owner}</span>
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <%!-- Show content only when there is no title (fallback) --%>
       <div :if={!@title && @event.content != ""} class="px-3 pb-2">
-        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">{@event.content}</p>
+        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">
+          {@event.content}
+        </p>
       </div>
       <%!-- Collapsible result for completed tasks --%>
       <div :if={@result && @event.type == :task_complete} class="px-3 pb-2">
@@ -491,7 +662,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid #{@config.accent_border}; border-left: 2px solid #{@config.accent}; border-radius: 0.5rem; box-shadow: 0 0 16px rgba(251, 191, 36, 0.06);"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -504,7 +679,10 @@ defmodule LoomkinWeb.TeamActivityComponent do
         <span class="badge-warning flex-shrink-0" style="padding: 1px 8px; font-size: 0.6875rem;">
           &#11088; discovery
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -562,11 +740,29 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid #{@config.accent_border}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center justify-center gap-2 px-3 py-1.5 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@agent_name)};"}></span>
-        <span style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}>&#10035; {@agent_name} joined</span>
-        <span :if={@role} style="font-size: 0.6875rem; color: var(--text-muted);">as <span style="color: var(--text-secondary);">{@role}</span></span>
-        <span :if={@model} class="ml-auto" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">{@model}</span>
-        <span :if={!@model} class="ml-auto" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@agent_name)};"}
+        >
+        </span>
+        <span style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}>
+          &#10035; {@agent_name} joined
+        </span>
+        <span :if={@role} style="font-size: 0.6875rem; color: var(--text-muted);">
+          as <span style="color: var(--text-secondary);">{@role}</span>
+        </span>
+        <span
+          :if={@model}
+          class="ml-auto"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
+          {@model}
+        </span>
+        <span
+          :if={!@model}
+          class="ml-auto"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -599,7 +795,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid #{@config.accent_border}; border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -612,14 +812,25 @@ defmodule LoomkinWeb.TeamActivityComponent do
         <span class="badge-danger flex-shrink-0" style="padding: 1px 8px; font-size: 0.6875rem;">
           &#9888; error
         </span>
-        <span :if={@brief_error && @content_text != ""} class="truncate min-w-0" style={"font-size: 0.75rem; color: #{@config.accent_text}; opacity: 0.8;"}>{@content_text}</span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          :if={@brief_error && @content_text != ""}
+          class="truncate min-w-0"
+          style={"font-size: 0.75rem; color: #{@config.accent_text}; opacity: 0.8;"}
+        >
+          {@content_text}
+        </span>
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <%!-- Full error content if too long for header --%>
       <div :if={!@brief_error} class="px-3 pb-2">
-        <p style={"font-size: 0.75rem; color: #{@config.accent_text}; opacity: 0.8; word-break: break-word;"}>{@content_text}</p>
+        <p style={"font-size: 0.75rem; color: #{@config.accent_text}; opacity: 0.8; word-break: break-word;"}>
+          {@content_text}
+        </p>
       </div>
       <%!-- Collapsible details (stack trace etc.) --%>
       <div :if={@details} class="px-3 pb-2">
@@ -672,7 +883,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid #{@config.accent_border}; border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)}; #{if @is_live, do: "box-shadow: 0 0 6px #{agent_color(@event.agent)};"}"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)}; #{if @is_live, do: "box-shadow: 0 0 6px #{agent_color(@event.agent)};"}"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -685,17 +900,35 @@ defmodule LoomkinWeb.TeamActivityComponent do
         <span style={"font-size: 0.6875rem; color: #{@config.accent_text}; opacity: 0.6;"}>
           thinking
           <span :if={@is_live} class="inline-flex gap-0.5 ml-0.5 align-middle">
-            <span class="thinking-dot inline-block rounded-full" style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}></span>
-            <span class="thinking-dot inline-block rounded-full" style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}></span>
-            <span class="thinking-dot inline-block rounded-full" style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}></span>
+            <span
+              class="thinking-dot inline-block rounded-full"
+              style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}
+            >
+            </span>
+            <span
+              class="thinking-dot inline-block rounded-full"
+              style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}
+            >
+            </span>
+            <span
+              class="thinking-dot inline-block rounded-full"
+              style={"width: 3px; height: 3px; background-color: #{@config.accent_text};"}
+            >
+            </span>
           </span>
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div :if={@streaming_content || @event.content != ""} class="px-3 pb-2">
-        <p class="line-clamp-2" style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+        <p
+          class="line-clamp-2"
+          style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; word-break: break-word;"
+        >
           {@streaming_content || @event.content}<span :if={@is_live} class="streaming-cursor"></span>
         </p>
       </div>
@@ -723,7 +956,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -739,10 +976,27 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#128230; offload
         </span>
-        <span class="truncate min-w-0" style="font-size: 0.75rem; color: var(--text-secondary);">{@event.content}</span>
-        <span :if={@topic} class="flex-shrink-0" style={"font-size: 0.6875rem; color: #{@config.accent_text}; opacity: 0.6;"}>({@topic})</span>
-        <span :if={@token_count} class="flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">{format_tokens(@token_count)} tok</span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span class="truncate min-w-0" style="font-size: 0.75rem; color: var(--text-secondary);">
+          {@event.content}
+        </span>
+        <span
+          :if={@topic}
+          class="flex-shrink-0"
+          style={"font-size: 0.6875rem; color: #{@config.accent_text}; opacity: 0.6;"}
+        >
+          ({@topic})
+        </span>
+        <span
+          :if={@token_count}
+          class="flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
+          {format_tokens(@token_count)} tok
+        </span>
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -768,7 +1022,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid #{@config.accent_border}; border-left: 2px solid #{@config.accent}; border-radius: 0.5rem; box-shadow: 0 0 12px rgba(56, 189, 248, 0.08);"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@from}
@@ -784,12 +1042,17 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#10068; question
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p style={"font-size: 0.8125rem; color: #{@config.accent_text}; line-height: 1.5; white-space: pre-wrap; word-break: break-word;"}>{@event.content}</p>
+        <p style={"font-size: 0.8125rem; color: #{@config.accent_text}; line-height: 1.5; white-space: pre-wrap; word-break: break-word;"}>
+          {@event.content}
+        </p>
       </div>
     </div>
     """
@@ -815,7 +1078,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@from}
@@ -826,19 +1093,30 @@ defmodule LoomkinWeb.TeamActivityComponent do
           {@from}
         </button>
         <span style="font-size: 0.6875rem; color: var(--text-muted);">&#8594;</span>
-        <span :if={@to} class="truncate" style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}>{@to}</span>
+        <span
+          :if={@to}
+          class="truncate"
+          style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}
+        >
+          {@to}
+        </span>
         <span
           style={"display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 9999px; font-size: 0.6875rem; font-weight: 500; background: #{@config.accent_bg}; color: #{@config.accent_text}; border: 1px solid #{@config.accent_border};"}
           class="flex-shrink-0"
         >
           &#10069; answer
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">{@event.content}</p>
+        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+          {@event.content}
+        </p>
       </div>
     </div>
     """
@@ -864,20 +1142,34 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
-        <span class="flex-shrink-0" style={"font-size: 0.75rem; font-weight: 600; color: #{agent_color(@event.agent)};"}>{@event.agent}</span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
+        <span
+          class="flex-shrink-0"
+          style={"font-size: 0.75rem; font-weight: 600; color: #{agent_color(@event.agent)};"}
+        >
+          {@event.agent}
+        </span>
         <span
           style={"display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 9999px; font-size: 0.6875rem; font-weight: 500; background: #{@config.accent_bg}; color: #{@config.accent_text}; border: 1px solid #{@config.accent_border};"}
           class="flex-shrink-0"
         >
           {channel_icon(@channel)} {if @direction == :inbound, do: "received", else: "sent"}
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">{@event.content}</p>
+        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+          {@event.content}
+        </p>
       </div>
     </div>
     """
@@ -904,7 +1196,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: #{@config.accent_bg}; border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -920,7 +1216,10 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#129504; decision
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -973,7 +1272,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
       style={"background: var(--surface-2); border: 1px solid var(--border-subtle); border-left: 2px solid #{@config.accent}; border-radius: 0.5rem;"}
     >
       <div class="flex items-center gap-2 px-3 py-2 min-w-0">
-        <span class="flex-shrink-0" style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}></span>
+        <span
+          class="flex-shrink-0"
+          style={"width: 7px; height: 7px; border-radius: 9999px; background-color: #{agent_color(@event.agent)};"}
+        >
+        </span>
         <button
           phx-click="focus_agent"
           phx-value-agent={@event.agent}
@@ -989,7 +1292,10 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {Phoenix.HTML.raw(@config.icon)} {@config.label}
         </span>
-        <span class="ml-auto flex-shrink-0" style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);">
+        <span
+          class="ml-auto flex-shrink-0"
+          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+        >
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -1043,14 +1349,13 @@ defmodule LoomkinWeb.TeamActivityComponent do
     end
   end
 
-  defp agent_color(agent_name) do
-    index = :erlang.phash2(agent_name, length(@agent_colors))
-    Enum.at(@agent_colors, index)
-  end
+  defp agent_color(agent_name), do: LoomkinWeb.AgentColors.agent_color(agent_name)
 
   defp extract_tool_name(content) when is_binary(content) do
     case Regex.run(~r/^used (\S+)/, content) do
-      [_, name] -> name
+      [_, name] ->
+        name
+
       _ ->
         case Regex.run(~r/^(\S+) done:/, content) do
           [_, name] -> name
@@ -1095,7 +1400,15 @@ defmodule LoomkinWeb.TeamActivityComponent do
   defp format_result_size(_), do: ""
 
   defp fallback_config do
-    %{label: "event", icon: "&#9679;", accent: "#71717a", accent_bg: "rgba(113, 113, 122, 0.08)", accent_border: "rgba(113, 113, 122, 0.25)", accent_text: "#a1a1aa", dot_color: "#71717a"}
+    %{
+      label: "event",
+      icon: "&#9679;",
+      accent: "#71717a",
+      accent_bg: "rgba(113, 113, 122, 0.08)",
+      accent_border: "rgba(113, 113, 122, 0.25)",
+      accent_text: "#a1a1aa",
+      dot_color: "#71717a"
+    }
   end
 
   defp type_config_list do

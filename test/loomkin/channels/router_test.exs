@@ -43,7 +43,10 @@ defmodule Loomkin.Channels.RouterTest do
     end
 
     test "handles integer and string IDs interchangeably" do
-      Loomkin.Config.put(:channels, %{telegram: %{allowed_chat_ids: ["12345"], allow_user_ids: []}})
+      Loomkin.Config.put(:channels, %{
+        telegram: %{allowed_chat_ids: ["12345"], allow_user_ids: []}
+      })
+
       assert :ok = Router.check_channel_acl(:telegram, 12345)
     end
 
@@ -170,7 +173,8 @@ defmodule Loomkin.Channels.RouterTest do
     test "ignores events when adapter returns :ignore" do
       stub(Loomkin.MockAdapter, :parse_inbound, fn _raw -> :ignore end)
 
-      assert {:ok, :ignored} = Router.handle_inbound(Loomkin.MockAdapter, :telegram, "chat-1", %{})
+      assert {:ok, :ignored} =
+               Router.handle_inbound(Loomkin.MockAdapter, :telegram, "chat-1", %{})
     end
 
     test "returns unknown command help for unrecognized commands" do
@@ -195,7 +199,8 @@ defmodule Loomkin.Channels.RouterTest do
 
   describe "handle_callback/4" do
     test "returns error when no bridge exists" do
-      assert {:error, :no_binding} = Router.handle_callback(:telegram, "no-bridge", "cb-1", "data")
+      assert {:error, :no_binding} =
+               Router.handle_callback(:telegram, "no-bridge", "cb-1", "data")
     end
   end
 end

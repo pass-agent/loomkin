@@ -153,7 +153,13 @@ defmodule Loomkin.Teams.PairModeTest do
       topic = "team:#{team_id}:pair:#{pair_id}"
       Phoenix.PubSub.subscribe(Loomkin.PubSub, topic)
 
-      events = [:intent_broadcast, :file_edited, :review_feedback, :review_approved, :review_rejected]
+      events = [
+        :intent_broadcast,
+        :file_edited,
+        :review_feedback,
+        :review_approved,
+        :review_rejected
+      ]
 
       Enum.each(events, fn event_type ->
         PairMode.broadcast_event(team_id, pair_id, event_type, "coder1")

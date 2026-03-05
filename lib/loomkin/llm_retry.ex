@@ -42,7 +42,11 @@ defmodule Loomkin.LLMRetry do
       {:error, reason} ->
         if transient?(reason) and attempt < max_retries do
           backoff_ms = Integer.pow(2, attempt) * @base_backoff_ms
-          Logger.warning("LLMRetry: transient error (attempt #{attempt + 1}/#{max_retries}), retrying in #{backoff_ms}ms: #{inspect(reason)}")
+
+          Logger.warning(
+            "LLMRetry: transient error (attempt #{attempt + 1}/#{max_retries}), retrying in #{backoff_ms}ms: #{inspect(reason)}"
+          )
+
           on_retry.(attempt + 1, reason, backoff_ms)
           Process.sleep(backoff_ms)
           do_retry(fun, on_retry, max_retries, attempt + 1)
@@ -70,12 +74,27 @@ defmodule Loomkin.LLMRetry do
         message = reason_field || Map.get(reason, :message) || ""
 
         cond do
-          status in [429, 500, 502, 503, 504, 529] -> true
-          status in [400, 401, 403, 404] -> false
+          status in [429, 500, 502, 503, 504, 529] ->
+            true
+
+          status in [400, 401, 403, 404] ->
+            false
+
           is_atom(reason_field) ->
-            reason_field in [:timeout, :closed, :econnrefused, :econnreset, :econnaborted, :ehostunreach]
-          is_binary(message) -> transient_string?(message)
-          true -> false
+            reason_field in [
+              :timeout,
+              :closed,
+              :econnrefused,
+              :econnreset,
+              :econnaborted,
+              :ehostunreach
+            ]
+
+          is_binary(message) ->
+            transient_string?(message)
+
+          true ->
+            false
         end
 
       is_map(reason) ->

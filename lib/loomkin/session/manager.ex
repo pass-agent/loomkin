@@ -37,7 +37,7 @@ defmodule Loomkin.Session.Manager do
       {:error, {:already_started, pid}} ->
         # Ensure secondary callers also get team wiring by re-broadcasting
         # the team_id if the session already has one.
-        Task.start(fn ->
+        Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
           try do
             case Session.get_team_id(pid) do
               nil -> :ok
@@ -102,9 +102,7 @@ defmodule Loomkin.Session.Manager do
           Logger.info("[Session.Manager] Concierge spawned pid=#{inspect(pid)} team=#{team_id}")
 
         {:error, reason} ->
-          Logger.warning(
-            "[Session.Manager] Concierge FAILED team=#{team_id}: #{inspect(reason)}"
-          )
+          Logger.warning("[Session.Manager] Concierge FAILED team=#{team_id}: #{inspect(reason)}")
       end
 
       # Spawn Orienter (fast model) — silent background scanner
@@ -116,9 +114,7 @@ defmodule Loomkin.Session.Manager do
           Logger.info("[Session.Manager] Orienter spawned pid=#{inspect(pid)} team=#{team_id}")
 
         {:error, reason} ->
-          Logger.warning(
-            "[Session.Manager] Orienter FAILED team=#{team_id}: #{inspect(reason)}"
-          )
+          Logger.warning("[Session.Manager] Orienter FAILED team=#{team_id}: #{inspect(reason)}")
       end
 
       # Persist team_id to the session DB record

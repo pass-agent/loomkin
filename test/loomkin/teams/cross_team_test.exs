@@ -16,7 +16,10 @@ defmodule Loomkin.Teams.CrossTeamTest do
   end
 
   describe "cross-team propagation" do
-    test "insight discovery propagates to parent team", %{parent_id: parent_id, child_id: child_id} do
+    test "insight discovery propagates to parent team", %{
+      parent_id: parent_id,
+      child_id: child_id
+    } do
       # Subscribe to parent's context topic
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{parent_id}:context")
 
@@ -31,7 +34,10 @@ defmodule Loomkin.Teams.CrossTeamTest do
       assert propagated.type == "insight"
     end
 
-    test "blocker discovery propagates to parent team", %{parent_id: parent_id, child_id: child_id} do
+    test "blocker discovery propagates to parent team", %{
+      parent_id: parent_id,
+      child_id: child_id
+    } do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{parent_id}:context")
 
       payload = %{from: "coder", type: "blocker", content: "Cannot proceed: missing dependency"}
@@ -42,7 +48,10 @@ defmodule Loomkin.Teams.CrossTeamTest do
       assert propagated.type == "blocker"
     end
 
-    test "progress discovery does NOT propagate to parent team", %{parent_id: parent_id, child_id: child_id} do
+    test "progress discovery does NOT propagate to parent team", %{
+      parent_id: parent_id,
+      child_id: child_id
+    } do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{parent_id}:context")
 
       payload = %{from: "coder", type: "progress", content: "Working on task 3"}
@@ -60,7 +69,10 @@ defmodule Loomkin.Teams.CrossTeamTest do
       refute_receive {:context_update, "researcher", _}, 100
     end
 
-    test "propagation can be disabled with propagate_up: false", %{parent_id: parent_id, child_id: child_id} do
+    test "propagation can be disabled with propagate_up: false", %{
+      parent_id: parent_id,
+      child_id: child_id
+    } do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{parent_id}:context")
 
       payload = %{from: "researcher", type: "insight", content: "Key finding"}

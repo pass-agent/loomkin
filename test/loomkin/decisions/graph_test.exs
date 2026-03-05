@@ -131,7 +131,10 @@ defmodule Loomkin.Decisions.GraphTest do
   describe "active_goals/0" do
     test "returns only active goals" do
       {:ok, _} = Graph.add_node(node_attrs(%{node_type: :goal, status: :active}))
-      {:ok, _} = Graph.add_node(node_attrs(%{node_type: :goal, status: :superseded, title: "Old"}))
+
+      {:ok, _} =
+        Graph.add_node(node_attrs(%{node_type: :goal, status: :superseded, title: "Old"}))
+
       {:ok, _} = Graph.add_node(node_attrs(%{node_type: :action, title: "Action"}))
 
       goals = Graph.active_goals()

@@ -12,16 +12,34 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
     end
 
     test "high score for keyword overlap" do
-      discovery = %{from: "researcher", type: "discovery", content: "The authentication module uses bcrypt for password hashing"}
-      agent = %{name: "coder-1", role: :coder, task: %{description: "Fix authentication password hashing bug"}}
+      discovery = %{
+        from: "researcher",
+        type: "discovery",
+        content: "The authentication module uses bcrypt for password hashing"
+      }
+
+      agent = %{
+        name: "coder-1",
+        role: :coder,
+        task: %{description: "Fix authentication password hashing bug"}
+      }
 
       score = RelevanceScorer.score(discovery, agent)
       assert score >= 0.3
     end
 
     test "high score for shared file paths" do
-      discovery = %{from: "researcher", type: "discovery", content: "Found issue in lib/auth/session.ex"}
-      agent = %{name: "coder-1", role: :coder, task: %{description: "Fix session handling in lib/auth/session.ex"}}
+      discovery = %{
+        from: "researcher",
+        type: "discovery",
+        content: "Found issue in lib/auth/session.ex"
+      }
+
+      agent = %{
+        name: "coder-1",
+        role: :coder,
+        task: %{description: "Fix session handling in lib/auth/session.ex"}
+      }
 
       score = RelevanceScorer.score(discovery, agent)
       assert score >= 0.3
@@ -60,7 +78,12 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
 
     test "returns low score for unrelated content" do
       discovery = %{from: "researcher", type: "discovery", content: "Database migration strategy"}
-      agent = %{name: "coder-1", role: :coder, task: %{description: "Fix CSS styling in header component"}}
+
+      agent = %{
+        name: "coder-1",
+        role: :coder,
+        task: %{description: "Fix CSS styling in header component"}
+      }
 
       score = RelevanceScorer.score(discovery, agent)
       assert score < 0.4
@@ -85,8 +108,17 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
     end
 
     test "score never exceeds 1.0" do
-      discovery = %{from: "researcher", type: "code", content: "Fix authentication bug in lib/auth.ex"}
-      agent = %{name: "coder-1", role: :coder, task: %{description: "Fix authentication bug in lib/auth.ex"}}
+      discovery = %{
+        from: "researcher",
+        type: "code",
+        content: "Fix authentication bug in lib/auth.ex"
+      }
+
+      agent = %{
+        name: "coder-1",
+        role: :coder,
+        task: %{description: "Fix authentication bug in lib/auth.ex"}
+      }
 
       score = RelevanceScorer.score(discovery, agent)
       assert score <= 1.0
@@ -95,7 +127,11 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
 
   describe "filter_relevant/3" do
     test "filters agents below threshold" do
-      discovery = %{from: "researcher", type: "discovery", content: "Found auth bug in lib/auth.ex"}
+      discovery = %{
+        from: "researcher",
+        type: "discovery",
+        content: "Found auth bug in lib/auth.ex"
+      }
 
       agents = [
         %{name: "coder-1", role: :coder, task: %{description: "Fix auth bug in lib/auth.ex"}},
@@ -112,7 +148,11 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
     end
 
     test "returns empty list when no agents pass threshold" do
-      discovery = %{from: "researcher", type: "discovery", content: "Quantum computing breakthrough"}
+      discovery = %{
+        from: "researcher",
+        type: "discovery",
+        content: "Quantum computing breakthrough"
+      }
 
       agents = [
         %{name: "coder-1", role: :coder, task: %{description: "Fix CSS button color"}},
@@ -127,10 +167,18 @@ defmodule Loomkin.Teams.RelevanceScorerTest do
     end
 
     test "results are sorted by score descending" do
-      discovery = %{from: "researcher", type: "code", content: "Fix bug in lib/auth.ex authentication"}
+      discovery = %{
+        from: "researcher",
+        type: "code",
+        content: "Fix bug in lib/auth.ex authentication"
+      }
 
       agents = [
-        %{name: "coder-1", role: :coder, task: %{description: "Fix authentication in lib/auth.ex"}},
+        %{
+          name: "coder-1",
+          role: :coder,
+          task: %{description: "Fix authentication in lib/auth.ex"}
+        },
         %{name: "coder-2", role: :coder, task: %{description: "Work on auth module"}},
         %{name: "lead", role: :lead, task: %{description: "Coordinate auth fix"}}
       ]

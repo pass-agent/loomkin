@@ -3,7 +3,8 @@ defmodule Loomkin.Decisions.Pulse do
 
   import Ecto.Query
   alias Loomkin.Repo
-  alias Loomkin.Schemas.{DecisionNode, DecisionEdge}
+  alias Loomkin.Schemas.DecisionEdge
+  alias Loomkin.Schemas.DecisionNode
   alias Loomkin.Decisions.Graph
 
   @default_confidence_threshold 50
@@ -25,7 +26,8 @@ defmodule Loomkin.Decisions.Pulse do
       coverage_gaps: coverage_gaps,
       low_confidence: low_confidence,
       stale_nodes: stale_nodes,
-      summary: build_summary(active_goals, recent_decisions, coverage_gaps, low_confidence, stale_nodes)
+      summary:
+        build_summary(active_goals, recent_decisions, coverage_gaps, low_confidence, stale_nodes)
     }
   end
 

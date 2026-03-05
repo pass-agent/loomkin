@@ -73,14 +73,10 @@ defmodule Loomkin.Teams.OrchestrationTest do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{sub_team_id}:tasks")
 
       {:ok, lead_pid} =
-        TeamManager.spawn_agent(sub_team_id, "lead-1", :lead,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(sub_team_id, "lead-1", :lead, project_path: @project_path)
 
       {:ok, coder_pid} =
-        TeamManager.spawn_agent(sub_team_id, "coder-1", :coder,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(sub_team_id, "coder-1", :coder, project_path: @project_path)
 
       {:ok, researcher_pid} =
         TeamManager.spawn_agent(sub_team_id, "researcher-1", :researcher,
@@ -155,7 +151,7 @@ defmodule Loomkin.Teams.OrchestrationTest do
 
       # Verify task_completed event
       assert_receive {:task_completed, ^task1_id, "researcher-1",
-                       "Found 3 patterns: GenServer, PubSub, ETS"}
+                      "Found 3 patterns: GenServer, PubSub, ETS"}
 
       # --- Phase 6: Blocked task becomes available ---
       # After task1 completes, task2 should be unblocked
@@ -176,7 +172,7 @@ defmodule Loomkin.Teams.OrchestrationTest do
       {:ok, _} = Tasks.complete_task(task2.id, "Feature implemented in lib/feature.ex")
 
       assert_receive {:task_completed, ^task2_id, "coder-1",
-                       "Feature implemented in lib/feature.ex"}
+                      "Feature implemented in lib/feature.ex"}
 
       # --- Phase 7: Verify all tasks completed ---
 
@@ -223,9 +219,7 @@ defmodule Loomkin.Teams.OrchestrationTest do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:tasks")
 
       {:ok, _agent_pid} =
-        TeamManager.spawn_agent(team_id, "worker", :coder,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(team_id, "worker", :coder, project_path: @project_path)
 
       # Agent init broadcast
       assert_receive {:agent_status, "worker", :idle}
@@ -269,14 +263,10 @@ defmodule Loomkin.Teams.OrchestrationTest do
         TeamManager.create_team(name: "multi-agent", project_path: @project_path)
 
       {:ok, pid1} =
-        TeamManager.spawn_agent(team_id, "agent-a", :coder,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(team_id, "agent-a", :coder, project_path: @project_path)
 
       {:ok, pid2} =
-        TeamManager.spawn_agent(team_id, "agent-b", :researcher,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(team_id, "agent-b", :researcher, project_path: @project_path)
 
       # Broadcast context update to entire team
       Comms.broadcast(team_id, {:context_update, "lead", %{plan: "build feature X"}})
@@ -297,14 +287,10 @@ defmodule Loomkin.Teams.OrchestrationTest do
         TeamManager.create_team(name: "peer-msg", project_path: @project_path)
 
       {:ok, pid1} =
-        TeamManager.spawn_agent(team_id, "sender", :lead,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(team_id, "sender", :lead, project_path: @project_path)
 
       {:ok, pid2} =
-        TeamManager.spawn_agent(team_id, "receiver", :coder,
-          project_path: @project_path
-        )
+        TeamManager.spawn_agent(team_id, "receiver", :coder, project_path: @project_path)
 
       Agent.peer_message(pid2, "sender", "Please implement the fix")
       Process.sleep(100)

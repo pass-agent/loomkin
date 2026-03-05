@@ -106,7 +106,7 @@ defmodule Loomkin.Channels.PermissionRegistry do
           # Find the agent and send the permission response
           case Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, agent_name}) do
             [{pid, _}] ->
-              GenServer.cast(pid, {:permission_response, full_action, tool_name, tool_path})
+              Loomkin.Teams.Agent.permission_response(pid, full_action, tool_name, tool_path)
               :ets.delete(@table, request_id)
 
               Logger.info(

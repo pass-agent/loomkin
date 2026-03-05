@@ -3,7 +3,10 @@ defmodule Loomkin.Teams.QueryRouter do
 
   use GenServer
 
-  alias Loomkin.Teams.{Comms, ContextRetrieval}
+  require Logger
+
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.ContextRetrieval
 
   # --- Public API ---
 
@@ -181,6 +184,8 @@ defmodule Loomkin.Teams.QueryRouter do
         []
     end
   rescue
-    _ -> []
+    e ->
+      Logger.warning("[QueryRouter] Keeper query failed: #{Exception.message(e)}")
+      []
   end
 end

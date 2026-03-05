@@ -14,7 +14,10 @@ defmodule Loomkin.Tools.TeamProgress do
 
   import Loomkin.Tool, only: [param!: 2]
 
-  alias Loomkin.Teams.{Context, Manager, RateLimiter, Tasks}
+  alias Loomkin.Teams.Context
+  alias Loomkin.Teams.Manager
+  alias Loomkin.Teams.RateLimiter
+  alias Loomkin.Teams.Tasks
 
   @impl true
   def run(params, _context) do

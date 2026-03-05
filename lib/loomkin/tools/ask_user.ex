@@ -37,13 +37,14 @@ defmodule Loomkin.Tools.AskUser do
     Phoenix.PubSub.broadcast(
       Loomkin.PubSub,
       "team:#{team_id}",
-      {:ask_user_question, %{
-        question_id: question_id,
-        agent_name: agent_name,
-        team_id: team_id,
-        question: question,
-        options: options
-      }}
+      {:ask_user_question,
+       %{
+         question_id: question_id,
+         agent_name: agent_name,
+         team_id: team_id,
+         question: question,
+         options: options
+       }}
     )
 
     Logger.info("[AskUser] Agent #{agent_name} asking: #{question} (#{question_id})")

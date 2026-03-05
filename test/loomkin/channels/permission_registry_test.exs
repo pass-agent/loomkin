@@ -14,7 +14,8 @@ defmodule Loomkin.Channels.PermissionRegistryTest do
 
   describe "register_request/5" do
     test "registers a request and returns an ID" do
-      request_id = PermissionRegistry.register_request("team-1", "coder", "write_file", "/path/to/file.ex")
+      request_id =
+        PermissionRegistry.register_request("team-1", "coder", "write_file", "/path/to/file.ex")
 
       assert is_binary(request_id)
       assert String.length(request_id) == 8

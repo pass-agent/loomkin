@@ -194,7 +194,10 @@ defmodule Loomkin.Teams.ConsensusTrailTest do
         weighted: weighted,
         vote_map: %{"alice" => "alice", "bob" => "bob"},
         session_id: nil,
-        rounds: [%{proposals: [%{}], critiques: [], revisions: []}] |> List.duplicate(3) |> List.flatten()
+        rounds:
+          [%{proposals: [%{}], critiques: [], revisions: []}]
+          |> List.duplicate(3)
+          |> List.flatten()
       }
 
       {:ok, node} = ConsensusTrail.log_outcome(attrs)
@@ -256,7 +259,11 @@ defmodule Loomkin.Teams.ConsensusTrailTest do
         weighted: weighted,
         rounds: [
           %{proposals: [%{from: "alice"}, %{from: "bob"}], critiques: [], revisions: []},
-          %{proposals: [%{from: "alice"}, %{from: "bob"}], critiques: [%{from: "bob"}], revisions: [%{from: "alice"}]}
+          %{
+            proposals: [%{from: "alice"}, %{from: "bob"}],
+            critiques: [%{from: "bob"}],
+            revisions: [%{from: "alice"}]
+          }
         ]
       }
 
@@ -271,7 +278,14 @@ defmodule Loomkin.Teams.ConsensusTrailTest do
       assert is_list(payload.key_tradeoffs)
       assert is_list(payload.convergence_trend)
       assert length(payload.convergence_trend) == 2
-      assert payload.suggested_next_action in [:revote, :narrow_scope, :defer_to_lead, :split_task]
+
+      assert payload.suggested_next_action in [
+               :revote,
+               :narrow_scope,
+               :defer_to_lead,
+               :split_task
+             ]
+
       assert is_binary(payload.policy_used)
       assert payload.rounds_completed == 2
     end
@@ -544,7 +558,11 @@ defmodule Loomkin.Teams.ConsensusTrailTest do
       },
       rounds: [
         %{proposals: [%{from: "alice"}, %{from: "bob"}], critiques: [], revisions: []},
-        %{proposals: [%{from: "alice"}, %{from: "bob"}], critiques: [%{from: "bob"}], revisions: [%{from: "alice"}]}
+        %{
+          proposals: [%{from: "alice"}, %{from: "bob"}],
+          critiques: [%{from: "bob"}],
+          revisions: [%{from: "alice"}]
+        }
       ]
     }
 

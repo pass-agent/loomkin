@@ -3,8 +3,13 @@ defmodule Loomkin.Teams.Tasks do
 
   import Ecto.Query
   alias Loomkin.Repo
-  alias Loomkin.Schemas.{TeamTask, TeamTaskDep}
-  alias Loomkin.Teams.{Capabilities, Comms, Context, CostTracker, Learning}
+  alias Loomkin.Schemas.TeamTask
+  alias Loomkin.Schemas.TeamTaskDep
+  alias Loomkin.Teams.Capabilities
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.Context
+  alias Loomkin.Teams.CostTracker
+  alias Loomkin.Teams.Learning
 
   def create_task(team_id, attrs) do
     %TeamTask{}
@@ -12,7 +17,12 @@ defmodule Loomkin.Teams.Tasks do
     |> Repo.insert()
     |> tap_ok(fn task ->
       Comms.broadcast_task_event(team_id, {:task_created, task.id, task.title})
-      Context.cache_task(team_id, task.id, %{title: task.title, status: task.status, owner: task.owner})
+
+      Context.cache_task(team_id, task.id, %{
+        title: task.title,
+        status: task.status,
+        owner: task.owner
+      })
     end)
   end
 
@@ -22,7 +32,12 @@ defmodule Loomkin.Teams.Tasks do
     |> Repo.update()
     |> tap_ok(fn task ->
       Comms.broadcast_task_event(task.team_id, {:task_assigned, task.id, agent_name})
-      Context.cache_task(task.team_id, task.id, %{title: task.title, status: :assigned, owner: agent_name})
+
+      Context.cache_task(task.team_id, task.id, %{
+        title: task.title,
+        status: :assigned,
+        owner: agent_name
+      })
     end)
   end
 
@@ -32,7 +47,12 @@ defmodule Loomkin.Teams.Tasks do
     |> Repo.update()
     |> tap_ok(fn task ->
       Comms.broadcast_task_event(task.team_id, {:task_started, task.id, task.owner})
-      Context.cache_task(task.team_id, task.id, %{title: task.title, status: :in_progress, owner: task.owner})
+
+      Context.cache_task(task.team_id, task.id, %{
+        title: task.title,
+        status: :in_progress,
+        owner: task.owner
+      })
     end)
   end
 
@@ -49,11 +69,22 @@ defmodule Loomkin.Teams.Tasks do
         # Persist accumulated cost/tokens from CostTracker for the owning agent
         if task.owner do
           usage = CostTracker.get_agent_usage(task.team_id, task.owner)
-          CostTracker.persist_task_cost(task.id, usage.cost, usage.input_tokens + usage.output_tokens)
+
+          CostTracker.persist_task_cost(
+            task.id,
+            usage.cost,
+            usage.input_tokens + usage.output_tokens
+          )
         end
 
         Comms.broadcast_task_event(task.team_id, {:task_completed, task.id, task.owner, result})
-        Context.cache_task(task.team_id, task.id, %{title: task.title, status: :completed, owner: task.owner})
+
+        Context.cache_task(task.team_id, task.id, %{
+          title: task.title,
+          status: :completed,
+          owner: task.owner
+        })
+
         record_capability(task, :success)
         record_learning_metric(task, true)
         auto_schedule_unblocked(task.team_id)
@@ -72,7 +103,13 @@ defmodule Loomkin.Teams.Tasks do
       |> Repo.update()
       |> tap_ok(fn task ->
         Comms.broadcast_task_event(task.team_id, {:task_failed, task.id, task.owner, reason})
-        Context.cache_task(task.team_id, task.id, %{title: task.title, status: :failed, owner: task.owner})
+
+        Context.cache_task(task.team_id, task.id, %{
+          title: task.title,
+          status: :failed,
+          owner: task.owner
+        })
+
         record_capability(task, :failure)
         record_learning_metric(task, false)
       end)
@@ -81,7 +118,11 @@ defmodule Loomkin.Teams.Tasks do
 
   def add_dependency(task_id, depends_on_id, dep_type \\ :blocks) do
     %TeamTaskDep{}
-    |> TeamTaskDep.changeset(%{task_id: task_id, depends_on_id: depends_on_id, dep_type: dep_type})
+    |> TeamTaskDep.changeset(%{
+      task_id: task_id,
+      depends_on_id: depends_on_id,
+      dep_type: dep_type
+    })
     |> Repo.insert()
   end
 
@@ -192,8 +233,10 @@ defmodule Loomkin.Teams.Tasks do
   defp blocked_task_ids(team_id) do
     Repo.all(
       from d in TeamTaskDep,
-        join: t in TeamTask, on: d.task_id == t.id,
-        join: dep in TeamTask, on: d.depends_on_id == dep.id,
+        join: t in TeamTask,
+        on: d.task_id == t.id,
+        join: dep in TeamTask,
+        on: d.depends_on_id == dep.id,
         where: t.team_id == ^team_id and d.dep_type == :blocks and dep.status != :completed,
         select: d.task_id,
         distinct: true

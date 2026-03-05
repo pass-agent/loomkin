@@ -16,40 +16,44 @@ defmodule LoomkinWeb.TeamDashboardComponentTest do
 
   describe "rendering" do
     test "renders team header with team_id" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "Team:"
       assert html =~ @team_id
     end
 
     test "renders empty agent list" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "Agents"
       assert html =~ "No agents spawned"
     end
 
     test "renders empty task list" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "Tasks"
       assert html =~ "No tasks created"
     end
 
     test "renders budget bar" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "Budget"
       assert html =~ "0.00"
@@ -67,21 +71,23 @@ defmodule LoomkinWeb.TeamDashboardComponentTest do
         })
         |> Repo.insert()
 
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "Implement auth module"
       assert html =~ "researcher"
     end
 
     test "renders budget percentage with green color for low usage" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id,
-        budget: %{spent: 0.5, limit: 5.0}
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id,
+          budget: %{spent: 0.5, limit: 5.0}
+        })
 
       # 10% -- green
       assert html =~ "bg-green-500"
@@ -90,10 +96,11 @@ defmodule LoomkinWeb.TeamDashboardComponentTest do
 
   describe "agent count display" do
     test "shows 0 agents when no agents spawned" do
-      html = render_component(LoomkinWeb.TeamDashboardComponent, %{
-        id: "test-dashboard",
-        team_id: @team_id
-      })
+      html =
+        render_component(LoomkinWeb.TeamDashboardComponent, %{
+          id: "test-dashboard",
+          team_id: @team_id
+        })
 
       assert html =~ "0 agents"
     end

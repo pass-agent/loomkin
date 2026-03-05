@@ -33,7 +33,15 @@ defmodule Loomkin.Channels.AuditLog do
   end
 
   @doc "Log a command execution."
-  @spec log_command(atom(), String.t(), map(), String.t(), String.t(), :ok | :error, String.t() | nil) ::
+  @spec log_command(
+          atom(),
+          String.t(),
+          map(),
+          String.t(),
+          String.t(),
+          :ok | :error,
+          String.t() | nil
+        ) ::
           :ok
   def log_command(channel, channel_id, metadata, command, args, result, response \\ nil) do
     entry = %{

@@ -16,13 +16,19 @@ defmodule Loomkin.Tools.CollectiveDecision do
       team_id: [type: :string, required: true, doc: "Team ID"],
       topic: [type: :string, required: true, doc: "Decision topic to vote on"],
       options: [type: {:list, :string}, required: true, doc: "List of options to vote on"],
-      scope: [type: :string, doc: "Decision scope/domain for weighting (e.g. code, architecture, testing, research). Defaults to 'general'"]
+      scope: [
+        type: :string,
+        doc:
+          "Decision scope/domain for weighting (e.g. code, architecture, testing, research). Defaults to 'general'"
+      ]
     ]
 
   import Loomkin.Tool, only: [param!: 2, param: 3]
 
   alias Loomkin.Decisions.Graph
-  alias Loomkin.Teams.{Comms, ConsensusPolicy, Context}
+  alias Loomkin.Teams.Comms
+  alias Loomkin.Teams.ConsensusPolicy
+  alias Loomkin.Teams.Context
 
   @vote_timeout_ms 30_000
 
@@ -60,12 +66,13 @@ defmodule Loomkin.Tools.CollectiveDecision do
       participant_names = Enum.map(agents, & &1.name)
       votes = collect_votes(vote_id, participant_names, @vote_timeout_ms)
 
-      result = Loomkin.Teams.Debate.tally_weighted_votes(
-        votes,
-        agents,
-        topic,
-        scope
-      )
+      result =
+        Loomkin.Teams.Debate.tally_weighted_votes(
+          votes,
+          agents,
+          topic,
+          scope
+        )
 
       # Check quorum using policy
       consensus? =

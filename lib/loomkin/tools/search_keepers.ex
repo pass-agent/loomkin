@@ -9,7 +9,11 @@ defmodule Loomkin.Tools.SearchKeepers do
         "which keeper to query before committing to a full context_retrieve.",
     schema: [
       team_id: [type: :string, required: true, doc: "Team ID"],
-      query: [type: :string, required: true, doc: "Natural language query to search keeper topics"]
+      query: [
+        type: :string,
+        required: true,
+        doc: "Natural language query to search keeper topics"
+      ]
     ]
 
   import Loomkin.Tool, only: [param!: 2]

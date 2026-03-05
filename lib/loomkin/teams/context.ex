@@ -90,7 +90,9 @@ defmodule Loomkin.Teams.Context do
           end)
 
         case conflict do
-          nil -> :ok
+          nil ->
+            :ok
+
           other ->
             # Roll back our claim and report conflict
             :ets.delete(table, {:claim, path, agent_name})

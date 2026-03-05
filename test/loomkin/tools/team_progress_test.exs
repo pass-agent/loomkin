@@ -14,15 +14,18 @@ defmodule Loomkin.Tools.TeamProgressTest do
 
       parent = self()
 
-      keeper_pid = spawn_link(fn ->
-        {:ok, _} = Registry.register(
-          Loomkin.Teams.AgentRegistry,
-          {team_id, "keeper:abc-123"},
-          %{type: :keeper, topic: "test", tokens: 100, source_agent: "coder"}
-        )
-        send(parent, :keeper_registered)
-        Process.sleep(:infinity)
-      end)
+      keeper_pid =
+        spawn_link(fn ->
+          {:ok, _} =
+            Registry.register(
+              Loomkin.Teams.AgentRegistry,
+              {team_id, "keeper:abc-123"},
+              %{type: :keeper, topic: "test", tokens: 100, source_agent: "coder"}
+            )
+
+          send(parent, :keeper_registered)
+          Process.sleep(:infinity)
+        end)
 
       assert_receive :keeper_registered
       on_exit(fn -> Process.exit(keeper_pid, :kill) end)
@@ -44,23 +47,27 @@ defmodule Loomkin.Tools.TeamProgressTest do
       {:ok, team_id} = Manager.create_team(name: "mixed-progress")
 
       # Register a real agent from test process
-      {:ok, _} = Registry.register(
-        Loomkin.Teams.AgentRegistry,
-        {team_id, "researcher-1"},
-        %{role: :researcher, status: :working}
-      )
+      {:ok, _} =
+        Registry.register(
+          Loomkin.Teams.AgentRegistry,
+          {team_id, "researcher-1"},
+          %{role: :researcher, status: :working}
+        )
 
       parent = self()
 
-      keeper_pid = spawn_link(fn ->
-        {:ok, _} = Registry.register(
-          Loomkin.Teams.AgentRegistry,
-          {team_id, "keeper:xyz-789"},
-          %{type: :keeper, topic: "research notes", tokens: 500, source_agent: "researcher-1"}
-        )
-        send(parent, :keeper_registered)
-        Process.sleep(:infinity)
-      end)
+      keeper_pid =
+        spawn_link(fn ->
+          {:ok, _} =
+            Registry.register(
+              Loomkin.Teams.AgentRegistry,
+              {team_id, "keeper:xyz-789"},
+              %{type: :keeper, topic: "research notes", tokens: 500, source_agent: "researcher-1"}
+            )
+
+          send(parent, :keeper_registered)
+          Process.sleep(:infinity)
+        end)
 
       assert_receive :keeper_registered
       on_exit(fn -> Process.exit(keeper_pid, :kill) end)

@@ -258,7 +258,10 @@ defmodule Loomkin.Channels.BridgeTest do
         :ok
       end)
 
-      send(pid, {:team_escalation, %{agent_name: "coder", from_model: "haiku", to_model: "sonnet"}})
+      send(
+        pid,
+        {:team_escalation, %{agent_name: "coder", from_model: "haiku", to_model: "sonnet"}}
+      )
 
       assert_receive {:text_sent, text}, 500
       assert text =~ "coder"
@@ -268,13 +271,17 @@ defmodule Loomkin.Channels.BridgeTest do
     end
 
     test "suppresses team_llm_stop at default levels", %{pid: pid} do
-      send(pid, {:team_llm_stop, %{
-        agent_name: "coder",
-        model: "haiku",
-        cost: 0.001,
-        input_tokens: 100,
-        output_tokens: 50
-      }})
+      send(
+        pid,
+        {:team_llm_stop,
+         %{
+           agent_name: "coder",
+           model: "haiku",
+           cost: 0.001,
+           input_tokens: 100,
+           output_tokens: 50
+         }}
+      )
 
       Process.sleep(50)
 
@@ -357,19 +364,25 @@ defmodule Loomkin.Channels.BridgeTest do
         {:message, "hello", %{}}
       end)
 
-      assert :ok = Bridge.handle_inbound(binding.channel, binding.channel_id, %{"text" => "hello"})
+      assert :ok =
+               Bridge.handle_inbound(binding.channel, binding.channel_id, %{"text" => "hello"})
+
       Process.sleep(50)
     end
 
     test "routes callback via cast", %{binding: binding, pid: pid} do
       expect(Loomkin.MockAdapter, :send_question, fn _b, _qid, _q, _o -> :ok end)
 
-      send(pid, {:ask_user_question, %{
-        question_id: "q-callback",
-        agent_name: "coder",
-        question: "Pick one",
-        options: ["X", "Y"]
-      }})
+      send(
+        pid,
+        {:ask_user_question,
+         %{
+           question_id: "q-callback",
+           agent_name: "coder",
+           question: "Pick one",
+           options: ["X", "Y"]
+         }}
+      )
 
       Process.sleep(50)
 

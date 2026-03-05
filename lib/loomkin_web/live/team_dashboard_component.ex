@@ -1,11 +1,14 @@
 defmodule LoomkinWeb.TeamDashboardComponent do
   use LoomkinWeb, :live_component
 
-  alias Loomkin.Teams.{Manager, Tasks, CostTracker}
+  alias Loomkin.Teams.CostTracker
+  alias Loomkin.Teams.Manager
+  alias Loomkin.Teams.Tasks
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, agents: [], tasks: [], budget: %{spent: 0, limit: 5.0}, subscribed: false)}
+    {:ok,
+     assign(socket, agents: [], tasks: [], budget: %{spent: 0, limit: 5.0}, subscribed: false)}
   end
 
   @impl true
@@ -181,7 +184,8 @@ defmodule LoomkinWeb.TeamDashboardComponent do
               :for={agent <- @agents}
               class="flex items-center gap-3 px-3 py-2 hover:bg-gray-800/30"
             >
-              <span class={"w-2 h-2 rounded-full flex-shrink-0 #{status_dot_color(agent.status)}"}></span>
+              <span class={"w-2 h-2 rounded-full flex-shrink-0 #{status_dot_color(agent.status)}"}>
+              </span>
               <span class="text-sm text-gray-100 font-medium w-24 truncate">{agent.name}</span>
               <span class={"text-xs w-16 #{status_text_color(agent.status)}"}>{agent.status}</span>
               <span class="text-xs text-gray-500 truncate flex-1">
@@ -206,8 +210,12 @@ defmodule LoomkinWeb.TeamDashboardComponent do
             >
               <span class="flex-shrink-0 w-4 text-center">{task_status_icon(task.status)}</span>
               <span class="text-sm text-gray-100 truncate flex-1">{task.title}</span>
-              <span class="text-xs text-gray-500 w-20 truncate text-right">{task.owner || "\u2014"}</span>
-              <span class="text-xs text-gray-400 w-16 text-right font-mono">{format_cost(task.cost_usd)}</span>
+              <span class="text-xs text-gray-500 w-20 truncate text-right">
+                {task.owner || "\u2014"}
+              </span>
+              <span class="text-xs text-gray-400 w-16 text-right font-mono">
+                {format_cost(task.cost_usd)}
+              </span>
             </div>
           </div>
         </div>
@@ -250,11 +258,22 @@ defmodule LoomkinWeb.TeamDashboardComponent do
   defp status_text_color(:error), do: "text-red-400"
   defp status_text_color(_), do: "text-gray-500"
 
-  defp task_status_icon(:completed), do: Phoenix.HTML.raw(~s(<span class="text-green-400">&#10003;</span>))
-  defp task_status_icon(:in_progress), do: Phoenix.HTML.raw(~s(<span class="text-violet-400 animate-spin inline-block">&#8635;</span>))
-  defp task_status_icon(:assigned), do: Phoenix.HTML.raw(~s(<span class="text-blue-400">&#8635;</span>))
-  defp task_status_icon(:pending), do: Phoenix.HTML.raw(~s(<span class="text-gray-500">&#9719;</span>))
-  defp task_status_icon(:failed), do: Phoenix.HTML.raw(~s(<span class="text-red-400">&#10007;</span>))
+  defp task_status_icon(:completed),
+    do: Phoenix.HTML.raw(~s(<span class="text-green-400">&#10003;</span>))
+
+  defp task_status_icon(:in_progress),
+    do:
+      Phoenix.HTML.raw(~s(<span class="text-violet-400 animate-spin inline-block">&#8635;</span>))
+
+  defp task_status_icon(:assigned),
+    do: Phoenix.HTML.raw(~s(<span class="text-blue-400">&#8635;</span>))
+
+  defp task_status_icon(:pending),
+    do: Phoenix.HTML.raw(~s(<span class="text-gray-500">&#9719;</span>))
+
+  defp task_status_icon(:failed),
+    do: Phoenix.HTML.raw(~s(<span class="text-red-400">&#10007;</span>))
+
   defp task_status_icon(_), do: Phoenix.HTML.raw(~s(<span class="text-gray-600">&#8226;</span>))
 
   # --- Budget helpers ---

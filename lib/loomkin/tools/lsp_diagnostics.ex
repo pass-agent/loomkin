@@ -7,7 +7,11 @@ defmodule Loomkin.Tools.LspDiagnostics do
       "Get compiler diagnostics (errors, warnings) for a file from the language server. " <>
         "Use severity filter to show only errors or warnings.",
     schema: [
-      file_path: [type: :string, required: true, doc: "Path to the file (relative to project root)"],
+      file_path: [
+        type: :string,
+        required: true,
+        doc: "Path to the file (relative to project root)"
+      ],
       severity: [
         type: :string,
         doc: "Filter by severity: error, warning, information, hint. Omit for all."
@@ -43,7 +47,10 @@ defmodule Loomkin.Tools.LspDiagnostics do
         end
 
       if servers == [] do
-        {:ok, %{result: "No LSP servers connected. Configure LSP servers in .loomkin.toml under [lsp]."}}
+        {:ok,
+         %{
+           result: "No LSP servers connected. Configure LSP servers in .loomkin.toml under [lsp]."
+         }}
       else
         diagnostics = collect_diagnostics(servers, full_path, severity_filter)
         {:ok, %{result: format_diagnostics(file_path, diagnostics)}}

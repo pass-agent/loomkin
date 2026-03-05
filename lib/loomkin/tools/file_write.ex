@@ -7,7 +7,11 @@ defmodule Loomkin.Tools.FileWrite do
       "Writes content to a file. Creates parent directories if they don't exist. " <>
         "Overwrites the file if it already exists.",
     schema: [
-      file_path: [type: :string, required: true, doc: "Path to the file (relative to project root)"],
+      file_path: [
+        type: :string,
+        required: true,
+        doc: "Path to the file (relative to project root)"
+      ],
       content: [type: :string, required: true, doc: "The content to write to the file"]
     ]
 

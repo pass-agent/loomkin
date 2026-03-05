@@ -82,10 +82,13 @@ defmodule Loomkin.Channels.Telegram.Adapter do
         data = Map.get(callback_query, "data", "")
 
         # Answer the callback query to remove the loading indicator
-        Task.start(fn ->
+        Task.Supervisor.start_child(Loomkin.Channels.WebhookTaskSupervisor, fn ->
           case telegex().answer_callback_query(telegram_callback_id) do
-            {:ok, _} -> :ok
-            {:error, reason} -> Logger.error("[Telegram.Adapter] answer_callback_query failed: #{inspect(reason)}")
+            {:ok, _} ->
+              :ok
+
+            {:error, reason} ->
+              Logger.error("[Telegram.Adapter] answer_callback_query failed: #{inspect(reason)}")
           end
         end)
 

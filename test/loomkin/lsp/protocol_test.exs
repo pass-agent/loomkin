@@ -53,7 +53,14 @@ defmodule Loomkin.LSP.ProtocolTest do
     end
 
     test "decodes a request message" do
-      body = Jason.encode!(%{"jsonrpc" => "2.0", "id" => 2, "method" => "textDocument/completion", "params" => %{}})
+      body =
+        Jason.encode!(%{
+          "jsonrpc" => "2.0",
+          "id" => 2,
+          "method" => "textDocument/completion",
+          "params" => %{}
+        })
+
       assert {:ok, msg} = Protocol.decode_message(body)
       assert msg[:type] == :request
       assert msg["method"] == "textDocument/completion"

@@ -16,7 +16,8 @@ defmodule Loomkin.Session.Architect do
      Reports back results per plan item.
   """
 
-  alias Loomkin.Session.{ContextWindow, Persistence}
+  alias Loomkin.Session.ContextWindow
+  alias Loomkin.Session.Persistence
   alias Loomkin.Telemetry, as: LoomkinTelemetry
 
   require Logger
@@ -43,7 +44,9 @@ defmodule Loomkin.Session.Architect do
 
     # Fast-path: skip planning for trivial messages (greetings, thanks, etc.)
     if trivial_message?(user_text) do
-      Logger.info("[Architect] Trivial message detected — skipping planning, using conversational response")
+      Logger.info(
+        "[Architect] Trivial message detected — skipping planning, using conversational response"
+      )
 
       # Save user message to conversation
       {:ok, _} =
@@ -60,7 +63,10 @@ defmodule Loomkin.Session.Architect do
   end
 
   defp run_planning(user_text, state, architect_model, editor_model, _opts) do
-    Logger.info("[Architect] Starting run — architect=#{architect_model} editor=#{editor_model} session=#{state.id}")
+    Logger.info(
+      "[Architect] Starting run — architect=#{architect_model} editor=#{editor_model} session=#{state.id}"
+    )
+
     broadcast(state.id, {:architect_phase, :planning})
 
     case plan(user_text, state, architect_model: architect_model) do
@@ -305,7 +311,9 @@ defmodule Loomkin.Session.Architect do
 
     response_text = Enum.join(results, "\n\n")
 
-    Logger.info("[Architect] Tool results: #{inspect(results, limit: 300)} spawned_team_ids=#{inspect(spawned_team_ids)}")
+    Logger.info(
+      "[Architect] Tool results: #{inspect(results, limit: 300)} spawned_team_ids=#{inspect(spawned_team_ids)}"
+    )
 
     # Bootstrap: send the user's request to each spawned team's lead agent
     for team_id <- spawned_team_ids do
@@ -344,7 +352,8 @@ defmodule Loomkin.Session.Architect do
 
   # Find and message the lead agent (or first agent) in a newly spawned team.
   defp bootstrap_team_lead(team_id, user_text) do
-    alias Loomkin.Teams.{Agent, Manager}
+    alias Loomkin.Teams.Agent
+    alias Loomkin.Teams.Manager
 
     agents = Manager.list_agents(team_id)
 
@@ -1087,6 +1096,8 @@ defmodule Loomkin.Session.Architect do
   defp broadcast(session_id, event) do
     Phoenix.PubSub.broadcast(Loomkin.PubSub, "session:#{session_id}", event)
   rescue
-    _ -> :ok
+    e ->
+      Logger.debug("[Architect] Broadcast failed: #{Exception.message(e)}")
+      :ok
   end
 end

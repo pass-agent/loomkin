@@ -17,7 +17,9 @@ defmodule Loomkin.Teams.ClusterTest do
       assert Cluster.enabled?()
 
       # Restore
-      if original, do: Application.put_env(:loomkin, :cluster, original), else: Application.delete_env(:loomkin, :cluster)
+      if original,
+        do: Application.put_env(:loomkin, :cluster, original),
+        else: Application.delete_env(:loomkin, :cluster)
     end
   end
 
@@ -46,16 +48,16 @@ defmodule Loomkin.Teams.ClusterTest do
   describe "Cluster.handle_node_join/1" do
     test "broadcasts node_joined event" do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "cluster:events")
-      :ok = Cluster.handle_node_join(:"test@localhost")
-      assert_receive {:node_joined, :"test@localhost"}
+      :ok = Cluster.handle_node_join(:test@localhost)
+      assert_receive {:node_joined, :test@localhost}
     end
   end
 
   describe "Cluster.handle_node_leave/1" do
     test "broadcasts node_left event" do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "cluster:events")
-      :ok = Cluster.handle_node_leave(:"test@localhost")
-      assert_receive {:node_left, :"test@localhost"}
+      :ok = Cluster.handle_node_leave(:test@localhost)
+      assert_receive {:node_left, :test@localhost}
     end
   end
 
@@ -97,7 +99,7 @@ defmodule Loomkin.Teams.ClusterTest do
   describe "Migration.migrate_agent/3" do
     test "returns error when clustering is disabled" do
       assert {:error, :clustering_disabled} =
-               Migration.migrate_agent("team-1", "agent-1", :"target@localhost")
+               Migration.migrate_agent("team-1", "agent-1", :target@localhost)
     end
   end
 

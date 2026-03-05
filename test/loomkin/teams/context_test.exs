@@ -95,18 +95,21 @@ defmodule Loomkin.Teams.ContextTest do
 
     test "detects conflict on overlapping line regions", %{team_id: team_id} do
       assert :ok = Context.claim_region(team_id, "alice", "lib/foo.ex", {:lines, 1, 15})
+
       assert {:conflict, "alice", {:lines, 1, 15}} =
                Context.claim_region(team_id, "bob", "lib/foo.ex", {:lines, 10, 20})
     end
 
     test "whole_file conflicts with any region", %{team_id: team_id} do
       assert :ok = Context.claim_region(team_id, "alice", "lib/bar.ex", {:lines, 5, 10})
+
       assert {:conflict, "alice", {:lines, 5, 10}} =
                Context.claim_region(team_id, "bob", "lib/bar.ex", :whole_file)
     end
 
     test "symbol region conflicts with any region (treated as whole_file)", %{team_id: team_id} do
       assert :ok = Context.claim_region(team_id, "alice", "lib/baz.ex", {:lines, 1, 5})
+
       assert {:conflict, "alice", {:lines, 1, 5}} =
                Context.claim_region(team_id, "bob", "lib/baz.ex", {:symbol, "Mod.func/2"})
     end

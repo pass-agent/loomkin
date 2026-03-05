@@ -22,7 +22,12 @@ defmodule Loomkin.Channels.Adapter do
   The `question_id` must be embedded in callback data so that inbound
   callbacks can be matched back to the pending question in the Bridge.
   """
-  @callback send_question(binding, question_id :: String.t(), question :: String.t(), options :: [String.t()]) ::
+  @callback send_question(
+              binding,
+              question_id :: String.t(),
+              question :: String.t(),
+              options :: [String.t()]
+            ) ::
               :ok | {:error, term()}
 
   @doc "Send an agent activity event (tool use, status change, etc.) to the channel."

@@ -9,6 +9,8 @@ defmodule Loomkin.Models do
   Users can also type any `provider:model` string directly.
   """
 
+  require Logger
+
   # Provider atom → {display name, env var name}
   @providers %{
     anthropic: {"Anthropic", "ANTHROPIC_API_KEY"},
@@ -177,7 +179,9 @@ defmodule Loomkin.Models do
       {m.name || m.id, "#{provider}:#{m.id}"}
     end)
   rescue
-    _ -> []
+    e ->
+      Logger.warning("[Models] Failed to fetch models for #{provider}: #{Exception.message(e)}")
+      []
   end
 
   defp fetch_provider_models_enriched(provider) do
@@ -190,7 +194,12 @@ defmodule Loomkin.Models do
       {m.name || m.id, "#{provider}:#{m.id}", ctx_label}
     end)
   rescue
-    _ -> []
+    e ->
+      Logger.warning(
+        "[Models] Failed to fetch enriched models for #{provider}: #{Exception.message(e)}"
+      )
+
+      []
   end
 
   defp chat_capable?(%{capabilities: %{chat: true}}), do: true

@@ -65,18 +65,30 @@ defmodule Loomkin.Decisions.CascadeTest do
 
     test "walks through multi-level chains" do
       # A --requires--> B --blocks--> C
-      {:ok, a} = Graph.add_node(%{
-        node_type: :decision, title: "Root decision", confidence: 25,
-        metadata: %{"team_id" => @team_id}, agent_name: "lead"
-      })
-      {:ok, b} = Graph.add_node(%{
-        node_type: :action, title: "Middle action",
-        metadata: %{}, agent_name: "worker1"
-      })
-      {:ok, c} = Graph.add_node(%{
-        node_type: :action, title: "Leaf action",
-        metadata: %{}, agent_name: "worker2"
-      })
+      {:ok, a} =
+        Graph.add_node(%{
+          node_type: :decision,
+          title: "Root decision",
+          confidence: 25,
+          metadata: %{"team_id" => @team_id},
+          agent_name: "lead"
+        })
+
+      {:ok, b} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Middle action",
+          metadata: %{},
+          agent_name: "worker1"
+        })
+
+      {:ok, c} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Leaf action",
+          metadata: %{},
+          agent_name: "worker2"
+        })
 
       {:ok, _} = Graph.add_edge(a.id, b.id, :requires)
       {:ok, _} = Graph.add_edge(b.id, c.id, :blocks)
@@ -89,14 +101,20 @@ defmodule Loomkin.Decisions.CascadeTest do
     end
 
     test "does not follow non-requires/blocks edges" do
-      {:ok, source} = Graph.add_node(%{
-        node_type: :decision, title: "Source", confidence: 20,
-        metadata: %{"team_id" => @team_id}
-      })
-      {:ok, downstream} = Graph.add_node(%{
-        node_type: :action, title: "Connected via leads_to",
-        metadata: %{}
-      })
+      {:ok, source} =
+        Graph.add_node(%{
+          node_type: :decision,
+          title: "Source",
+          confidence: 20,
+          metadata: %{"team_id" => @team_id}
+        })
+
+      {:ok, downstream} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Connected via leads_to",
+          metadata: %{}
+        })
 
       # Use :leads_to — should NOT be followed by cascade
       {:ok, _} = Graph.add_edge(source.id, downstream.id, :leads_to)
@@ -130,15 +148,22 @@ defmodule Loomkin.Decisions.CascadeTest do
       # Subscribe to receive the notification
       Comms.subscribe(@team_id, "worker")
 
-      {:ok, source} = Graph.add_node(%{
-        node_type: :decision, title: "Risky call", confidence: 25,
-        metadata: %{"team_id" => @team_id, "keeper_id" => "k-123"},
-        agent_name: "lead"
-      })
-      {:ok, downstream} = Graph.add_node(%{
-        node_type: :action, title: "Downstream task",
-        metadata: %{}, agent_name: "worker"
-      })
+      {:ok, source} =
+        Graph.add_node(%{
+          node_type: :decision,
+          title: "Risky call",
+          confidence: 25,
+          metadata: %{"team_id" => @team_id, "keeper_id" => "k-123"},
+          agent_name: "lead"
+        })
+
+      {:ok, downstream} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Downstream task",
+          metadata: %{},
+          agent_name: "worker"
+        })
 
       {:ok, _} = Graph.add_edge(source.id, downstream.id, :requires)
 
@@ -157,14 +182,21 @@ defmodule Loomkin.Decisions.CascadeTest do
     test "includes keeper_id from source node metadata" do
       Comms.subscribe(@team_id, "alice")
 
-      {:ok, source} = Graph.add_node(%{
-        node_type: :observation, title: "Uncertain data", confidence: 10,
-        metadata: %{"team_id" => @team_id, "keeper_id" => "keeper-abc"}
-      })
-      {:ok, downstream} = Graph.add_node(%{
-        node_type: :action, title: "Uses uncertain data",
-        metadata: %{}, agent_name: "alice"
-      })
+      {:ok, source} =
+        Graph.add_node(%{
+          node_type: :observation,
+          title: "Uncertain data",
+          confidence: 10,
+          metadata: %{"team_id" => @team_id, "keeper_id" => "keeper-abc"}
+        })
+
+      {:ok, downstream} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Uses uncertain data",
+          metadata: %{},
+          agent_name: "alice"
+        })
 
       {:ok, _} = Graph.add_edge(source.id, downstream.id, :requires)
       {:ok, _} = Cascade.check_and_propagate(source.id)
@@ -178,14 +210,21 @@ defmodule Loomkin.Decisions.CascadeTest do
     test "automatically triggers cascade when confidence is updated" do
       Comms.subscribe(@team_id, "bob")
 
-      {:ok, source} = Graph.add_node(%{
-        node_type: :decision, title: "Auto-cascade test",
-        metadata: %{"team_id" => @team_id}, confidence: 80
-      })
-      {:ok, downstream} = Graph.add_node(%{
-        node_type: :action, title: "Depends on decision",
-        metadata: %{}, agent_name: "bob"
-      })
+      {:ok, source} =
+        Graph.add_node(%{
+          node_type: :decision,
+          title: "Auto-cascade test",
+          metadata: %{"team_id" => @team_id},
+          confidence: 80
+        })
+
+      {:ok, downstream} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Depends on decision",
+          metadata: %{},
+          agent_name: "bob"
+        })
 
       {:ok, _} = Graph.add_edge(source.id, downstream.id, :requires)
 
@@ -199,14 +238,20 @@ defmodule Loomkin.Decisions.CascadeTest do
     end
 
     test "does not trigger cascade when updating non-confidence fields" do
-      {:ok, source} = Graph.add_node(%{
-        node_type: :decision, title: "No cascade", confidence: 30,
-        metadata: %{"team_id" => @team_id}
-      })
-      {:ok, downstream} = Graph.add_node(%{
-        node_type: :action, title: "Should not be affected",
-        metadata: %{}
-      })
+      {:ok, source} =
+        Graph.add_node(%{
+          node_type: :decision,
+          title: "No cascade",
+          confidence: 30,
+          metadata: %{"team_id" => @team_id}
+        })
+
+      {:ok, downstream} =
+        Graph.add_node(%{
+          node_type: :action,
+          title: "Should not be affected",
+          metadata: %{}
+        })
 
       {:ok, _} = Graph.add_edge(source.id, downstream.id, :requires)
 
@@ -220,14 +265,22 @@ defmodule Loomkin.Decisions.CascadeTest do
   # --- Helpers ---
 
   defp create_chain do
-    {:ok, source} = Graph.add_node(%{
-      node_type: :decision, title: "Source decision", confidence: 80,
-      metadata: %{"team_id" => @team_id}, agent_name: "lead"
-    })
-    {:ok, downstream} = Graph.add_node(%{
-      node_type: :action, title: "Downstream action",
-      metadata: %{}, agent_name: "worker"
-    })
+    {:ok, source} =
+      Graph.add_node(%{
+        node_type: :decision,
+        title: "Source decision",
+        confidence: 80,
+        metadata: %{"team_id" => @team_id},
+        agent_name: "lead"
+      })
+
+    {:ok, downstream} =
+      Graph.add_node(%{
+        node_type: :action,
+        title: "Downstream action",
+        metadata: %{},
+        agent_name: "worker"
+      })
 
     {:ok, _} = Graph.add_edge(source.id, downstream.id, :requires)
 

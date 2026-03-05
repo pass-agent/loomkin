@@ -66,7 +66,10 @@ defmodule Loomkin.Tools.Shell do
   defp check_blocklist(command) do
     case Enum.find(@blocked_patterns, fn {regex, _reason} -> Regex.match?(regex, command) end) do
       {_regex, reason} ->
-        Logger.warning("[Shell] Blocked dangerous command (#{reason}): #{String.slice(command, 0, 100)}")
+        Logger.warning(
+          "[Shell] Blocked dangerous command (#{reason}): #{String.slice(command, 0, 100)}"
+        )
+
         {:error, "Command blocked: #{reason}"}
 
       nil ->
@@ -85,7 +88,9 @@ defmodule Loomkin.Tools.Shell do
         else
           blocked = Enum.reject(chained_cmds, &(&1 in allowed))
           Logger.warning("[Shell] Command not in allowlist: #{inspect(blocked)}")
-          {:error, "Command not in allowlist. Allowed: #{Enum.join(allowed, ", ")}. Blocked: #{Enum.join(blocked, ", ")}"}
+
+          {:error,
+           "Command not in allowlist. Allowed: #{Enum.join(allowed, ", ")}. Blocked: #{Enum.join(blocked, ", ")}"}
         end
 
       _ ->

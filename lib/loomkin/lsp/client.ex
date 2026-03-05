@@ -106,7 +106,11 @@ defmodule Loomkin.LSP.Client do
         params = Protocol.initialize_params(root_uri)
         send_request(port, id, "initialize", params)
 
-        state = %{state | pending_requests: Map.put(state.pending_requests, id, {:initialize, nil})}
+        state = %{
+          state
+          | pending_requests: Map.put(state.pending_requests, id, {:initialize, nil})
+        }
+
         {:noreply, state}
 
       {:error, reason} ->
@@ -125,7 +129,11 @@ defmodule Loomkin.LSP.Client do
         params = Protocol.initialize_params(root_uri)
         send_request(port, id, "initialize", params)
 
-        state = %{state | pending_requests: Map.put(state.pending_requests, id, {:initialize, from})}
+        state = %{
+          state
+          | pending_requests: Map.put(state.pending_requests, id, {:initialize, from})
+        }
+
         {:noreply, state}
 
       {:error, reason} ->
@@ -309,7 +317,11 @@ defmodule Loomkin.LSP.Client do
   end
 
   defp handle_lsp_message(
-         %{:type => :notification, "method" => "textDocument/publishDiagnostics", "params" => params},
+         %{
+           :type => :notification,
+           "method" => "textDocument/publishDiagnostics",
+           "params" => params
+         },
          state
        ) do
     uri = params["uri"]
@@ -340,7 +352,10 @@ defmodule Loomkin.LSP.Client do
         %{state | pending_requests: pending}
 
       {nil, _} ->
-        Logger.warning("[LSP:#{state.name}] Error response for unknown request: #{inspect(error)}")
+        Logger.warning(
+          "[LSP:#{state.name}] Error response for unknown request: #{inspect(error)}"
+        )
+
         state
     end
   end

@@ -21,8 +21,10 @@ defmodule LoomkinWeb.ContextInspectorComponent do
     {:ok, assign(socket, assigns)}
   end
 
+  @valid_inspector_tabs ~w(files diff terminal graph)
   @impl true
-  def handle_event("switch_inspector_tab", %{"tab" => tab}, socket) do
+  def handle_event("switch_inspector_tab", %{"tab" => tab}, socket)
+      when tab in @valid_inspector_tabs do
     send(self(), {:inspector_tab, String.to_existing_atom(tab)})
     {:noreply, socket}
   end
@@ -50,8 +52,10 @@ defmodule LoomkinWeb.ContextInspectorComponent do
         />
       <% else %>
         <%!-- Tab bar --%>
-        <div class="flex items-center gap-0.5 overflow-x-auto px-1.5 py-1 flex-shrink-0"
-             style="background: var(--surface-1); border-bottom: 1px solid var(--border-subtle);">
+        <div
+          class="flex items-center gap-0.5 overflow-x-auto px-1.5 py-1 flex-shrink-0"
+          style="background: var(--surface-1); border-bottom: 1px solid var(--border-subtle);"
+        >
           <button
             :for={tab <- @tabs}
             phx-click="switch_inspector_tab"
@@ -172,10 +176,15 @@ defmodule LoomkinWeb.ContextInspectorComponent do
           selected={@selected_file}
         />
       </div>
-      <div :if={@selected_file} class="h-1/2 flex flex-col animate-fade-in-up"
-           style="border-top: 1px solid var(--border-subtle);">
-        <div class="flex items-center justify-between px-3 py-2 bg-surface-2 flex-shrink-0"
-             style="border-bottom: 1px solid var(--border-subtle);">
+      <div
+        :if={@selected_file}
+        class="h-1/2 flex flex-col animate-fade-in-up"
+        style="border-top: 1px solid var(--border-subtle);"
+      >
+        <div
+          class="flex items-center justify-between px-3 py-2 bg-surface-2 flex-shrink-0"
+          style="border-bottom: 1px solid var(--border-subtle);"
+        >
           <div class="flex items-center gap-2 truncate">
             <.icon name="hero-document-text-mini" class="w-3.5 h-3.5 text-brand flex-shrink-0" />
             <span class="text-xs text-brand font-mono truncate">{@selected_file}</span>
@@ -233,7 +242,8 @@ defmodule LoomkinWeb.ContextInspectorComponent do
       "relative flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1.5 text-[11px] font-medium rounded-md transition-all duration-200 interactive "
 
     if active == tab do
-      base <> "after:absolute after:bottom-0 after:left-1 after:right-1 after:h-[1.5px] after:rounded-full"
+      (base <>
+         "after:absolute after:bottom-0 after:left-1 after:right-1 after:h-[1.5px] after:rounded-full")
       |> Kernel.<>(" ")
       |> Kernel.<>("text-brand after:bg-violet-500")
     else

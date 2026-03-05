@@ -7,6 +7,9 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   require Logger
   @max_activity_events 200
+  @max_messages 200
+  @max_diffs 100
+  @max_shell_commands 100
 
   def mount(params, _session, socket) do
     socket =
@@ -196,7 +199,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         # Direct reply to a specific agent — validate agent still exists
         case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
           {:ok, pid} ->
-            Task.start(fn -> Loomkin.Teams.Agent.send_message(pid, trimmed) end)
+            Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
+              Loomkin.Teams.Agent.send_message(pid, trimmed)
+            end)
 
             reply_event = %{
               id: Ecto.UUID.generate(),
@@ -237,7 +242,10 @@ defmodule LoomkinWeb.WorkspaceLive do
           "[WorkspaceLive] Sending message via Architect session=#{session_id} mode=#{socket.assigns.mode} active_team_id=#{inspect(socket.assigns[:active_team_id])}"
         )
 
-        task = Task.async(fn -> Session.send_message(session_id, trimmed) end)
+        task =
+          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+            Session.send_message(session_id, trimmed)
+          end)
 
         user_msg = %{role: :user, content: trimmed}
 
@@ -268,7 +276,7 @@ defmodule LoomkinWeb.WorkspaceLive do
            input_text: "",
            async_task: task,
            status: :thinking,
-           messages: socket.assigns.messages ++ [user_msg]
+           messages: Enum.take(socket.assigns.messages ++ [user_msg], -@max_messages)
          )
          |> push_event("clear-input", %{})}
     end
@@ -319,7 +327,8 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, assign(socket, show_agent_picker: false)}
   end
 
-  def handle_event("switch_tab", %{"tab" => tab}, socket) do
+  @valid_tabs ~w(files diff terminal graph)
+  def handle_event("switch_tab", %{"tab" => tab}, socket) when tab in @valid_tabs do
     {:noreply, assign(socket, active_tab: String.to_existing_atom(tab))}
   end
 
@@ -362,7 +371,8 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, assign(socket, permission_request: nil)}
   end
 
-  def handle_event("switch_sub_tab", %{"tab" => tab}, socket) do
+  @valid_sub_tabs ~w(activity cost graph)
+  def handle_event("switch_sub_tab", %{"tab" => tab}, socket) when tab in @valid_sub_tabs do
     {:noreply, assign(socket, team_sub_tab: String.to_existing_atom(tab))}
   end
 
@@ -646,7 +656,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       "[WorkspaceLive] :new_message role=#{msg.role} content_len=#{String.length(msg.content || "")}"
     )
 
-    socket = assign(socket, messages: socket.assigns.messages ++ [msg])
+    socket = assign(socket, messages: Enum.take(socket.assigns.messages ++ [msg], -@max_messages))
 
     # Also add assistant messages to activity feed for mission control mode
     socket =
@@ -739,11 +749,15 @@ defmodule LoomkinWeb.WorkspaceLive do
       cond do
         tool_name in ["file_edit", "file_write"] ->
           diff = LoomkinWeb.DiffComponent.parse_edit_result(result)
-          assign(socket, diffs: socket.assigns.diffs ++ [diff])
+          assign(socket, diffs: Enum.take(socket.assigns.diffs ++ [diff], -@max_diffs))
 
         tool_name == "shell" ->
           cmd = parse_shell_result(result)
-          assign(socket, shell_commands: socket.assigns.shell_commands ++ [cmd])
+
+          assign(socket,
+            shell_commands:
+              Enum.take(socket.assigns.shell_commands ++ [cmd], -@max_shell_commands)
+          )
 
         true ->
           socket
@@ -871,7 +885,12 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info({:select_prompt, prompt}, socket) do
     session_id = socket.assigns.session_id
-    task = Task.async(fn -> Session.send_message(session_id, prompt) end)
+
+    task =
+      Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+        Session.send_message(session_id, prompt)
+      end)
+
     user_msg = %{role: :user, content: prompt}
 
     {:noreply,
@@ -880,7 +899,7 @@ defmodule LoomkinWeb.WorkspaceLive do
        input_text: "",
        async_task: task,
        status: :thinking,
-       messages: socket.assigns.messages ++ [user_msg]
+       messages: Enum.take(socket.assigns.messages ++ [user_msg], -@max_messages)
      )
      |> push_event("clear-input", %{})}
   end
@@ -1140,43 +1159,56 @@ defmodule LoomkinWeb.WorkspaceLive do
      )}
   end
 
-  # Handle async task completion
+  # Handle async task completion — match on the stored async_task ref
   def handle_info({ref, result}, socket) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
 
-    socket =
-      case result do
-        {:ok, response} ->
-          Logger.info(
-            "[WorkspaceLive] Async task completed OK response=#{inspect(response, limit: 200)}"
-          )
+    case socket.assigns[:async_task] do
+      %Task{ref: ^ref} ->
+        socket =
+          case result do
+            {:ok, response} ->
+              Logger.info(
+                "[WorkspaceLive] Async task completed OK response=#{inspect(response, limit: 200)}"
+              )
 
-          socket
+              socket
 
-        {:error, reason} ->
-          Logger.error("[WorkspaceLive] Async task returned error: #{inspect(reason)}")
+            {:error, reason} ->
+              Logger.error("[WorkspaceLive] Async task returned error: #{inspect(reason)}")
 
-          socket
-          |> assign(streaming: false, streaming_content: "")
-          |> put_flash(:error, format_llm_error(reason))
+              socket
+              |> assign(streaming: false, streaming_content: "")
+              |> put_flash(:error, format_llm_error(reason))
 
-        other ->
-          Logger.warning(
-            "[WorkspaceLive] Async task returned unexpected result: #{inspect(other)}"
-          )
+            other ->
+              Logger.warning(
+                "[WorkspaceLive] Async task returned unexpected result: #{inspect(other)}"
+              )
 
-          socket
-      end
+              socket
+          end
 
-    {:noreply, assign(socket, async_task: nil)}
+        {:noreply, assign(socket, async_task: nil)}
+
+      _ ->
+        # Not our task — ignore
+        {:noreply, socket}
+    end
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, reason}, socket) do
-    if reason != :normal do
-      Logger.error("[WorkspaceLive] Async task crashed: #{inspect(reason)}")
-    end
+  def handle_info({:DOWN, ref, :process, _pid, reason}, socket) when is_reference(ref) do
+    case socket.assigns[:async_task] do
+      %Task{ref: ^ref} ->
+        if reason != :normal do
+          Logger.error("[WorkspaceLive] Async task crashed: #{inspect(reason)}")
+        end
 
-    {:noreply, assign(socket, async_task: nil)}
+        {:noreply, assign(socket, async_task: nil)}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   # Team decision and context events — buffer for activity feed
@@ -1855,9 +1887,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   # --- Helpers ---
 
-  defp cap_events(events, max \\ @max_activity_events) do
-    if length(events) > max, do: Enum.take(events, -max), else: events
-  end
+  defp cap_events(events, max \\ @max_activity_events), do: Enum.take(events, -max)
 
   defp status_badge_class(:idle), do: "badge-success flex items-center gap-1.5"
   defp status_badge_class(:thinking), do: "badge flex items-center gap-1.5"
@@ -2081,7 +2111,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     case socket.assigns.permission_request do
       %{source: {:agent, team_id, agent_name}} ->
         case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-          {:ok, pid} -> GenServer.cast(pid, {:permission_response, action, tool_name, tool_path})
+          {:ok, pid} -> Loomkin.Teams.Agent.permission_response(pid, action, tool_name, tool_path)
           :error -> :ok
         end
 
@@ -2825,25 +2855,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   defp agent_picker_dot_class(:blocked), do: "bg-amber-400"
   defp agent_picker_dot_class(_), do: "bg-gray-400"
 
-  @agent_colors [
-    "#818cf8",
-    "#f472b6",
-    "#34d399",
-    "#fb923c",
-    "#22d3ee",
-    "#a78bfa",
-    "#fbbf24",
-    "#f87171",
-    "#4ade80",
-    "#60a5fa"
-  ]
-
-  defp agent_color(name) when is_binary(name) do
-    idx = :erlang.phash2(name, length(@agent_colors))
-    Enum.at(@agent_colors, idx)
-  end
-
-  defp agent_color(_), do: "#a1a1aa"
+  defp agent_color(name), do: LoomkinWeb.AgentColors.agent_color(name)
 
   defp short_team_id(id) when is_binary(id), do: String.slice(id, 0, 8)
   defp short_team_id(_), do: "?"
@@ -3231,7 +3243,9 @@ defmodule LoomkinWeb.WorkspaceLive do
     try do
       Loomkin.Channels.Bindings.list_bindings_for_team(team_id)
     rescue
-      _ -> []
+      e ->
+        Logger.warning("[WorkspaceLive] Failed to load channel bindings: #{Exception.message(e)}")
+        []
     end
   end
 end

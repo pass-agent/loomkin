@@ -28,7 +28,12 @@ defmodule Loomkin.Teams.CollaborationEventsTest do
     end
 
     test "formats multiple recipients", %{team_id: team_id} do
-      CollaborationEvents.discovery_shared(team_id, "researcher", ["coder", "tester", "lead"], :bug)
+      CollaborationEvents.discovery_shared(
+        team_id,
+        "researcher",
+        ["coder", "tester", "lead"],
+        :bug
+      )
 
       assert_receive {:collab_event, payload}
       assert payload.description =~ "coder, tester, and lead"
@@ -37,7 +42,12 @@ defmodule Loomkin.Teams.CollaborationEventsTest do
 
   describe "question_asked/4" do
     test "broadcasts collab_event with question", %{team_id: team_id} do
-      CollaborationEvents.question_asked(team_id, "coder", "researcher", "How does the auth module work?")
+      CollaborationEvents.question_asked(
+        team_id,
+        "coder",
+        "researcher",
+        "How does the auth module work?"
+      )
 
       assert_receive {:collab_event, payload}
       assert payload.type == :question_asked
