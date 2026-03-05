@@ -79,7 +79,12 @@ defmodule Loomkin.Decisions.Graph do
   end
 
   defp apply_node_filters(query, [{:session_id, sid} | rest]) do
-    query |> where([n], n.session_id == ^sid) |> apply_node_filters(rest)
+    # session_id is a :binary_id (UUID) — skip filter if the value isn't a valid UUID
+    if valid_uuid?(sid) do
+      query |> where([n], n.session_id == ^sid) |> apply_node_filters(rest)
+    else
+      apply_node_filters(query, rest)
+    end
   end
 
   defp apply_node_filters(query, [{:team_id, team_id} | rest]) do
@@ -461,4 +466,8 @@ defmodule Loomkin.Decisions.Graph do
       {acc ++ Enum.reverse(nodes) ++ deeper, visited}
     end
   end
+
+  @uuid_regex ~r/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  defp valid_uuid?(value) when is_binary(value), do: Regex.match?(@uuid_regex, value)
+  defp valid_uuid?(_), do: false
 end

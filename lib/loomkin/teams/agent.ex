@@ -1146,7 +1146,7 @@ defmodule Loomkin.Teams.Agent do
       description:
         "Agent #{agent_name} in team #{team_id} changed role from #{old_role} to #{new_role}.",
       status: :active,
-      session_id: team_id
+      metadata: %{"team_id" => team_id}
     })
   rescue
     e ->

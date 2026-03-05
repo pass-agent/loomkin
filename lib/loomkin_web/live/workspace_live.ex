@@ -2630,17 +2630,24 @@ defmodule LoomkinWeb.WorkspaceLive do
   # event handlers and PubSub.subscribe is not idempotent (each call adds
   # another subscription, causing duplicate event delivery).
   defp refresh_decision_graphs(socket) do
-    send_update(LoomkinWeb.DecisionGraphComponent,
-      id: "decision-graph",
-      session_id: socket.assigns[:session_id],
-      team_id: socket.assigns[:active_team_id]
-    )
+    # Only send updates to decision graph components when they're actually mounted.
+    # "decision-graph" lives in the sidebar graph tab (solo mode).
+    # "team-decision-graph" lives in the team sub-tab (solo mode, :team tab, :graph sub-tab).
+    if socket.assigns[:active_tab] == :graph do
+      send_update(LoomkinWeb.DecisionGraphComponent,
+        id: "decision-graph",
+        session_id: socket.assigns[:session_id],
+        team_id: socket.assigns[:active_team_id]
+      )
+    end
 
-    send_update(LoomkinWeb.DecisionGraphComponent,
-      id: "team-decision-graph",
-      session_id: socket.assigns[:session_id],
-      team_id: socket.assigns[:display_team_id]
-    )
+    if socket.assigns[:active_tab] == :team && socket.assigns[:team_sub_tab] == :graph do
+      send_update(LoomkinWeb.DecisionGraphComponent,
+        id: "team-decision-graph",
+        session_id: socket.assigns[:session_id],
+        team_id: socket.assigns[:display_team_id]
+      )
+    end
   end
 
   defp refresh_roster(socket) do
