@@ -19,6 +19,7 @@ defmodule Loomkin.Decisions.Pulse do
     coverage_gaps = find_coverage_gaps(active_goals)
     low_confidence = find_low_confidence(confidence_threshold)
     stale_nodes = find_stale_nodes(stale_days)
+    health_score = compute_health(opts)
 
     %{
       active_goals: active_goals,
@@ -26,9 +27,85 @@ defmodule Loomkin.Decisions.Pulse do
       coverage_gaps: coverage_gaps,
       low_confidence: low_confidence,
       stale_nodes: stale_nodes,
+      health_score: health_score,
       summary:
         build_summary(active_goals, recent_decisions, coverage_gaps, low_confidence, stale_nodes)
     }
+  end
+
+  @doc "Computes a 0-100 health score for the decision graph."
+  def compute_health(opts \\ []) do
+    team_id = Keyword.get(opts, :team_id)
+
+    active_nodes = list_active_nodes(team_id)
+    all_edges = list_all_edges(team_id, active_nodes)
+
+    gap_count = count_coverage_gaps(active_nodes, all_edges)
+    orphan_count = count_orphans(active_nodes, all_edges)
+    low_confidence_count = count_low_confidence(active_nodes)
+
+    100 - min(gap_count * 10, 50) - min(orphan_count * 5, 30) - min(low_confidence_count * 3, 20)
+  end
+
+  defp list_active_nodes(nil) do
+    DecisionNode
+    |> where([n], n.status == :active)
+    |> Repo.all()
+  end
+
+  defp list_active_nodes(team_id) do
+    DecisionNode
+    |> where([n], n.status == :active)
+    |> where([n], fragment("? ->> 'team_id' = ?", n.metadata, ^team_id))
+    |> Repo.all()
+  end
+
+  defp list_all_edges(nil, _nodes), do: Repo.all(DecisionEdge)
+
+  defp list_all_edges(_team_id, active_nodes) do
+    node_ids = Enum.map(active_nodes, & &1.id)
+
+    DecisionEdge
+    |> where([e], e.from_node_id in ^node_ids or e.to_node_id in ^node_ids)
+    |> Repo.all()
+  end
+
+  defp count_coverage_gaps(active_nodes, all_edges) do
+    gap_types = [:goal, :decision]
+
+    active_nodes
+    |> Enum.filter(&(&1.node_type in gap_types))
+    |> Enum.count(fn node ->
+      outgoing_target_ids =
+        all_edges
+        |> Enum.filter(&(&1.from_node_id == node.id))
+        |> Enum.map(& &1.to_node_id)
+        |> MapSet.new()
+
+      connected_types =
+        active_nodes
+        |> Enum.filter(&MapSet.member?(outgoing_target_ids, &1.id))
+        |> Enum.map(& &1.node_type)
+
+      not Enum.any?(connected_types, &(&1 in [:action, :outcome]))
+    end)
+  end
+
+  defp count_orphans(active_nodes, all_edges) do
+    edge_node_ids =
+      all_edges
+      |> Enum.flat_map(&[&1.from_node_id, &1.to_node_id])
+      |> MapSet.new()
+
+    active_nodes
+    |> Enum.reject(&(&1.node_type == :goal))
+    |> Enum.count(&(not MapSet.member?(edge_node_ids, &1.id)))
+  end
+
+  defp count_low_confidence(active_nodes) do
+    Enum.count(active_nodes, fn node ->
+      node.confidence != nil and node.confidence < @default_confidence_threshold
+    end)
   end
 
   defp find_coverage_gaps(goals) do

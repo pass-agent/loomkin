@@ -36,7 +36,7 @@ defmodule Loomkin.Tools.DecisionQuery do
 
       "pulse" ->
         report = Pulse.generate()
-        {:ok, %{result: report.summary}}
+        {:ok, %{result: "#{report.summary} Health: #{report.health_score}/100."}}
 
       "search" ->
         search_term = param(params, :search_term, "")

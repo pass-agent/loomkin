@@ -117,7 +117,12 @@ defmodule Loomkin.Teams.AgentCheckpointTest do
           reason: :user_requested
         }
 
-        %{state | status: :paused, paused_state: paused_state, messages: [%{role: :user, content: "hello"}]}
+        %{
+          state
+          | status: :paused,
+            paused_state: paused_state,
+            messages: [%{role: :user, content: "hello"}]
+        }
       end)
 
       state = :sys.get_state(pid)
@@ -147,7 +152,12 @@ defmodule Loomkin.Teams.AgentCheckpointTest do
           reason: :user_requested
         }
 
-        %{state | status: :paused, paused_state: paused_state, messages: [%{role: :user, content: "original task"}]}
+        %{
+          state
+          | status: :paused,
+            paused_state: paused_state,
+            messages: [%{role: :user, content: "original task"}]
+        }
       end)
 
       result = Agent.steer(pid, "focus on tests instead")
@@ -157,9 +167,10 @@ defmodule Loomkin.Teams.AgentCheckpointTest do
       assert state.status == :working
 
       # Verify guidance was injected into messages
-      guidance_msg = Enum.find(state.messages, fn m ->
-        is_binary(m.content) && String.contains?(m.content, "focus on tests instead")
-      end)
+      guidance_msg =
+        Enum.find(state.messages, fn m ->
+          is_binary(m.content) && String.contains?(m.content, "focus on tests instead")
+        end)
 
       assert guidance_msg != nil
       assert String.contains?(guidance_msg.content, "[User Guidance]")

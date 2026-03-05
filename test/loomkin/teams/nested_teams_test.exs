@@ -147,7 +147,9 @@ defmodule Loomkin.Teams.NestedTeamsTest do
   describe "agent_loop context injection" do
     test "parent_team_id resolves to actual parent for sub-teams" do
       {:ok, parent_id} = Manager.create_team(name: "parent", project_path: "/tmp/test")
-      {:ok, child_id} = Manager.create_sub_team(parent_id, "lead", name: "child", project_path: "/tmp/test")
+
+      {:ok, child_id} =
+        Manager.create_sub_team(parent_id, "lead", name: "child", project_path: "/tmp/test")
 
       parent_team_id =
         case Manager.get_parent_team(child_id) do
