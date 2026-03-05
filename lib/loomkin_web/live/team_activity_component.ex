@@ -869,13 +869,18 @@ defmodule LoomkinWeb.TeamActivityComponent do
     meta = Map.get(event, :metadata, %{})
     streaming_content = meta[:content]
     is_live = type == :streaming
+    content = streaming_content || event.content || ""
+    long_content = String.length(content) > 120
+    expanded = MapSet.member?(assigns.expanded_ids, event.id)
 
     assigns =
       assigns
       |> assign(:event, event)
       |> assign(:config, config)
-      |> assign(:streaming_content, streaming_content)
+      |> assign(:content_text, content)
       |> assign(:is_live, is_live)
+      |> assign(:long_content, long_content)
+      |> assign(:expanded, expanded)
 
     ~H"""
     <div
@@ -924,13 +929,33 @@ defmodule LoomkinWeb.TeamActivityComponent do
           {relative_time(@event.timestamp)}
         </span>
       </div>
-      <div :if={@streaming_content || @event.content != ""} class="px-3 pb-2">
+      <div :if={@content_text != ""} class="px-3 pb-2">
         <p
-          class="line-clamp-2"
+          class={if @long_content && !@expanded, do: "line-clamp-2"}
           style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; word-break: break-word;"
         >
-          {@streaming_content || @event.content}<span :if={@is_live} class="streaming-cursor"></span>
+          {@content_text}<span :if={@is_live} class="streaming-cursor"></span>
         </p>
+        <button
+          :if={@long_content && !@expanded}
+          phx-click="expand_event"
+          phx-value-id={@event.id}
+          phx-target={@myself}
+          class="mt-1"
+          style={"font-size: 0.6875rem; color: #{@config.accent_text}; opacity: 0.7; transition: opacity 200ms;"}
+        >
+          show more
+        </button>
+        <button
+          :if={@long_content && @expanded}
+          phx-click="expand_event"
+          phx-value-id={@event.id}
+          phx-target={@myself}
+          class="mt-1"
+          style="font-size: 0.6875rem; color: var(--text-muted); transition: opacity 200ms;"
+        >
+          show less
+        </button>
       </div>
     </div>
     """

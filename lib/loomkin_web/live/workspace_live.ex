@@ -132,6 +132,31 @@ defmodule LoomkinWeb.WorkspaceLive do
         _, _ -> effective_model
       end
 
+    # Proactively read team_id from session — covers the case where the team
+    # was created during start_session but the :team_available PubSub event
+    # hasn't been processed yet (common with longpoll reconnections).
+    team_id_from_session =
+      try do
+        Session.get_team_id(pid)
+      catch
+        _, _ -> nil
+      end
+
+    socket =
+      if team_id_from_session do
+        bindings = load_channel_bindings(team_id_from_session)
+
+        socket
+        |> assign(
+          team_id: team_id_from_session,
+          active_team_id: team_id_from_session,
+          mode: :mission_control,
+          channel_bindings: bindings
+        )
+      else
+        socket
+      end
+
     socket =
       if connected?(socket) do
         Session.subscribe(session_id)
@@ -168,6 +193,22 @@ defmodule LoomkinWeb.WorkspaceLive do
     child_teams = if team_id, do: Teams.Manager.list_sub_teams(team_id), else: []
     active_team_id = socket.assigns[:active_team_id] || team_id
     channel_bindings = load_channel_bindings(active_team_id)
+
+    # Replay session message history as activity events so the feed
+    # survives reconnections (longpoll or websocket drops).
+    history_events = messages_to_activity_events(messages)
+
+    socket =
+      Enum.reduce(history_events, socket, fn event, sock ->
+        known = sock.assigns.activity_known_agents
+
+        case trackable_agent_name(event.agent) do
+          nil -> assign(sock, activity_events: sock.assigns.activity_events ++ [event])
+          name ->
+            new_known = if name in known, do: known, else: known ++ [name]
+            assign(sock, activity_events: sock.assigns.activity_events ++ [event], activity_known_agents: new_known)
+        end
+      end)
 
     assign(socket,
       session_id: session_id,
@@ -1080,18 +1121,10 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:agent_stream_end, agent_name, _payload}, socket) do
-    # Finalize the thinking event — mark it as no longer live
+    # Remove the thinking card — internal reasoning shouldn't clutter the communication log.
+    # The actual output (message, tool call, etc.) will appear as its own event.
     thinking_id = "thinking-#{agent_name}"
-    events = socket.assigns.activity_events
-
-    events =
-      Enum.map(events, fn ev ->
-        if ev.id == thinking_id do
-          %{ev | metadata: Map.delete(ev.metadata || %{}, :live)}
-        else
-          ev
-        end
-      end)
+    events = Enum.reject(socket.assigns.activity_events, &(&1.id == thinking_id))
 
     {:noreply,
      assign(socket, activity_events: events, streaming_agent: nil, streaming_thoughts: "")}
@@ -1174,6 +1207,19 @@ defmodule LoomkinWeb.WorkspaceLive do
 
               socket
 
+            {:error, :cancelled} ->
+              # User-initiated cancel — no error flash needed
+              Logger.debug("[WorkspaceLive] Async task cancelled by user")
+              assign(socket, streaming: false, streaming_content: "")
+
+            {:error, :busy} ->
+              # Agent is busy with another task — show a gentle warning
+              Logger.debug("[WorkspaceLive] Agent is busy, message queued or dropped")
+
+              socket
+              |> assign(streaming: false, streaming_content: "")
+              |> put_flash(:info, "Agent is busy — try again in a moment")
+
             {:error, reason} ->
               Logger.error("[WorkspaceLive] Async task returned error: #{inspect(reason)}")
 
@@ -1189,7 +1235,7 @@ defmodule LoomkinWeb.WorkspaceLive do
               socket
           end
 
-        {:noreply, assign(socket, async_task: nil)}
+        {:noreply, assign(socket, async_task: nil, status: :idle)}
 
       _ ->
         # Not our task — ignore
@@ -1200,11 +1246,12 @@ defmodule LoomkinWeb.WorkspaceLive do
   def handle_info({:DOWN, ref, :process, _pid, reason}, socket) when is_reference(ref) do
     case socket.assigns[:async_task] do
       %Task{ref: ^ref} ->
-        if reason != :normal do
+        # :killed is expected when user cancels (Task.shutdown(:brutal_kill))
+        if reason not in [:normal, :killed] do
           Logger.error("[WorkspaceLive] Async task crashed: #{inspect(reason)}")
         end
 
-        {:noreply, assign(socket, async_task: nil)}
+        {:noreply, assign(socket, async_task: nil, status: :idle)}
 
       _ ->
         {:noreply, socket}
@@ -1889,6 +1936,33 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   defp cap_events(events, max \\ @max_activity_events), do: Enum.take(events, -max)
 
+  # Convert persisted session messages into activity feed events.
+  # Used on mount to recover feed state after reconnections.
+  defp messages_to_activity_events(messages) do
+    messages
+    |> Enum.filter(fn msg ->
+      role = Map.get(msg, :role)
+      role in [:user, :assistant]
+    end)
+    |> Enum.map(fn msg ->
+      {agent, from, to} =
+        case msg.role do
+          :user -> {"You", "You", "Team"}
+          :assistant -> {"concierge", "concierge", "You"}
+        end
+
+      %{
+        id: "history-#{Ecto.UUID.generate()}",
+        type: :message,
+        agent: agent,
+        content: Map.get(msg, :content) || "",
+        timestamp: Map.get(msg, :inserted_at, DateTime.utc_now()),
+        expanded: false,
+        metadata: %{from: from, to: to}
+      }
+    end)
+  end
+
   defp status_badge_class(:idle), do: "badge-success flex items-center gap-1.5"
   defp status_badge_class(:thinking), do: "badge flex items-center gap-1.5"
   defp status_badge_class(:executing_tool), do: "badge flex items-center gap-1.5"
@@ -2121,6 +2195,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   # Subscribe to a team's PubSub topics, but only once per team.
+  # Also synthesizes "joined" events for agents that already exist (race condition fix).
   # Returns the updated socket with the team tracked in :subscribed_teams.
   defp subscribe_to_team(socket, team_id) do
     subscribed = socket.assigns[:subscribed_teams] || MapSet.new()
@@ -2133,7 +2208,38 @@ defmodule LoomkinWeb.WorkspaceLive do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:tasks")
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:context")
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "team:#{team_id}:decisions")
-      assign(socket, subscribed_teams: MapSet.put(subscribed, team_id))
+
+      socket = assign(socket, subscribed_teams: MapSet.put(subscribed, team_id))
+
+      # Synthesize "joined" events for agents that were spawned before we subscribed
+      existing_agents =
+        case Loomkin.Teams.Manager.list_agents(team_id) do
+          agents when is_list(agents) -> agents
+          {:ok, agents} when is_list(agents) -> agents
+          _ -> []
+        end
+
+      known = socket.assigns.activity_known_agents
+
+      Enum.reduce(existing_agents, socket, fn agent, sock ->
+        if agent.name in known do
+          sock
+        else
+          event = %{
+            id: Ecto.UUID.generate(),
+            type: :agent_spawn,
+            agent: agent.name,
+            content: "#{agent.name} joined",
+            timestamp: DateTime.utc_now(),
+            expanded: false,
+            metadata: %{agent_name: agent.name, role: agent.role}
+          }
+
+          events = cap_events(sock.assigns.activity_events ++ [event])
+          new_known = sock.assigns.activity_known_agents ++ [agent.name]
+          assign(sock, activity_events: events, activity_known_agents: new_known)
+        end
+      end)
     end
   end
 
@@ -2182,6 +2288,28 @@ defmodule LoomkinWeb.WorkspaceLive do
 
       :merge_tool_result ->
         merge_tool_result(socket, pubsub_event)
+
+      :maybe_agent_spawn ->
+        # Only show "joined" for agents we haven't seen before
+        {:agent_status, agent, :idle} = pubsub_event
+        known = socket.assigns.activity_known_agents
+
+        if agent in known do
+          socket
+        else
+          event = %{
+            id: Ecto.UUID.generate(),
+            type: :agent_spawn,
+            agent: agent,
+            content: "#{agent} joined",
+            timestamp: DateTime.utc_now(),
+            expanded: false,
+            metadata: %{agent_name: agent}
+          }
+
+          events = cap_events(socket.assigns.activity_events ++ [event])
+          assign(socket, activity_events: events, activity_known_agents: known ++ [agent])
+        end
 
       event ->
         events = socket.assigns.activity_events ++ [event]
@@ -2370,17 +2498,10 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   # --- Agent status: surface spawn and working transitions ---
 
-  defp activity_event_from({:agent_status, agent, :idle}) do
-    # Agent just spawned (initial status broadcast) — show as spawn event
-    %{
-      id: Ecto.UUID.generate(),
-      type: :agent_spawn,
-      agent: agent,
-      content: "#{agent} joined",
-      timestamp: DateTime.utc_now(),
-      expanded: false,
-      metadata: %{agent_name: agent}
-    }
+  defp activity_event_from({:agent_status, _agent, :idle}) do
+    # Idle status is handled specially in forward_to_activity —
+    # only show "joined" for agents we haven't seen before.
+    :maybe_agent_spawn
   end
 
   defp activity_event_from({:agent_status, agent, :working}) do
@@ -2656,7 +2777,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   # Filter out low-signal events from the primary activity feed.
   # Tool calls and context offloads go to the collapsible ToolCallsComponent instead.
-  @low_signal_event_types [:tool_call, :context_offload]
+  @low_signal_event_types [:tool_call, :context_offload, :status]
 
   defp filter_high_signal_events(events) do
     Enum.reject(events, fn event -> event.type in @low_signal_event_types end)
