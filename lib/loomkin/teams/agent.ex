@@ -600,16 +600,23 @@ defmodule Loomkin.Teams.Agent do
     if from == to_string(state.name) do
       {:noreply, state}
     else
-      enrichment_text =
+      # enrichments can be a list (intra-team) or a map with :source_team (cross-team)
+      {enrichment_text, source_label} =
         case enrichments do
-          [] -> ""
-          list -> "\n\nRelevant context:\n" <> Enum.join(list, "\n")
+          %{source_team: source_team} ->
+            {"", " (cross-team from #{source_team})"}
+
+          [] ->
+            {"", ""}
+
+          list when is_list(list) ->
+            {"\n\nRelevant context:\n" <> Enum.join(list, "\n"), ""}
         end
 
       query_msg = %{
         role: :user,
         content: """
-        [Query from #{from} | ID: #{query_id}]
+        [Query from #{from}#{source_label} | ID: #{query_id}]
         #{question}#{enrichment_text}
 
         You can respond using peer_answer_question with query_id "#{query_id}", \

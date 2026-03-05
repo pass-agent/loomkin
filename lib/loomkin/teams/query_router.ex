@@ -34,6 +34,14 @@ defmodule Loomkin.Teams.QueryRouter do
     GenServer.call(__MODULE__, {:get_query, query_id})
   end
 
+  @doc "Ask a question across team boundaries. Returns {:ok, query_id}."
+  def ask_cross_team(source_team_id, target_team_id, from, question, opts \\ []) do
+    GenServer.call(
+      __MODULE__,
+      {:ask_cross_team, source_team_id, target_team_id, from, question, opts}
+    )
+  end
+
   @doc "Expire stale queries older than ttl_ms."
   def expire_stale(ttl_ms \\ 60_000) do
     GenServer.call(__MODULE__, {:expire_stale, ttl_ms})
@@ -96,15 +104,52 @@ defmodule Loomkin.Teams.QueryRouter do
     {:reply, {:ok, query_id}, state}
   end
 
+  def handle_call(
+        {:ask_cross_team, source_team_id, target_team_id, from, question, opts},
+        _from_pid,
+        state
+      ) do
+    query_id = Ecto.UUID.generate()
+    target = Keyword.get(opts, :target)
+    max_hops = Keyword.get(opts, :max_hops, 5)
+
+    query = %{
+      team_id: target_team_id,
+      source_team_id: source_team_id,
+      origin: from,
+      question: question,
+      target: target,
+      hops: [],
+      enrichments: [],
+      answer: nil,
+      created_at: System.monotonic_time(:millisecond),
+      max_hops: max_hops
+    }
+
+    state = put_in(state, [:queries, query_id], query)
+
+    message = {:query, query_id, from, question, %{source_team: source_team_id}}
+
+    if target do
+      Comms.send_cross_team(target_team_id, target, message)
+    else
+      Comms.broadcast(target_team_id, message)
+    end
+
+    {:reply, {:ok, query_id}, state}
+  end
+
   def handle_call({:answer, query_id, from, answer}, _from_pid, state) do
     case Map.fetch(state.queries, query_id) do
       {:ok, query} ->
         query = %{query | answer: answer, hops: query.hops ++ [from]}
         state = put_in(state, [:queries, query_id], query)
 
-        # Send answer back to origin
+        # Route answer back — cross-team queries go to source_team_id
+        reply_team = Map.get(query, :source_team_id, query.team_id)
+
         Comms.send_to(
-          query.team_id,
+          reply_team,
           query.origin,
           {:query_answer, query_id, from, answer, query.enrichments}
         )

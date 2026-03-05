@@ -155,6 +155,19 @@ defmodule Loomkin.Teams.Tasks do
     )
   end
 
+  @doc "List tasks from sibling teams for cross-team visibility."
+  def list_cross_team_tasks(team_id) do
+    case Loomkin.Teams.Manager.get_sibling_teams(team_id) do
+      {:ok, siblings} ->
+        Enum.flat_map(siblings, fn sib_id ->
+          list_all(sib_id)
+        end)
+
+      :none ->
+        []
+    end
+  end
+
   def get_task(task_id) do
     case Repo.get(TeamTask, task_id) do
       nil -> {:error, :not_found}

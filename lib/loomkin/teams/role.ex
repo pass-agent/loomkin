@@ -51,6 +51,11 @@ defmodule Loomkin.Teams.Role do
     Loomkin.Tools.Git
   ]
 
+  @cross_team_tools [
+    Loomkin.Tools.CrossTeamQuery,
+    Loomkin.Tools.ListTeams
+  ]
+
   @peer_tools [
     Loomkin.Tools.PeerMessage,
     Loomkin.Tools.PeerDiscovery,
@@ -89,7 +94,7 @@ defmodule Loomkin.Teams.Role do
                Loomkin.Tools.DecisionQuery,
                Loomkin.Tools.SubAgent,
                Loomkin.Tools.LspDiagnostics
-             ] ++ @lead_tools ++ @peer_tools
+             ] ++ @lead_tools ++ @peer_tools ++ @cross_team_tools
 
   @tool_name_to_module %{
     "file_read" => Loomkin.Tools.FileRead,
@@ -122,7 +127,9 @@ defmodule Loomkin.Teams.Role do
     "context_retrieve" => Loomkin.Tools.ContextRetrieve,
     "search_keepers" => Loomkin.Tools.SearchKeepers,
     "context_offload" => Loomkin.Tools.ContextOffload,
-    "ask_user" => Loomkin.Tools.AskUser
+    "ask_user" => Loomkin.Tools.AskUser,
+    "cross_team_query" => Loomkin.Tools.CrossTeamQuery,
+    "list_teams" => Loomkin.Tools.ListTeams
   }
 
   # -- Shared behavioral guidance (injected into all roles) --
@@ -210,6 +217,14 @@ defmodule Loomkin.Teams.Role do
   - **When you find something relevant to a teammate**: Send it directly — use `peer_message`
   - **When asked a question**: Always respond promptly — use `peer_answer_question`
   - **Don't work in isolation**: If you're unsure, ask. If you learned something, share it.
+
+  ## Cross-Team Communication
+
+  You may be part of a larger team hierarchy with sibling teams, a parent team, or child teams:
+  - **Discover teams**: Use `list_teams` to see the team hierarchy and available agents
+  - **Ask across teams**: Use `cross_team_query` to ask questions to agents in other teams
+  - **When to use cross-team comms**: When you need expertise or information from agents outside your team
+  - Answers from cross-team queries arrive asynchronously, just like intra-team questions
   """
 
   @peer_role_guidance %{
@@ -283,7 +298,7 @@ defmodule Loomkin.Teams.Role do
     },
     researcher: %{
       model_tier: :default,
-      tools: @read_only_tools ++ @decision_tools ++ @peer_tools,
+      tools: @read_only_tools ++ @decision_tools ++ @peer_tools ++ @cross_team_tools,
       system_prompt: """
       You are a research agent. Your job is to explore the codebase, analyze patterns,
       and report findings to the team lead. You are read-only — never modify files.
@@ -306,7 +321,8 @@ defmodule Loomkin.Teams.Role do
       model_tier: :default,
       tools:
         @read_only_tools ++
-          @write_tools ++ @exec_tools ++ [Loomkin.Tools.DecisionLog] ++ @peer_tools,
+          @write_tools ++
+          @exec_tools ++ [Loomkin.Tools.DecisionLog] ++ @peer_tools ++ @cross_team_tools,
       system_prompt: """
       You are a coding agent. Your job is to implement changes, write code, and run commands.
 
@@ -343,7 +359,9 @@ defmodule Loomkin.Teams.Role do
     },
     reviewer: %{
       model_tier: :default,
-      tools: @read_only_tools ++ [Loomkin.Tools.Shell] ++ @decision_tools ++ @peer_tools,
+      tools:
+        @read_only_tools ++
+          [Loomkin.Tools.Shell] ++ @decision_tools ++ @peer_tools ++ @cross_team_tools,
       system_prompt: """
       You are a code review agent. Your job is to review code quality, find issues,
       and suggest improvements.
@@ -367,7 +385,9 @@ defmodule Loomkin.Teams.Role do
     },
     tester: %{
       model_tier: :default,
-      tools: @read_only_tools ++ [Loomkin.Tools.Shell, Loomkin.Tools.DecisionLog] ++ @peer_tools,
+      tools:
+        @read_only_tools ++
+          [Loomkin.Tools.Shell, Loomkin.Tools.DecisionLog] ++ @peer_tools ++ @cross_team_tools,
       system_prompt: """
       You are a testing agent. Your job is to run tests, validate changes, and report results.
 
@@ -422,7 +442,9 @@ defmodule Loomkin.Teams.Role do
     },
     orienter: %{
       model_tier: :fast,
-      tools: @read_only_tools ++ @decision_tools ++ @peer_tools ++ [Loomkin.Tools.Git],
+      tools:
+        @read_only_tools ++
+          @decision_tools ++ @peer_tools ++ @cross_team_tools ++ [Loomkin.Tools.Git],
       system_prompt: """
       You are the Orienter — a silent background agent that scans the project and decision
       graph at session start to build situational awareness.

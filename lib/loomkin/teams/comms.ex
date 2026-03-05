@@ -92,6 +92,39 @@ defmodule Loomkin.Teams.Comms do
     end
   end
 
+  @doc "Send a direct message to an agent in any team (cross-team unicast)."
+  def send_cross_team(target_team_id, target_agent, message) do
+    Phoenix.PubSub.broadcast(
+      @pubsub,
+      "team:#{target_team_id}:agent:#{target_agent}",
+      message
+    )
+  end
+
+  @doc "Broadcast a message to all child teams."
+  def broadcast_to_children(parent_team_id, message) do
+    for child_id <- Loomkin.Teams.Manager.get_child_teams(parent_team_id) do
+      broadcast(child_id, message)
+    end
+
+    :ok
+  end
+
+  @doc "Broadcast a message to sibling teams."
+  def broadcast_to_siblings(team_id, message) do
+    case Loomkin.Teams.Manager.get_sibling_teams(team_id) do
+      {:ok, siblings} ->
+        for sib_id <- siblings do
+          broadcast(sib_id, message)
+        end
+
+        :ok
+
+      :none ->
+        :ok
+    end
+  end
+
   @doc "Broadcast a task event (assigned, completed, etc)."
   def broadcast_task_event(team_id, event) do
     Phoenix.PubSub.broadcast(@pubsub, "team:#{team_id}:tasks", event)
@@ -108,7 +141,7 @@ defmodule Loomkin.Teams.Comms do
 
   # -- Private --
 
-  @propagatable_types ~w[insight blocker]
+  @propagatable_types ~w[insight blocker discovery warning]
 
   defp maybe_propagate_to_parent(team_id, %{from: from} = payload) do
     type = to_string(payload[:type] || "")

@@ -121,6 +121,34 @@ defmodule Loomkin.Teams.Manager do
     end
   end
 
+  @doc "Get sibling team IDs (other sub-teams under the same parent)."
+  @spec get_sibling_teams(String.t()) :: {:ok, [String.t()]} | :none
+  def get_sibling_teams(team_id) do
+    case get_parent_team(team_id) do
+      {:ok, parent_id} ->
+        siblings = get_sub_team_ids(parent_id) -- [team_id]
+        {:ok, siblings}
+
+      :none ->
+        :none
+    end
+  end
+
+  @doc "Get child (sub-team) IDs for a given team."
+  @spec get_child_teams(String.t()) :: [String.t()]
+  def get_child_teams(team_id) do
+    get_sub_team_ids(team_id)
+  end
+
+  @doc "Get team name from metadata."
+  @spec get_team_name(String.t()) :: String.t() | nil
+  def get_team_name(team_id) do
+    case get_team_meta(team_id) do
+      {:ok, meta} -> meta[:name]
+      :error -> nil
+    end
+  end
+
   @doc """
   Spawn an agent in a team.
 
@@ -339,7 +367,9 @@ defmodule Loomkin.Teams.Manager do
     end
   end
 
-  defp get_team_meta(team_id) do
+  @doc "Get team metadata from ETS. Returns {:ok, meta} or :error."
+  @spec get_team_meta(String.t()) :: {:ok, map()} | :error
+  def get_team_meta(team_id) do
     case TableRegistry.get_table(team_id) do
       {:ok, table} ->
         case :ets.lookup(table, :meta) do
