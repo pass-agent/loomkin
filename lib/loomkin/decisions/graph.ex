@@ -79,6 +79,12 @@ defmodule Loomkin.Decisions.Graph do
     |> apply_node_filters(rest)
   end
 
+  defp apply_node_filters(query, [{:branch, branch} | rest]) do
+    query
+    |> where([n], fragment("? ->> 'branch' = ?", n.metadata, ^branch))
+    |> apply_node_filters(rest)
+  end
+
   defp apply_node_filters(query, [{:cross_session, true} | rest]) do
     apply_node_filters(query, rest)
   end
@@ -168,6 +174,195 @@ defmodule Loomkin.Decisions.Graph do
         {:error, reason} ->
           Repo.rollback(reason)
       end
+    end)
+  end
+
+  # --- Pivot Chains ---
+
+  @doc """
+  Creates an atomic pivot chain: old_node -> observation -> revisit -> new_decision.
+  Supersedes the old node and broadcasts {:pivot_created, ...}.
+  """
+  def create_pivot_chain(old_node_id, observation_title, new_approach_title, opts \\ []) do
+    Repo.transaction(fn ->
+      old_node = get_node(old_node_id)
+
+      if is_nil(old_node), do: Repo.rollback(:old_node_not_found)
+      if old_node.status != :active, do: Repo.rollback(:old_node_not_active)
+
+      base_metadata =
+        Map.take(old_node.metadata || %{}, ["team_id", "keeper_id"])
+        |> Map.put("agent_name", old_node.agent_name || Keyword.get(opts, :agent_name))
+        |> Map.merge(Keyword.get(opts, :metadata, %{}))
+
+      base_attrs = %{
+        status: :active,
+        session_id: old_node.session_id,
+        agent_name: Keyword.get(opts, :agent_name, old_node.agent_name),
+        metadata: base_metadata
+      }
+
+      {:ok, observation} =
+        base_attrs
+        |> Map.merge(%{node_type: :observation, title: observation_title})
+        |> add_node()
+        |> rollback_on_error()
+
+      {:ok, revisit} =
+        base_attrs
+        |> Map.merge(%{node_type: :revisit, title: "Reconsidering: #{old_node.title}"})
+        |> add_node()
+        |> rollback_on_error()
+
+      {:ok, decision} =
+        base_attrs
+        |> Map.merge(%{
+          node_type: :decision,
+          title: new_approach_title,
+          confidence: Keyword.get(opts, :confidence)
+        })
+        |> add_node()
+        |> rollback_on_error()
+
+      add_edge(old_node_id, observation.id, :leads_to) |> rollback_on_error()
+      add_edge(observation.id, revisit.id, :leads_to) |> rollback_on_error()
+      add_edge(revisit.id, decision.id, :leads_to) |> rollback_on_error()
+
+      add_edge(old_node_id, decision.id, :supersedes,
+        rationale: "Pivoted via: #{observation_title}"
+      )
+      |> rollback_on_error()
+
+      update_node(old_node, %{status: :superseded}) |> rollback_on_error()
+
+      result = %{
+        old_node: old_node,
+        observation: observation,
+        revisit: revisit,
+        decision: decision
+      }
+
+      Phoenix.PubSub.broadcast(Loomkin.PubSub, "decision_graph", {:pivot_created, result})
+
+      result
+    end)
+  end
+
+  defp rollback_on_error({:ok, _} = ok), do: ok
+  defp rollback_on_error({:error, reason}), do: Repo.rollback(reason)
+
+  # --- Subtree Merging ---
+
+  @all_edge_types ~w(leads_to chosen rejected requires blocks enables supersedes supports revises summarizes)a
+
+  @doc """
+  Merge (copy) a subtree rooted at `source_root_id` under `target_parent_id`.
+
+  Options:
+    * `:supersede_source` - mark source nodes as superseded (default: false)
+    * `:edge_type` - edge type from target parent to copied root (default: :leads_to)
+    * `:prefix_titles` - string prefix for copied node titles (default: nil)
+    * `:metadata_merge` - map to merge into all copied node metadata (default: %{})
+
+  Returns `{:ok, %{merged_count: N, root_id: new_root_id, id_mapping: %{old => new}}}`.
+  """
+  def merge_subtree(source_root_id, target_parent_id, opts \\ []) do
+    edge_type = Keyword.get(opts, :edge_type, :leads_to)
+    supersede_source = Keyword.get(opts, :supersede_source, false)
+    prefix = Keyword.get(opts, :prefix_titles)
+    metadata_merge = Keyword.get(opts, :metadata_merge, %{})
+
+    Repo.transaction(fn ->
+      source_root = get_node(source_root_id)
+
+      if is_nil(source_root), do: Repo.rollback(:source_not_found)
+      if is_nil(get_node(target_parent_id)), do: Repo.rollback(:target_not_found)
+
+      # Collect all downstream nodes (source root + descendants)
+      downstream = walk_downstream(source_root_id, @all_edge_types, max_depth: 100)
+      all_nodes = [source_root | Enum.map(downstream, fn {node, _d, _e} -> node end)]
+      node_ids = MapSet.new(all_nodes, & &1.id)
+
+      # Build ID mapping: old_id -> new_id
+      id_mapping =
+        Map.new(all_nodes, fn node -> {node.id, Ecto.UUID.generate()} end)
+
+      # Copy nodes
+      for node <- all_nodes do
+        new_id = Map.fetch!(id_mapping, node.id)
+        title = if prefix, do: "#{prefix}#{node.title}", else: node.title
+        merged_meta = Map.merge(node.metadata || %{}, metadata_merge)
+
+        attrs = %{
+          node_type: node.node_type,
+          title: title,
+          description: node.description,
+          status: node.status,
+          confidence: node.confidence,
+          metadata: merged_meta,
+          agent_name: node.agent_name,
+          session_id: node.session_id,
+          change_id: Ecto.UUID.generate()
+        }
+
+        case %DecisionNode{id: new_id}
+             |> DecisionNode.changeset(attrs)
+             |> Repo.insert() do
+          {:ok, _} -> :ok
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end
+
+      # Collect edges where both endpoints are in the subtree
+      all_edges =
+        Enum.flat_map(all_nodes, fn node ->
+          list_edges(from_node_id: node.id)
+        end)
+
+      internal_edges =
+        Enum.filter(all_edges, fn edge ->
+          MapSet.member?(node_ids, edge.from_node_id) and
+            MapSet.member?(node_ids, edge.to_node_id)
+        end)
+        |> Enum.uniq_by(& &1.id)
+
+      # Recreate internal edges with mapped IDs
+      for edge <- internal_edges do
+        new_from = Map.fetch!(id_mapping, edge.from_node_id)
+        new_to = Map.fetch!(id_mapping, edge.to_node_id)
+
+        case add_edge(new_from, new_to, edge.edge_type,
+               rationale: edge.rationale,
+               weight: edge.weight
+             ) do
+          {:ok, _} -> :ok
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end
+
+      # Link target parent to copied root
+      new_root_id = Map.fetch!(id_mapping, source_root_id)
+
+      case add_edge(target_parent_id, new_root_id, edge_type) do
+        {:ok, _} -> :ok
+        {:error, reason} -> Repo.rollback(reason)
+      end
+
+      # Optionally supersede source nodes
+      if supersede_source do
+        for node <- all_nodes do
+          case update_node(node, %{status: :superseded}) do
+            {:ok, _} -> :ok
+            {:error, reason} -> Repo.rollback(reason)
+          end
+        end
+      end
+
+      %{
+        merged_count: length(all_nodes),
+        root_id: new_root_id,
+        id_mapping: id_mapping
+      }
     end)
   end
 
