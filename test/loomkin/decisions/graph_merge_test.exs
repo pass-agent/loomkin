@@ -3,7 +3,7 @@ defmodule Loomkin.Decisions.GraphMergeTest do
 
   alias Loomkin.Decisions.Graph
 
-  defp node_attrs(overrides \\ %{}) do
+  defp node_attrs(overrides) do
     Map.merge(%{node_type: :goal, title: "Test node"}, overrides)
   end
 

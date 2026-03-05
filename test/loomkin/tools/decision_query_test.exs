@@ -4,7 +4,7 @@ defmodule Loomkin.Tools.DecisionQueryTest do
   alias Loomkin.Tools.DecisionQuery
   alias Loomkin.Decisions.Graph
 
-  defp node_attrs(overrides \\ %{}) do
+  defp node_attrs(overrides) do
     Map.merge(%{node_type: :goal, title: "Test goal"}, overrides)
   end
 

@@ -4,7 +4,7 @@ defmodule Loomkin.Decisions.DiffTest do
   alias Loomkin.Decisions.Diff
   alias Loomkin.Decisions.Graph
 
-  defp node_attrs(overrides \\ %{}) do
+  defp node_attrs(overrides) do
     Map.merge(%{node_type: :goal, title: "Test node"}, overrides)
   end
 

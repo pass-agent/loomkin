@@ -251,8 +251,13 @@ defmodule LoomkinWeb.ChatComponent do
       |> MDEx.Document.put_markdown(content)
 
     case MDEx.to_html(doc) do
-      {:ok, html} -> Phoenix.HTML.raw(html)
-      _ -> Phoenix.HTML.raw("<p>#{Phoenix.HTML.html_escape(content)}</p>")
+      {:ok, html} ->
+        Phoenix.HTML.raw(html)
+
+      _ ->
+        Phoenix.HTML.raw(
+          "<p>#{Phoenix.HTML.safe_to_string(Phoenix.HTML.html_escape(content))}</p>"
+        )
     end
   end
 

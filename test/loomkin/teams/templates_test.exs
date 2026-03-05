@@ -1,7 +1,7 @@
 defmodule Loomkin.Teams.TemplatesTest do
   use ExUnit.Case, async: false
 
-  alias Loomkin.Teams.{Manager, Templates, TableRegistry}
+  alias Loomkin.Teams.{Manager, Templates}
 
   setup do
     # Store original teams config

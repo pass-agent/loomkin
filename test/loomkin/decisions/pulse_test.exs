@@ -3,7 +3,7 @@ defmodule Loomkin.Decisions.PulseTest do
 
   alias Loomkin.Decisions.{Graph, Pulse}
 
-  defp node_attrs(overrides \\ %{}) do
+  defp node_attrs(overrides) do
     Map.merge(%{node_type: :goal, title: "Test goal"}, overrides)
   end
 

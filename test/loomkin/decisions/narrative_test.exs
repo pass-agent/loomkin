@@ -4,7 +4,7 @@ defmodule Loomkin.Decisions.NarrativeTest do
   alias Loomkin.Decisions.{Graph, Narrative}
   alias Loomkin.Schemas.Session
 
-  defp node_attrs(overrides \\ %{}) do
+  defp node_attrs(overrides) do
     Map.merge(%{node_type: :goal, title: "Test goal"}, overrides)
   end
 

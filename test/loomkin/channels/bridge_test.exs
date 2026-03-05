@@ -419,7 +419,7 @@ defmodule Loomkin.Channels.BridgeTest do
       assert MapSet.size(state.subscribed_sessions) == 1
     end
 
-    test "receives events after subscribing", %{binding: binding, pid: pid} do
+    test "receives events after subscribing", %{binding: binding, pid: _pid} do
       test_pid = self()
 
       Bridge.subscribe_session(binding.channel, binding.channel_id, "sess-live")
