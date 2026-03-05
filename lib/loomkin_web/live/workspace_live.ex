@@ -1940,7 +1940,10 @@ defmodule LoomkinWeb.WorkspaceLive do
   # Used on mount to recover feed state after reconnections.
   defp messages_to_activity_events(messages) do
     messages
-    |> Enum.filter(fn msg -> msg.role in [:user, :assistant] end)
+    |> Enum.filter(fn msg ->
+      role = Map.get(msg, :role)
+      role in [:user, :assistant]
+    end)
     |> Enum.map(fn msg ->
       {agent, from, to} =
         case msg.role do
@@ -1952,7 +1955,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         id: "history-#{Ecto.UUID.generate()}",
         type: :message,
         agent: agent,
-        content: msg.content || "",
+        content: Map.get(msg, :content) || "",
         timestamp: Map.get(msg, :inserted_at, DateTime.utc_now()),
         expanded: false,
         metadata: %{from: from, to: to}
