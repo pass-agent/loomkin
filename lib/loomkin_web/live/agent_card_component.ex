@@ -211,7 +211,9 @@ defmodule LoomkinWeb.AgentCardComponent do
             </div>
           <% _ -> %>
             <%= if @card.status == :complete do %>
-              <p class="text-xs italic" style="color: var(--color-emerald-400);">Orientation complete</p>
+              <p class="text-xs italic" style="color: var(--color-emerald-400);">
+                Orientation complete
+              </p>
             <% else %>
               <p class="text-xs text-muted italic">idle</p>
             <% end %>
