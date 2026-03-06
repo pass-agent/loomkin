@@ -1,5 +1,9 @@
 import Config
 
+# Use Docker Postgres port by default; override with DB_PORT for system-installed Postgres
+config :loomkin, Loomkin.Repo,
+  port: String.to_integer(System.get_env("DB_PORT") || "5488")
+
 # Development endpoint configuration
 config :loomkin, LoomkinWeb.Endpoint,
   url: [host: "loom.test", port: 4200],

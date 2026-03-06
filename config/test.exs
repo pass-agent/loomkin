@@ -4,7 +4,7 @@ config :loomkin, Loomkin.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  port: 5488,
+  port: String.to_integer(System.get_env("DB_PORT") || "5488"),
   database: "loomkin_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10

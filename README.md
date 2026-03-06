@@ -57,9 +57,12 @@ Every session is a team. One agent or twenty — the architecture is the same. C
 
 ### Prerequisites
 
-- Elixir 1.18+
-- PostgreSQL 14+
+- Elixir 1.18+ (with Erlang/OTP 27+) — versions pinned in `.mise.toml`
+- Docker (we recommend [OrbStack](https://orbstack.dev) on macOS — fast, lightweight Docker runtime)
+- Node.js 22 — for asset compilation
 - An API key for at least one LLM provider (Anthropic, OpenAI, Google, etc.)
+
+> **No Docker?** If you prefer system-installed Postgres, set `DB_PORT=5432` (or your custom port) in your environment and skip the `make db.up` step.
 
 ### Install
 
@@ -67,11 +70,11 @@ Every session is a team. One agent or twenty — the architecture is the same. C
 git clone https://github.com/bleuropa/loomkin.git
 cd loomkin
 
-# Install deps and set up the database
-mix setup
+# Install deps, start Postgres container, set up the database
+make setup
 
 # Start the web UI
-mix phx.server
+make dev
 # → http://localhost:4200
 ```
 
@@ -235,17 +238,22 @@ Loomkin wouldn't exist without these projects:
 Loomkin is in active development. Contributions welcome. **925+ tests across 83 files. ~20,000 LOC application code. ~13,000 LOC tests.**
 
 ```bash
+# Full setup (Docker, deps, database)
+make setup
+
+# Start the dev server
+make dev
+
 # Run tests
-mix test
-
-# Run with verbose output
-mix test --trace
-
-# Start the dev server with live reload
-mix phx.server
+make test
 
 # Format code
-mix format
+make format
+
+# Database lifecycle
+make db.up      # start Postgres container
+make db.down    # stop Postgres container
+make db.reset   # drop, create, migrate, seed
 ```
 
 ---
