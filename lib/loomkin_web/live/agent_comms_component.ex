@@ -9,6 +9,7 @@ defmodule LoomkinWeb.AgentCommsComponent do
 
   use Phoenix.Component
 
+  alias Phoenix.LiveView.JS
   alias LoomkinWeb.AgentColors
 
   @type_config %{
@@ -120,10 +121,11 @@ defmodule LoomkinWeb.AgentCommsComponent do
   attr :stream, :any, required: true
   attr :event_count, :integer, default: 0
   attr :id, :string, default: "agent-comms"
+  attr :root_team_id, :string, default: nil
 
   def comms_feed(assigns) do
     ~H"""
-    <div id={@id} class="flex flex-col h-full">
+    <div id={@id} class="flex flex-col h-full relative">
       <%!-- Section header --%>
       <div class="px-3 py-2 flex items-center gap-2">
         <span class="text-[10px] font-semibold text-muted uppercase tracking-widest">
@@ -135,6 +137,7 @@ defmodule LoomkinWeb.AgentCommsComponent do
       <%!-- Scrollable feed --%>
       <div
         id="comms-feed-scroll"
+        phx-hook="CommsFeedScroll"
         phx-update="stream"
         class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5"
       >
@@ -146,12 +149,23 @@ defmodule LoomkinWeb.AgentCommsComponent do
         </div>
 
         <div :for={{dom_id, event} <- @stream} id={dom_id}>
-          <.comms_row event={event} />
+          <.comms_row event={event} root_team_id={@root_team_id} />
         </div>
+      </div>
+
+      <%!-- New messages indicator --%>
+      <div
+        data-new-messages
+        class="hidden absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-indigo-600/90 text-white text-[10px] font-medium cursor-pointer backdrop-blur-sm z-10"
+        phx-click={JS.dispatch("scroll-to-bottom", to: "#comms-feed-scroll")}
+      >
       </div>
     </div>
     """
   end
+
+  attr :event, :map, required: true
+  attr :root_team_id, :string, default: nil
 
   defp comms_row(assigns) do
     config = type_config(assigns.event.type)
@@ -187,6 +201,12 @@ defmodule LoomkinWeb.AgentCommsComponent do
           >
             {@event.agent}
           </button>
+          <span
+            :if={@event.metadata[:team_id] && @event.metadata[:team_id] != @root_team_id}
+            class="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700/50"
+          >
+            {short_team_label(@event.metadata[:team_id])}
+          </span>
           <span class="text-xs text-zinc-400 leading-5 truncate">
             {@event.content}
           </span>
@@ -213,4 +233,14 @@ defmodule LoomkinWeb.AgentCommsComponent do
 
   defp format_timestamp(%DateTime{} = dt), do: Calendar.strftime(dt, "%H:%M:%S")
   defp format_timestamp(_), do: ""
+
+  defp short_team_label(team_id) when is_binary(team_id) do
+    if String.length(team_id) > 8 do
+      "sub-" <> String.slice(team_id, 0, 4)
+    else
+      team_id
+    end
+  end
+
+  defp short_team_label(_), do: ""
 end

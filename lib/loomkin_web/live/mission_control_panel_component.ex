@@ -140,7 +140,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
 
           <%= if @worker_card_names != [] do %>
             <div class={[
-              "grid gap-3",
+              "agent-card-grid grid gap-3",
               card_grid_cols(length(@worker_card_names)),
               any_agents_active?(@agent_cards, @worker_card_names) && "grid-alive"
             ]}>
@@ -164,6 +164,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
               stream={@comms_stream}
               event_count={@comms_event_count}
               id="agent-comms"
+              root_team_id={@active_team_id}
             />
           </div>
         <% end %>
@@ -189,7 +190,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
         phx-value-id={kin.id}
         phx-target={@myself}
         class="group flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-subtle transition-all hover:border-solid hover:bg-surface-2"
-        title={"Spawn #{kin.display_name || kin.name}"}
+        aria-label={"Spawn #{kin.display_name || kin.name}"}
       >
         <span
           class="w-1.5 h-1.5 rounded-full opacity-50"
@@ -205,6 +206,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
           class="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity text-muted"
           viewBox="0 0 20 20"
           fill="currentColor"
+          aria-hidden="true"
         >
           <path
             fill-rule="evenodd"

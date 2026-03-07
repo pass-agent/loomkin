@@ -28,6 +28,22 @@ hljs.registerLanguage("markdown", markdown)
 hljs.registerLanguage("yaml", yaml)
 hljs.registerLanguage("diff", diff)
 
+// --- Utilities ---
+
+function trapFocus(containerEl) {
+  const focusable = containerEl.querySelectorAll(
+    'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])'
+  )
+  const first = focusable[0], last = focusable[focusable.length - 1]
+  return (e) => {
+    if (e.key !== 'Tab') return
+    if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
+      e.preventDefault()
+      ;(e.shiftKey ? last : first).focus()
+    }
+  }
+}
+
 // --- Hooks ---
 
 let Hooks = {}
@@ -95,21 +111,27 @@ Hooks.ScrollToBottom = {
   }
 }
 
-// TabTransition: adds fade-in animation class when tab content appears
+// TabTransition: adds fade-in animation class when tab content appears.
+// Uses View Transitions API when available for smooth cross-fades.
 Hooks.TabTransition = {
   mounted() {
     this.currentTab = this.el.dataset.tab || this.el.id
-    this.el.classList.add("tab-content-enter")
+    this.el.classList.add("tab-content-enter", "tab-content-panel")
   },
   updated() {
     const newTab = this.el.dataset.tab || this.el.id
     if (this.currentTab !== newTab) {
       this.currentTab = newTab
-      // Re-trigger animation only on actual tab change
-      this.el.classList.remove("tab-content-enter")
-      // Force reflow to restart animation
-      void this.el.offsetWidth
-      this.el.classList.add("tab-content-enter")
+      const triggerAnimation = () => {
+        this.el.classList.remove("tab-content-enter")
+        void this.el.offsetWidth // force reflow
+        this.el.classList.add("tab-content-enter")
+      }
+      if (document.startViewTransition) {
+        document.startViewTransition(triggerAnimation)
+      } else {
+        triggerAnimation()
+      }
     }
   }
 }
@@ -269,11 +291,16 @@ Hooks.KeyboardShortcuts = {
   }
 }
 
-// CommandPalette: handles search input focus and result navigation
+// CommandPalette: handles search input focus, result navigation, and focus trapping
 Hooks.CommandPalette = {
   mounted() {
+    this._prevFocus = document.activeElement
+
     const input = this.el.querySelector('#command-palette-input')
     if (input) requestAnimationFrame(() => input.focus())
+
+    this._trapHandler = trapFocus(this.el)
+    this.el.addEventListener('keydown', this._trapHandler)
 
     this._onKeydown = (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -311,6 +338,8 @@ Hooks.CommandPalette = {
   },
   destroyed() {
     this.el.removeEventListener('keydown', this._onKeydown)
+    this.el.removeEventListener('keydown', this._trapHandler)
+    this._prevFocus?.focus()
   }
 }
 
@@ -473,6 +502,66 @@ Hooks.LocalTime = {
         this.el.textContent = `${Math.floor(diffSec / 86400)}d ago`
       }
     }
+  }
+}
+
+// CommsFeedScroll: auto-scrolls comms feed when at bottom, shows "N new messages" indicator when scrolled up
+Hooks.CommsFeedScroll = {
+  mounted() {
+    this.isAtBottom = true
+    this.newCount = 0
+
+    this.el.addEventListener("scroll", () => {
+      const threshold = 50
+      const atBottom =
+        this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < threshold
+      this.isAtBottom = atBottom
+      if (atBottom) {
+        this.newCount = 0
+        this.hideIndicator()
+      }
+    })
+
+    this.el.addEventListener("scroll-to-bottom", () => {
+      this.el.scrollTop = this.el.scrollHeight
+      this.newCount = 0
+      this.hideIndicator()
+    })
+
+    this.observer = new MutationObserver((mutations) => {
+      if (this.isAtBottom) {
+        requestAnimationFrame(() => {
+          this.el.scrollTop = this.el.scrollHeight
+        })
+      } else {
+        const added = mutations.reduce(
+          (count, m) => count + m.addedNodes.length, 0
+        )
+        if (added > 0) {
+          this.newCount += added
+          this.showIndicator(this.newCount)
+        }
+      }
+    })
+
+    this.observer.observe(this.el, { childList: true })
+  },
+
+  showIndicator(count) {
+    const indicator = this.el.parentElement.querySelector("[data-new-messages]")
+    if (indicator) {
+      indicator.textContent = `${count} new message${count === 1 ? "" : "s"}`
+      indicator.classList.remove("hidden")
+    }
+  },
+
+  hideIndicator() {
+    const indicator = this.el.parentElement.querySelector("[data-new-messages]")
+    if (indicator) indicator.classList.add("hidden")
+  },
+
+  destroyed() {
+    if (this.observer) this.observer.disconnect()
   }
 }
 
