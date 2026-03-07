@@ -63,8 +63,6 @@ defmodule LoomkinWeb.WorkspaceLive do
         subscribed_teams: MapSet.new(),
         # Guard against duplicate global signal bus subscriptions
         global_signals_subscribed: false,
-        # Guard against duplicate vote signal subscriptions
-        vote_signals_subscribed: false,
         # Debounce timer for metrics updates
         metrics_debounce_ref: nil,
         # Agent picker state is now owned by ComposerComponent
@@ -173,9 +171,6 @@ defmodule LoomkinWeb.WorkspaceLive do
     socket =
       if connected?(socket) do
         Session.subscribe(session_id)
-
-        # Subscribe to session signals via the Bus
-        Loomkin.Signals.subscribe("session.**")
 
         # Start per-session TeamBroadcaster (replaces subscribe_global_signals)
         {:ok, broadcaster} =
@@ -3873,16 +3868,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         "Options: #{options_text}. " <>
         "Reply with ONLY your preferred option (exact text)."
 
-    # Subscribe to vote signals (only once to prevent duplicate delivery)
     vote_topic = "ask_user:vote:#{question_id}"
-
-    socket =
-      if socket.assigns[:vote_signals_subscribed] do
-        socket
-      else
-        Loomkin.Signals.subscribe("collaboration.vote.*")
-        assign(socket, vote_signals_subscribed: true)
-      end
 
     signal =
       Loomkin.Signals.Collaboration.PeerMessage.new!(
