@@ -77,12 +77,9 @@ defmodule LoomkinWeb.KinPanelComponent do
       />
 
       <%!-- Panel --%>
-      <div
-        class="relative w-full max-w-md bg-surface-0 border-l flex flex-col animate-slide-in-right"
-        style="border-color: var(--border-subtle);"
-      >
+      <div class="relative w-full max-w-md bg-surface-0 border-l border-subtle flex flex-col animate-slide-in-right">
         <%!-- Header --%>
-        <div class="flex items-center gap-3 p-4 border-b" style="border-color: var(--border-subtle);">
+        <div class="flex items-center gap-3 p-4 border-b border-subtle">
           <button
             :if={@panel_mode == :edit}
             phx-click="kin_back_to_list"
@@ -98,7 +95,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             </svg>
           </button>
           <div class="flex-1">
-            <h2 class="text-sm font-semibold" style="color: var(--text-primary);">
+            <h2 class="text-sm font-semibold text-primary">
               {if @panel_mode == :list,
                 do: "Kin Management",
                 else: if(@editing_id, do: "Edit Template", else: "New Template")}
@@ -106,7 +103,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             <p
               :if={@panel_mode == :list}
               class="text-[10px] mt-0.5"
-              style="color: var(--text-muted);"
+              class="text-muted"
             >
               Templates any kin can spawn as needed
             </p>
@@ -157,26 +154,23 @@ defmodule LoomkinWeb.KinPanelComponent do
       <div>
         <p
           class="text-[10px] uppercase tracking-wider mb-2 font-medium"
-          style="color: var(--text-muted);"
+          class="text-muted"
         >
           Core — always active
         </p>
         <div class="space-y-2">
-          <div
-            class="flex items-center gap-3 p-3 rounded-lg border"
-            style="border-color: var(--border-subtle); background: var(--surface-1);"
-          >
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-subtle bg-surface-1">
             <div class="flex items-center justify-center w-7 h-7 rounded-full bg-violet-500/15 text-violet-400 text-xs font-bold flex-shrink-0">
               C
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium" style="color: var(--text-primary);">Concierge</span>
+                <span class="text-sm font-medium text-primary">Concierge</span>
                 <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-violet-500/15 text-violet-400">
                   core
                 </span>
               </div>
-              <p class="text-[10px] mt-0.5" style="color: var(--text-muted);">
+              <p class="text-[10px] mt-0.5 text-muted">
                 Your primary contact. Coordinates the team and spawns specialists as needed.
               </p>
             </div>
@@ -186,21 +180,18 @@ defmodule LoomkinWeb.KinPanelComponent do
               title="Active"
             />
           </div>
-          <div
-            class="flex items-center gap-3 p-3 rounded-lg border"
-            style="border-color: var(--border-subtle); background: var(--surface-1);"
-          >
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-subtle bg-surface-1">
             <div class="flex items-center justify-center w-7 h-7 rounded-full bg-sky-500/15 text-sky-400 text-xs font-bold flex-shrink-0">
               O
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-medium" style="color: var(--text-primary);">Orienter</span>
+                <span class="text-sm font-medium text-primary">Orienter</span>
                 <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-sky-500/15 text-sky-400">
                   core
                 </span>
               </div>
-              <p class="text-[10px] mt-0.5" style="color: var(--text-muted);">
+              <p class="text-[10px] mt-0.5 text-muted">
                 Silently scans the project on session start and briefs the Concierge.
               </p>
             </div>
@@ -214,10 +205,7 @@ defmodule LoomkinWeb.KinPanelComponent do
       </div>
 
       <%!-- How it works callout --%>
-      <div
-        class="rounded-lg px-3 py-2.5 text-[11px] leading-relaxed"
-        style="background: var(--surface-1); color: var(--text-muted); border: 1px solid var(--border-subtle);"
-      >
+      <div class="rounded-lg px-3 py-2.5 text-[11px] leading-relaxed bg-surface-1 text-muted border border-subtle">
         Kin spawn kin. The Concierge will create specialists automatically based on your
         tasks — or any kin can spawn others when it needs help. Templates below give them a
         head start.
@@ -225,32 +213,31 @@ defmodule LoomkinWeb.KinPanelComponent do
 
       <%!-- Separator --%>
       <div class="flex items-center gap-2">
-        <div class="flex-1 h-px" style="background: var(--border-subtle);"></div>
+        <div class="flex-1 h-px bg-border-subtle"></div>
         <span
           class="text-[10px] uppercase tracking-wider font-medium"
-          style="color: var(--text-muted);"
+          class="text-muted"
         >
           Templates
         </span>
-        <div class="flex-1 h-px" style="background: var(--border-subtle);"></div>
+        <div class="flex-1 h-px bg-border-subtle"></div>
       </div>
 
       <%!-- Empty state for templates --%>
       <div
         :if={@kin_agents == []}
-        class="rounded-lg border border-dashed py-8 text-center"
-        style="border-color: var(--border-subtle); background: var(--surface-1);"
+        class="rounded-lg border border-dashed py-8 text-center border-subtle bg-surface-1"
       >
         <svg
           class="w-7 h-7 mx-auto mb-2 opacity-30"
-          style="color: var(--text-muted);"
+          class="text-muted"
           viewBox="0 0 20 20"
           fill="currentColor"
         >
           <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
         </svg>
-        <p class="text-xs font-medium" style="color: var(--text-secondary);">No templates yet</p>
-        <p class="text-[10px] mt-1 px-6" style="color: var(--text-muted);">
+        <p class="text-xs font-medium text-secondary">No templates yet</p>
+        <p class="text-[10px] mt-1 px-6 text-muted">
           Optional — kin will improvise without them, but templates let you predefine roles, models, and spawn rules.
         </p>
       </div>
@@ -258,13 +245,12 @@ defmodule LoomkinWeb.KinPanelComponent do
       <div
         :for={kin <- @kin_agents}
         class={[
-          "group relative flex items-center gap-3 p-3 rounded-lg border transition-colors",
+          "group relative flex items-center gap-3 p-3 rounded-lg border border-subtle transition-colors",
           if(kin.enabled,
             do: "bg-surface-1 hover:bg-surface-2",
             else: "opacity-50 bg-surface-1"
           )
         ]}
-        style="border-color: var(--border-subtle);"
       >
         <%!-- Potency color bar --%>
         <div
@@ -275,13 +261,10 @@ defmodule LoomkinWeb.KinPanelComponent do
         <%!-- Info --%>
         <div class="flex-1 min-w-0 pl-2">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium truncate" style="color: var(--text-primary);">
+            <span class="text-sm font-medium truncate text-primary">
               {kin.display_name || kin.name}
             </span>
-            <span
-              class="text-[10px] px-1.5 py-0.5 rounded font-medium"
-              style="background: var(--brand-muted); color: var(--text-muted);"
-            >
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium bg-brand-muted text-muted">
               {format_role(kin.role)}
             </span>
           </div>
@@ -300,8 +283,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             </span>
             <span
               :if={kin.spawn_context}
-              class="text-[10px] truncate max-w-[160px]"
-              style="color: var(--text-muted);"
+              class="text-[10px] truncate max-w-[160px] text-muted"
               title={kin.spawn_context}
             >
               {kin.spawn_context}
@@ -417,7 +399,7 @@ defmodule LoomkinWeb.KinPanelComponent do
     <div class="p-4">
       <%!-- Presets (only on create) --%>
       <div :if={!@editing_id} class="mb-4">
-        <p class="text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-muted);">
+        <p class="text-[10px] uppercase tracking-wider mb-2 text-muted">
           Quick start
         </p>
         <div class="flex flex-wrap gap-2">
@@ -426,8 +408,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             phx-click="kin_apply_preset"
             phx-value-preset={preset.name}
             phx-target={@myself}
-            class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors hover:bg-surface-2"
-            style="border-color: var(--border-subtle); color: var(--text-secondary);"
+            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-subtle transition-colors hover:bg-surface-2 text-secondary"
           >
             {preset.display_name}
           </button>
@@ -444,7 +425,7 @@ defmodule LoomkinWeb.KinPanelComponent do
       >
         <%!-- Name --%>
         <div>
-          <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+          <label class="text-[10px] uppercase tracking-wider text-muted">
             Name <span class="text-red-400">*</span>
           </label>
           <input
@@ -452,8 +433,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             name={@form[:name].name}
             value={@form[:name].value}
             placeholder="e.g. code-reviewer"
-            class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-            style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+            class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/30 input-surface"
           />
           <p
             :for={{msg, opts} <- @form[:name].errors}
@@ -465,7 +445,7 @@ defmodule LoomkinWeb.KinPanelComponent do
 
         <%!-- Display Name --%>
         <div>
-          <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+          <label class="text-[10px] uppercase tracking-wider text-muted">
             Display Name
           </label>
           <input
@@ -473,20 +453,18 @@ defmodule LoomkinWeb.KinPanelComponent do
             name={@form[:display_name].name}
             value={@form[:display_name].value}
             placeholder="e.g. Code Reviewer"
-            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-            style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 input-surface"
           />
         </div>
 
         <%!-- Role --%>
         <div>
-          <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+          <label class="text-[10px] uppercase tracking-wider text-muted">
             Role <span class="text-red-400">*</span>
           </label>
           <select
             name={@form[:role].name}
-            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-            style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 input-surface"
           >
             <option value="">Select a role...</option>
             <option
@@ -501,12 +479,12 @@ defmodule LoomkinWeb.KinPanelComponent do
 
         <%!-- Potency --%>
         <div>
-          <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+          <label class="text-[10px] uppercase tracking-wider text-muted">
             Potency
           </label>
           <div class="mt-2">
             <%!-- Zone labels --%>
-            <div class="flex text-[9px] font-medium mb-1" style="color: var(--text-muted);">
+            <div class="flex text-[9px] font-medium mb-1 text-muted">
               <span class="flex-1 text-center" style="color: #71717a;">Dormant</span>
               <span class="flex-1 text-center" style="color: #60a5fa;">Available</span>
               <span class="flex-1 text-center" style="color: #fbbf24;">Suggested</span>
@@ -536,7 +514,7 @@ defmodule LoomkinWeb.KinPanelComponent do
               >
                 {potency_label(@form[:potency].value || 50)}
               </span>
-              <span class="text-xs font-mono" style="color: var(--text-muted);">
+              <span class="text-xs font-mono text-muted">
                 {@form[:potency].value || 50}
               </span>
             </div>
@@ -545,17 +523,16 @@ defmodule LoomkinWeb.KinPanelComponent do
 
         <%!-- Spawn Context --%>
         <div>
-          <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+          <label class="text-[10px] uppercase tracking-wider text-muted">
             Spawn Context
           </label>
           <textarea
             name={@form[:spawn_context].name}
             rows="3"
             placeholder="Describe WHEN this agent should be spawned, e.g. 'When the user asks about database migrations or schema changes'"
-            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-y"
-            style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+            class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-y input-surface"
           >{@form[:spawn_context].value}</textarea>
-          <p class="text-[10px] mt-1" style="color: var(--text-muted);">
+          <p class="text-[10px] mt-1 text-muted">
             Tells kin when to spawn this specialist
           </p>
         </div>
@@ -563,8 +540,8 @@ defmodule LoomkinWeb.KinPanelComponent do
         <%!-- Auto-spawn toggle --%>
         <div class="flex items-center justify-between py-2">
           <div>
-            <span class="text-xs font-medium" style="color: var(--text-primary);">Auto-spawn</span>
-            <p class="text-[10px]" style="color: var(--text-muted);">
+            <span class="text-xs font-medium text-primary">Auto-spawn</span>
+            <p class="text-[10px] text-muted">
               Start automatically every session
             </p>
           </div>
@@ -583,10 +560,7 @@ defmodule LoomkinWeb.KinPanelComponent do
 
         <%!-- Advanced section --%>
         <details class="group">
-          <summary
-            class="flex items-center gap-2 cursor-pointer text-xs font-medium py-2 select-none"
-            style="color: var(--text-muted);"
-          >
+          <summary class="flex items-center gap-2 cursor-pointer text-xs font-medium py-2 select-none text-muted">
             <svg
               class="w-3 h-3 transition-transform group-open:rotate-90"
               viewBox="0 0 20 20"
@@ -603,35 +577,33 @@ defmodule LoomkinWeb.KinPanelComponent do
           <div class="space-y-4 pt-2">
             <%!-- Model Override --%>
             <div class="opacity-50">
-              <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+              <label class="text-[10px] uppercase tracking-wider text-muted">
                 Model Override
               </label>
               <input
                 type="text"
                 disabled
                 placeholder="Coming soon"
-                class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono cursor-not-allowed"
-                style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-muted);"
+                class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono cursor-not-allowed input-surface text-muted"
               />
             </div>
 
             <%!-- System Prompt Extra --%>
             <div>
-              <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+              <label class="text-[10px] uppercase tracking-wider text-muted">
                 Extra System Prompt
               </label>
               <textarea
                 name={@form[:system_prompt_extra].name}
                 rows="3"
                 placeholder="Additional instructions appended to the role's base prompt"
-                class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-y"
-                style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+                class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-y input-surface"
               >{@form[:system_prompt_extra].value}</textarea>
             </div>
 
             <%!-- Budget Limit --%>
             <div>
-              <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+              <label class="text-[10px] uppercase tracking-wider text-muted">
                 Budget Limit (tokens)
               </label>
               <input
@@ -640,14 +612,13 @@ defmodule LoomkinWeb.KinPanelComponent do
                 value={@form[:budget_limit].value}
                 placeholder="Blank = unlimited"
                 min="0"
-                class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+                class="mt-1 w-full rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500/30 input-surface"
               />
             </div>
 
             <%!-- Tags --%>
             <div>
-              <label class="text-[10px] uppercase tracking-wider" style="color: var(--text-muted);">
+              <label class="text-[10px] uppercase tracking-wider text-muted">
                 Tags
               </label>
               <input
@@ -660,8 +631,7 @@ defmodule LoomkinWeb.KinPanelComponent do
                   )
                 }
                 placeholder="Comma-separated, e.g. frontend, css"
-                class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30"
-                style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-primary);"
+                class="mt-1 w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 input-surface"
               />
             </div>
           </div>
@@ -673,8 +643,7 @@ defmodule LoomkinWeb.KinPanelComponent do
             type="button"
             phx-click="kin_back_to_list"
             phx-target={@myself}
-            class="px-4 py-2 text-xs font-medium rounded-xl transition-colors"
-            style="background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-subtle);"
+            class="px-4 py-2 text-xs font-medium rounded-xl transition-colors bg-surface-2 text-muted border border-subtle"
           >
             Cancel
           </button>

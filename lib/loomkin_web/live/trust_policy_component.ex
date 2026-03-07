@@ -29,7 +29,7 @@ defmodule LoomkinWeb.TrustPolicyComponent do
           class="w-2 h-2 rounded-full flex-shrink-0"
           style={"background: #{preset_color(@current_preset)};"}
         />
-        <span class="text-[10px] font-medium" style="color: var(--text-secondary);">
+        <span class="text-[10px] font-medium text-secondary">
           {preset_label(@current_preset)}
         </span>
         <span
@@ -39,8 +39,7 @@ defmodule LoomkinWeb.TrustPolicyComponent do
           {@pending_count}
         </span>
         <svg
-          class="w-3 h-3"
-          style="color: var(--text-muted);"
+          class="w-3 h-3 text-muted"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -81,8 +80,7 @@ defmodule LoomkinWeb.TrustPolicyComponent do
           title={"Trust level: #{preset_label(@current_preset)}"}
         />
         <button
-          class="ml-1 p-0.5 rounded interactive flex-shrink-0"
-          style="color: var(--text-muted);"
+          class="ml-1 p-0.5 rounded interactive flex-shrink-0 text-muted"
           phx-click="toggle_trust_panel"
           title="Collapse"
         >

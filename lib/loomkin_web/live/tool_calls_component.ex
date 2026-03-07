@@ -82,13 +82,12 @@ defmodule LoomkinWeb.ToolCallsComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex flex-col" style="border-top: 1px solid var(--border-subtle);">
+    <div class="flex flex-col border-t border-subtle">
       <%!-- Header: click to expand/collapse --%>
       <button
         phx-click="toggle_collapse"
         phx-target={@myself}
-        class="flex items-center justify-between px-3 py-2 w-full text-left interactive"
-        style="background: var(--surface-1); transition: background 0.2s;"
+        class="flex items-center justify-between px-3 py-2 w-full text-left interactive bg-surface-1"
       >
         <div class="flex items-center gap-2">
           <svg
@@ -108,14 +107,11 @@ defmodule LoomkinWeb.ToolCallsComponent do
           <span class="text-[11px] font-medium text-muted">
             Tool Calls
           </span>
-          <span
-            class="text-[10px] px-1.5 py-0.5 rounded-full"
-            style="background: var(--surface-3); color: var(--text-muted);"
-          >
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-3 text-muted">
             {@total_count}
           </span>
         </div>
-        <span :if={@total_count > 0} class="text-[10px]" style="color: var(--text-muted);">
+        <span :if={@total_count > 0} class="text-[10px] text-muted">
           {if @collapsed, do: "click to expand", else: "click to collapse"}
         </span>
       </button>
@@ -123,8 +119,7 @@ defmodule LoomkinWeb.ToolCallsComponent do
       <%!-- Collapsible tool calls feed --%>
       <div
         :if={!@collapsed && @total_count > 0}
-        class="overflow-auto max-h-64 animate-fade-in"
-        style="background: var(--surface-0);"
+        class="overflow-auto max-h-64 animate-fade-in bg-surface-0"
       >
         <div class="px-3 py-2 space-y-1">
           <div :for={event <- @recent_events} class="tool-call-item">
@@ -136,8 +131,7 @@ defmodule LoomkinWeb.ToolCallsComponent do
       <%!-- Empty state --%>
       <div
         :if={!@collapsed && @total_count == 0}
-        class="px-3 py-4 text-center"
-        style="background: var(--surface-0);"
+        class="px-3 py-4 text-center bg-surface-0"
       >
         <span class="text-xs text-muted">No tool calls yet</span>
       </div>
@@ -170,7 +164,6 @@ defmodule LoomkinWeb.ToolCallsComponent do
         "flex items-start gap-2 py-1.5 px-2 rounded transition-colors",
         @has_result && "cursor-pointer hover:bg-white/5"
       ]}
-      style="background: transparent;"
       phx-click={if @has_result, do: "expand_event"}
       phx-target={if @has_result, do: @myself}
       phx-value-id={if @has_result, do: @event.id}
@@ -201,25 +194,21 @@ defmodule LoomkinWeb.ToolCallsComponent do
       <%!-- Target file/path --%>
       <span
         :if={@file_path}
-        class="flex-shrink truncate text-[10px] font-mono"
-        style="color: var(--text-muted); max-width: 120px;"
+        class="flex-shrink truncate text-[10px] font-mono text-muted max-w-[120px]"
         title={@file_path}
       >
         {Path.basename(@file_path)}
       </span>
 
       <%!-- Timestamp --%>
-      <span class="ml-auto flex-shrink-0 text-[9px] font-mono" style="color: var(--text-muted);">
+      <span class="ml-auto flex-shrink-0 text-[9px] font-mono text-muted">
         {relative_time(@event.timestamp)}
       </span>
     </div>
 
     <%!-- Result preview (on hover/expand) --%>
     <div :if={@has_result && @expanded} class="ml-6 mt-1 mb-2">
-      <pre
-        class="overflow-auto text-[10px] font-mono"
-        style="color: var(--text-muted); white-space: pre-wrap; word-break: break-word; background: var(--surface-2); border: 1px solid var(--border-subtle); border-radius: 0.25rem; padding: 0.375rem 0.5rem; max-height: 8rem;"
-      >{String.slice(@result, 0, 500)}{if String.length(@result) > 500, do: "...", else: ""}</pre>
+      <pre class="overflow-auto text-[10px] font-mono text-muted whitespace-pre-wrap break-all bg-surface-2 border border-subtle rounded px-2 py-1.5 max-h-32">{String.slice(@result, 0, 500)}{if String.length(@result) > 500, do: "...", else: ""}</pre>
     </div>
     """
   end

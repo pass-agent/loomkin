@@ -44,16 +44,17 @@ defmodule LoomkinWeb.SessionSwitcherComponent do
       <button
         phx-click="toggle_dropdown"
         phx-target={@myself}
-        class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all duration-200 press-down max-w-[180px]"
-        style={"border: 1px solid " <> if(@dropdown_open, do: "var(--border-brand)", else: "var(--border-subtle)") <> "; color: var(--text-secondary);"}
+        class={[
+          "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all duration-200 press-down max-w-[180px] text-secondary border",
+          if(@dropdown_open, do: "border-brand", else: "border-subtle")
+        ]}
       >
-        <span style="color: var(--text-muted);">
+        <span class="text-muted">
           <.icon name="hero-clock-mini" class="w-3 h-3 flex-shrink-0" />
         </span>
         <span class="truncate">{current_session_label(@session_id, @sessions)}</span>
         <svg
-          class={"w-3 h-3 flex-shrink-0 transition-transform duration-200 " <> if(@dropdown_open, do: "rotate-180", else: "")}
-          style="color: var(--text-muted);"
+          class={"w-3 h-3 flex-shrink-0 transition-transform duration-200 text-muted " <> if(@dropdown_open, do: "rotate-180", else: "")}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -72,8 +73,7 @@ defmodule LoomkinWeb.SessionSwitcherComponent do
         <button
           phx-click="new_session"
           phx-target={@myself}
-          class="w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors interactive"
-          style="color: var(--text-brand); border-bottom: 1px solid var(--border-subtle);"
+          class="w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors interactive text-brand border-b border-subtle"
         >
           <.icon name="hero-plus-mini" class="w-3.5 h-3.5" />
           <span class="font-medium">New Session</span>
@@ -86,21 +86,19 @@ defmodule LoomkinWeb.SessionSwitcherComponent do
             phx-click="select_session"
             phx-value-id={session.id}
             phx-target={@myself}
-            class="w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors interactive"
-            style={
-              if session.id == @session_id,
-                do: "background: rgba(124, 58, 237, 0.1); color: var(--text-brand);",
-                else: "color: var(--text-secondary);"
-            }
+            class={[
+              "w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors interactive",
+              if(session.id == @session_id, do: "bg-brand-subtle text-brand", else: "text-secondary")
+            ]}
           >
             <span :if={session.id == @session_id} class="flex-shrink-0">
-              <span style="color: var(--text-brand);">
+              <span class="text-brand">
                 <.icon name="hero-check-mini" class="w-3 h-3" />
               </span>
             </span>
             <span :if={session.id != @session_id} class="w-3 flex-shrink-0" />
             <span class="truncate flex-1 text-left">{session_label(session)}</span>
-            <span class="text-[10px] flex-shrink-0" style="color: var(--text-muted);">
+            <span class="text-[10px] flex-shrink-0 text-muted">
               {session_relative_time(session)}
             </span>
           </button>
@@ -108,8 +106,7 @@ defmodule LoomkinWeb.SessionSwitcherComponent do
 
         <div
           :if={@sessions == []}
-          class="px-3 py-3 text-xs text-center"
-          style="color: var(--text-muted);"
+          class="px-3 py-3 text-xs text-center text-muted"
         >
           No previous sessions
         </div>
@@ -118,8 +115,7 @@ defmodule LoomkinWeb.SessionSwitcherComponent do
         <button
           phx-click="toggle_all_projects"
           phx-target={@myself}
-          class="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors interactive"
-          style="border-top: 1px solid var(--border-subtle); color: var(--text-muted);"
+          class="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] transition-colors interactive border-t border-subtle text-muted"
         >
           <span>{if @show_all_projects, do: "This project only", else: "All projects"}</span>
         </button>

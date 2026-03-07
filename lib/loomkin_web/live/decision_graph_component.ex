@@ -58,6 +58,8 @@ defmodule LoomkinWeb.DecisionGraphComponent do
        pulse_generated_at: nil,
        selected_node: nil,
        agent_filter: nil,
+       new_node_ids: MapSet.new(),
+       refresh_ref: nil,
        svg_width: 800,
        svg_height: 400
      )}
@@ -67,22 +69,38 @@ defmodule LoomkinWeb.DecisionGraphComponent do
   def update(assigns, socket) do
     prev_session_id = socket.assigns[:session_id]
     prev_team_id = socket.assigns[:team_id]
+    prev_refresh_ref = socket.assigns[:refresh_ref]
 
     socket = assign(socket, assigns)
 
     session_id = socket.assigns[:session_id]
     team_id = socket.assigns[:team_id]
+    refresh_ref = socket.assigns[:refresh_ref]
 
-    if session_id != prev_session_id or team_id != prev_team_id do
-      do_load_graph(socket, session_id, team_id)
-    else
-      {:ok, socket}
+    session_or_team_changed =
+      session_id != prev_session_id or team_id != prev_team_id
+
+    refreshed =
+      refresh_ref != nil and refresh_ref != prev_refresh_ref
+
+    cond do
+      session_or_team_changed ->
+        do_load_graph(socket, session_id, team_id, MapSet.new())
+
+      refreshed ->
+        prev_node_ids = MapSet.new(socket.assigns.nodes, & &1.id)
+        do_load_graph(socket, session_id, team_id, prev_node_ids)
+
+      true ->
+        {:ok, socket}
     end
   end
 
-  defp do_load_graph(socket, session_id, team_id) do
+  defp do_load_graph(socket, session_id, team_id, prev_node_ids) do
     {nodes, edges, pulse} = load_graph_data(session_id, team_id, socket)
     node_ids = MapSet.new(nodes, & &1.id)
+
+    new_node_ids = MapSet.difference(node_ids, prev_node_ids)
 
     # Filter edges to only those connecting our nodes
     relevant_edges =
@@ -122,6 +140,7 @@ defmodule LoomkinWeb.DecisionGraphComponent do
          {:pulse, pulse},
          {:agents, agents},
          {:conflict_ids, conflict_ids},
+         {:new_node_ids, new_node_ids},
          {:visible_edges, visible_edges},
          {:svg_width, max(svg_w, 400)},
          {:svg_height, max(svg_h, 200)}
@@ -292,6 +311,7 @@ defmodule LoomkinWeb.DecisionGraphComponent do
               pos={pos}
               selected={@selected_node && @selected_node.id == pos.node.id}
               conflict={MapSet.member?(@conflict_ids, pos.node.id)}
+              is_new={MapSet.member?(@new_node_ids, pos.node.id)}
               myself={@myself}
             />
           </svg>
@@ -377,7 +397,7 @@ defmodule LoomkinWeb.DecisionGraphComponent do
       phx-click="select_node"
       phx-value-id={@node.id}
       phx-target={@myself}
-      class="cursor-pointer"
+      class={["cursor-pointer", @is_new && "graph-node-new"]}
       role="button"
     >
       <title>{@tooltip}</title>
@@ -393,6 +413,19 @@ defmodule LoomkinWeb.DecisionGraphComponent do
         stroke="#ef4444"
         stroke-width="2"
         class="conflict-glow"
+      />
+      <%!-- New node glow ring --%>
+      <rect
+        :if={@is_new}
+        x={@x - 3}
+        y={@y - 3}
+        width={@w + 6}
+        height={@h + 6}
+        rx="10"
+        fill="none"
+        stroke={@stroke}
+        stroke-width="1.5"
+        class="graph-node-glow"
       />
       <rect
         x={@x}
