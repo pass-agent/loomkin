@@ -5,7 +5,7 @@ defmodule LoomkinWeb.DiffComponent do
 
   @impl true
   def mount(socket) do
-    {:ok, assign(socket, diffs: [], collapsed: MapSet.new())}
+    {:ok, assign(socket, diffs: [], collapsed: MapSet.new(), parsed_cache: %{}, parsed_diffs: [])}
   end
 
   @impl true
@@ -16,12 +16,43 @@ defmodule LoomkinWeb.DiffComponent do
     socket = assign(socket, assigns)
 
     if new_diffs != prev_diffs do
-      parsed = Enum.map(new_diffs, &parse_diff/1)
-      {:ok, assign(socket, parsed_diffs: parsed)}
+      prev_cache = socket.assigns.parsed_cache
+      {parsed_diffs, new_cache} = parse_diffs_incremental(new_diffs, prev_cache)
+      {:ok, assign(socket, parsed_diffs: parsed_diffs, parsed_cache: new_cache)}
     else
       {:ok, socket}
     end
   end
+
+  defp parse_diffs_incremental(diffs, prev_cache) do
+    {parsed_diffs, new_cache} =
+      Enum.map_reduce(diffs, %{}, fn diff, cache_acc ->
+        cache_key = diff_cache_key(diff)
+
+        case Map.get(prev_cache, cache_key) do
+          nil ->
+            parsed = parse_diff(diff)
+            {parsed, Map.put(cache_acc, cache_key, parsed)}
+
+          cached ->
+            {cached, Map.put(cache_acc, cache_key, cached)}
+        end
+      end)
+
+    {parsed_diffs, new_cache}
+  end
+
+  defp diff_cache_key(%{file_path: file_path, hunks: hunks}) when is_list(hunks),
+    do: {:hunks, file_path, :erlang.phash2(hunks)}
+
+  defp diff_cache_key(%{file_path: file_path, old_content: old, new_content: new}),
+    do: {:content, file_path, :erlang.phash2({old, new})}
+
+  defp diff_cache_key(%{file_path: file_path} = entry),
+    do: {:entry, file_path, :erlang.phash2(entry)}
+
+  defp diff_cache_key(raw) when is_binary(raw),
+    do: {:raw, :erlang.phash2(raw)}
 
   @impl true
   def handle_event("toggle_diff", %{"index" => idx_str}, socket) do

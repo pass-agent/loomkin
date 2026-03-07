@@ -29,20 +29,28 @@ defmodule LoomkinWeb.ModelSelectorComponent do
     old_auth = socket.assigns[:prev_auth_version]
     new_auth = assigns[:auth_version]
 
-    if old_model != new_model or (new_auth != nil and old_auth != new_auth) do
-      {active, unconfigured, all} = load_providers()
+    socket =
+      if old_model != new_model or (new_auth != nil and old_auth != new_auth) do
+        {active, unconfigured, all} = load_providers()
 
-      {:ok,
-       assign(socket,
-         prev_model: new_model,
-         prev_auth_version: new_auth,
-         active_providers: active,
-         unconfigured_providers: unconfigured,
-         all_providers: all
-       )}
-    else
-      {:ok, socket}
-    end
+        assign(socket,
+          prev_model: new_model,
+          prev_auth_version: new_auth,
+          active_providers: active,
+          unconfigured_providers: unconfigured,
+          all_providers: all
+        )
+      else
+        socket
+      end
+
+    search = socket.assigns.search
+
+    {:ok,
+     assign(socket,
+       filtered_providers: filtered_active(socket.assigns.active_providers, search),
+       filtered_unconfigured: filtered_active(socket.assigns.unconfigured_providers, search)
+     )}
   end
 
   defp load_providers do
@@ -130,8 +138,8 @@ defmodule LoomkinWeb.ModelSelectorComponent do
 
         <%!-- Model list --%>
         <div class="max-h-72 overflow-y-auto overscroll-contain" id="model-list">
-          <%= if filtered_active(@active_providers, @search) == [] and @search != "" do %>
-            <%= for {provider_atom, display_name, key_status, models} <- filtered_active(@unconfigured_providers, @search) do %>
+          <%= if @filtered_providers == [] and @search != "" do %>
+            <%= for {provider_atom, display_name, key_status, models} <- @filtered_unconfigured do %>
               <.provider_group
                 provider_atom={provider_atom}
                 display_name={display_name}
@@ -142,7 +150,7 @@ defmodule LoomkinWeb.ModelSelectorComponent do
               />
             <% end %>
             <div
-              :if={filtered_active(@unconfigured_providers, @search) == []}
+              :if={@filtered_unconfigured == []}
               class="px-4 py-6 text-center"
             >
               <p class="text-xs" style="color: var(--text-muted);">
@@ -150,7 +158,7 @@ defmodule LoomkinWeb.ModelSelectorComponent do
               </p>
             </div>
           <% else %>
-            <%= for {provider_atom, display_name, key_status, models} <- filtered_active(@active_providers, @search) do %>
+            <%= for {provider_atom, display_name, key_status, models} <- @filtered_providers do %>
               <.provider_group
                 provider_atom={provider_atom}
                 display_name={display_name}
@@ -571,7 +579,12 @@ defmodule LoomkinWeb.ModelSelectorComponent do
   end
 
   def handle_event("search_models", %{"value" => value}, socket) do
-    {:noreply, assign(socket, search: value)}
+    {:noreply,
+     assign(socket,
+       search: value,
+       filtered_providers: filtered_active(socket.assigns.active_providers, value),
+       filtered_unconfigured: filtered_active(socket.assigns.unconfigured_providers, value)
+     )}
   end
 
   def handle_event("select_model", %{"model" => model}, socket) do
