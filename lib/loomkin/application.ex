@@ -53,6 +53,9 @@ defmodule Loomkin.Application do
         # Team agent orchestration
         Loomkin.Teams.Supervisor,
 
+        # Per-session TeamBroadcaster lifecycle
+        {DynamicSupervisor, name: Loomkin.Teams.BroadcasterSupervisor, strategy: :one_for_one},
+
         # File watcher (starts idle, reacts to :config_loaded)
         Loomkin.RepoIntel.Watcher,
 
