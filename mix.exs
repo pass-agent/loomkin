@@ -74,7 +74,9 @@ defmodule Loomkin.MixProject do
       {:owl, "~> 0.13"},
 
       # Config
-      {:toml, "~> 0.7"},
+      {:toml, github: "vinnymac/toml-elixir", ref: "ae7f122", override: true},
+      {:abacus, github: "vinnymac/abacus", ref: "de9f489", override: true},
+      {:sched_ex, github: "vinnymac/SchedEx", ref: "9d2a99d", override: true},
       {:yaml_elixir, "~> 2.12"},
 
       # OAuth
@@ -107,7 +109,7 @@ defmodule Loomkin.MixProject do
       {:bandit, "~> 1.6"},
 
       # Channel adapters
-      {:telegex, "~> 1.8"},
+      {:telegex, github: "vinnymac/telegex", ref: "22d2a35"},
       {:nostrum, "~> 0.10", runtime: false},
 
       # Binary packaging
