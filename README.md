@@ -10,9 +10,11 @@
 [![Elixir](https://img.shields.io/badge/Elixir-1.18+-4B275F?logo=elixir&logoColor=white)](https://elixir-lang.org)
 [![Last Commit](https://img.shields.io/github/last-commit/bleuropa/loomkin)](https://github.com/bleuropa/loomkin/commits/main)
 
-**The AI coding assistant with a nervous system.**
+**What if AI agents could form teams as fluidly as humans?**
 
-Every session is a team. One agent or twenty — the architecture is the same. Context is never lost. Agents communicate in microseconds. Cheap models in swarms outperform expensive models solo.
+Spawn specialists in milliseconds. Share discoveries in real-time. Review each other's work. Debate approaches and vote on decisions. Remember everything across sessions -- not just what happened, but *why*.
+
+Watch it all unfold from a live mission control UI. Built on Erlang/OTP.
 
 - **Decision graph** — persistent reasoning memory that survives across sessions (not just chat history)
 - **Context mesh** — overflow is offloaded to Keeper processes, never summarized away. 228K+ tokens preserved vs 128K with zero loss

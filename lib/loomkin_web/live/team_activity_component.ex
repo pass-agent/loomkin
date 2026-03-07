@@ -316,9 +316,9 @@ defmodule LoomkinWeb.TeamActivityComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex flex-col h-full" style="background: var(--surface-0);">
+    <div class="flex flex-col h-full bg-surface-0">
       <%!-- Filter Bar --%>
-      <div class="glass-subtle flex flex-col" style="border-bottom: 1px solid var(--border-subtle);">
+      <div class="glass-subtle flex flex-col border-b border-subtle">
         <%!-- Agent Filters --%>
         <div class="flex items-center gap-1.5 px-3 py-2 overflow-x-auto scrollbar-thin">
           <button
@@ -348,10 +348,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         </div>
 
         <%!-- Type Filters --%>
-        <div
-          class="flex items-center gap-1.5 px-3 py-1.5 overflow-x-auto scrollbar-thin"
-          style="border-top: 1px solid var(--border-subtle);"
-        >
+        <div class="flex items-center gap-1.5 px-3 py-1.5 overflow-x-auto scrollbar-thin border-t border-subtle">
           <button
             :for={{type, config} <- type_config_list()}
             phx-click="toggle_type"
@@ -375,9 +372,9 @@ defmodule LoomkinWeb.TeamActivityComponent do
         <div id={"activity-stream-#{@id}"} phx-update="stream" class="flex flex-col gap-1.5 p-2.5">
           <div class="hidden only:flex items-center justify-center h-48">
             <div class="text-center space-y-3">
-              <div class="text-muted" style="font-size: 2rem; opacity: 0.3;">&#9673;</div>
+              <div class="text-muted text-3xl opacity-30">&#9673;</div>
               <p class="text-sm text-muted">No activity yet</p>
-              <p class="text-xs" style="color: var(--text-muted); opacity: 0.6;">
+              <p class="text-xs text-muted opacity-60">
                 Events will appear here as your kin works
               </p>
             </div>
@@ -454,10 +451,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {Path.basename(@file_path)}
         </button>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -468,21 +462,17 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+          class="text-11 text-muted transition-colors duration-200"
         >
           &#9656; Result ({format_result_size(@result_preview)})
         </button>
         <div :if={@expanded} class="animate-fade-in-up">
-          <pre
-            class="overflow-auto mt-1"
-            style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; background: var(--surface-0); border: 1px solid var(--border-subtle); border-radius: 0.375rem; padding: 0.5rem 0.75rem; max-height: 16rem;"
-          >{@result_preview}</pre>
+          <pre class="overflow-auto mt-1 text-11 font-mono text-secondary whitespace-pre-wrap break-words bg-surface-0 border border-subtle rounded-md px-3 py-2 max-h-64">{@result_preview}</pre>
           <button
             phx-click="expand_event"
             phx-value-id={@event.id}
             phx-target={@myself}
-            class="mt-1"
-            style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+            class="mt-1 text-11 text-muted transition-colors duration-200"
           >
             &#9662; Collapse
           </button>
@@ -490,7 +480,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
       </div>
       <%!-- Fallback: show content if no result --%>
       <div :if={!@has_result && String.length(@event.content) > 0} class="px-3 pb-2">
-        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">
+        <p class="text-xs text-secondary break-words">
           {@event.content}
         </p>
       </div>
@@ -539,25 +529,22 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {@from}
         </button>
-        <span style="font-size: 0.6875rem; color: var(--text-muted);">&#8594;</span>
+        <span class="text-11 text-muted">&#8594;</span>
         <span
           style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}
           class="truncate"
         >
           {@display_to}
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p
-          class={if @long_content && !@expanded, do: "line-clamp-3"}
-          style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;"
-        >
+        <p class={[
+          "text-13 text-primary leading-normal whitespace-pre-wrap break-words",
+          if(@long_content && !@expanded, do: "line-clamp-3")
+        ]}>
           {@content_text}
         </p>
         <button
@@ -575,8 +562,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          class="mt-1"
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: opacity 200ms;"
+          class="mt-1 text-11 text-muted transition-opacity duration-200"
         >
           show less
         </button>
@@ -632,28 +618,23 @@ defmodule LoomkinWeb.TeamActivityComponent do
         </span>
         <span
           :if={@title}
-          class="truncate min-w-0"
-          style="font-size: 0.75rem; font-weight: 500; color: var(--text-primary);"
+          class="truncate min-w-0 text-xs font-medium text-primary"
         >
           {@title}
         </span>
         <span
           :if={@owner}
-          class="flex-shrink-0"
-          style="font-size: 0.6875rem; color: var(--text-muted);"
+          class="flex-shrink-0 text-11 text-muted"
         >
-          &#8594; <span style="color: var(--text-secondary);">{@owner}</span>
+          &#8594; <span class="text-secondary">{@owner}</span>
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <%!-- Show content only when there is no title (fallback) --%>
       <div :if={!@title && @event.content != ""} class="px-3 pb-2">
-        <p style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-word;">
+        <p class="text-xs text-secondary break-words">
           {@event.content}
         </p>
       </div>
@@ -664,21 +645,17 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+          class="text-11 text-muted transition-colors duration-200"
         >
           &#9656; Show result
         </button>
         <div :if={@expanded} class="animate-fade-in-up">
-          <pre
-            class="overflow-auto"
-            style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-secondary); white-space: pre-wrap; word-break: break-word; background: var(--surface-0); border: 1px solid var(--border-subtle); border-radius: 0.375rem; padding: 0.5rem 0.75rem; max-height: 12rem;"
-          >{@result}</pre>
+          <pre class="overflow-auto text-11 font-mono text-secondary whitespace-pre-wrap break-words bg-surface-0 border border-subtle rounded-md px-3 py-2 max-h-48">{@result}</pre>
           <button
             phx-click="expand_event"
             phx-value-id={@event.id}
             phx-target={@myself}
-            class="mt-1"
-            style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+            class="mt-1 text-11 text-muted transition-colors duration-200"
           >
             &#9662; Collapse
           </button>
@@ -723,13 +700,10 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {@event.agent}
         </button>
-        <span class="badge-warning flex-shrink-0" style="padding: 1px 8px; font-size: 0.6875rem;">
+        <span class="badge-warning flex-shrink-0 px-2 py-px text-11">
           &#11088; discovery
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -795,20 +769,18 @@ defmodule LoomkinWeb.TeamActivityComponent do
         <span style={"font-size: 0.75rem; font-weight: 500; color: #{@config.accent_text};"}>
           &#10035; {@agent_name} joined
         </span>
-        <span :if={@role} style="font-size: 0.6875rem; color: var(--text-muted);">
-          as <span style="color: var(--text-secondary);">{@role}</span>
+        <span :if={@role} class="text-11 text-muted">
+          as <span class="text-secondary">{@role}</span>
         </span>
         <span
           :if={@model}
-          class="ml-auto"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+          class="ml-auto text-11 font-mono text-muted"
         >
           {@model}
         </span>
         <span
           :if={!@model}
-          class="ml-auto"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+          class="ml-auto text-11 font-mono text-muted"
         >
           {relative_time(@event.timestamp)}
         </span>
@@ -856,7 +828,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {@event.agent}
         </button>
-        <span class="badge-danger flex-shrink-0" style="padding: 1px 8px; font-size: 0.6875rem;">
+        <span class="badge-danger flex-shrink-0 px-2 py-px text-11">
           &#9888; error
         </span>
         <span
@@ -866,10 +838,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {@content_text}
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -886,7 +855,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+          class="text-11 text-muted transition-colors duration-200"
         >
           &#9656; Show details
         </button>
@@ -899,8 +868,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
             phx-click="expand_event"
             phx-value-id={@event.id}
             phx-target={@myself}
-            class="mt-1"
-            style="font-size: 0.6875rem; color: var(--text-muted); transition: color 200ms;"
+            class="mt-1 text-11 text-muted transition-colors duration-200"
           >
             &#9662; Collapse
           </button>
@@ -969,18 +937,15 @@ defmodule LoomkinWeb.TeamActivityComponent do
             </span>
           </span>
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div :if={@content_text != ""} class="px-3 pb-2">
-        <p
-          class={if @long_content && !@expanded, do: "line-clamp-2"}
-          style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; white-space: pre-wrap; word-break: break-word;"
-        >
+        <p class={[
+          "text-xs text-muted leading-normal whitespace-pre-wrap break-words",
+          if(@long_content && !@expanded, do: "line-clamp-2")
+        ]}>
           {@content_text}<span :if={@is_live} class="streaming-cursor"></span>
         </p>
         <button
@@ -998,8 +963,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          class="mt-1"
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: opacity 200ms;"
+          class="mt-1 text-11 text-muted transition-opacity duration-200"
         >
           show less
         </button>
@@ -1048,7 +1012,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#128230; offload
         </span>
-        <span class="truncate min-w-0" style="font-size: 0.75rem; color: var(--text-secondary);">
+        <span class="truncate min-w-0 text-xs text-secondary">
           {@event.content}
         </span>
         <span
@@ -1060,15 +1024,11 @@ defmodule LoomkinWeb.TeamActivityComponent do
         </span>
         <span
           :if={@token_count}
-          class="flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
+          class="flex-shrink-0 text-11 font-mono text-muted"
         >
           {format_tokens(@token_count)} tok
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -1114,10 +1074,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#10068; question
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -1164,7 +1121,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {@from}
         </button>
-        <span style="font-size: 0.6875rem; color: var(--text-muted);">&#8594;</span>
+        <span class="text-11 text-muted">&#8594;</span>
         <span
           :if={@to}
           class="truncate"
@@ -1178,15 +1135,12 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#10069; answer
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+        <p class="text-13 text-primary leading-normal whitespace-pre-wrap break-words">
           {@event.content}
         </p>
       </div>
@@ -1231,15 +1185,12 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {channel_icon(@channel)} {if @direction == :inbound, do: "received", else: "sent"}
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p style="font-size: 0.8125rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+        <p class="text-13 text-primary leading-normal whitespace-pre-wrap break-words">
           {@event.content}
         </p>
       </div>
@@ -1288,10 +1239,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           &#129504; decision
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
@@ -1317,8 +1265,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          class="mt-1"
-          style="font-size: 0.6875rem; color: var(--text-muted); transition: opacity 200ms;"
+          class="mt-1 text-11 text-muted transition-opacity duration-200"
         >
           show less
         </button>
@@ -1364,18 +1311,15 @@ defmodule LoomkinWeb.TeamActivityComponent do
         >
           {Phoenix.HTML.raw(@config.icon)} {@config.label}
         </span>
-        <span
-          class="ml-auto flex-shrink-0"
-          style="font-size: 0.6875rem; font-family: var(--font-mono); color: var(--text-muted);"
-        >
+        <span class="ml-auto flex-shrink-0 text-11 font-mono text-muted">
           {relative_time(@event.timestamp)}
         </span>
       </div>
       <div class="px-3 pb-2">
-        <p
-          class={if !@expanded, do: "line-clamp-3"}
-          style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5; word-break: break-word;"
-        >
+        <p class={[
+          "text-xs text-secondary leading-normal break-words",
+          if(!@expanded, do: "line-clamp-3")
+        ]}>
           {@event.content}
         </p>
         <button
@@ -1383,8 +1327,7 @@ defmodule LoomkinWeb.TeamActivityComponent do
           phx-click="expand_event"
           phx-value-id={@event.id}
           phx-target={@myself}
-          class="mt-1"
-          style="font-size: 0.6875rem; color: var(--text-brand); transition: opacity 200ms;"
+          class="mt-1 text-11 text-brand transition-opacity duration-200"
         >
           show more
         </button>

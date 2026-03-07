@@ -621,6 +621,65 @@ body {
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
+/* ── Agent Card State Animations ── */
+.agent-card-thinking {
+  animation: glow-breathe 3s ease-in-out infinite;
+}
+
+.agent-card-working {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 58, 237, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+.agent-card-blocked {
+  animation: blocked-flicker 2s ease-in-out infinite;
+}
+
+@keyframes blocked-flicker {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.1); }
+  50% { box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.25); }
+}
+
+.agent-card-paused {
+  opacity: 0.6;
+  filter: saturate(0.5);
+  transition: opacity var(--transition-base), filter var(--transition-base);
+}
+
+.agent-card-streaming {
+  border-left: 2px solid rgba(124, 58, 237, 0.5);
+  animation: streaming-border 2s ease-in-out infinite;
+}
+
+@keyframes streaming-border {
+  0%, 100% { border-left-color: rgba(124, 58, 237, 0.3); }
+  50% { border-left-color: rgba(124, 58, 237, 0.7); }
+}
+
+.status-dot-transition {
+  transition: background-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+/* ── Capability Bars ── */
+.capability-bar {
+  height: 3px;
+  border-radius: 1.5px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.capability-bar-fill {
+  height: 100%;
+  border-radius: 1.5px;
+  transition: width var(--transition-slow);
+}
+
 /* ── Agent Card Markdown ── */
 .agent-card-content p { margin: 0.25em 0; }
 .agent-card-content p:first-child { margin-top: 0; }
@@ -792,6 +851,31 @@ body {
 .border-subtle { border-color: var(--border-subtle); }
 .border-default { border-color: var(--border-default); }
 .border-hover { border-color: var(--border-hover); }
+.border-brand { border-color: var(--border-brand); }
+
+/* Brand background utilities */
+.bg-brand { background-color: var(--brand); }
+.bg-brand-subtle { background-color: var(--brand-subtle); }
+.bg-brand-muted { background-color: var(--brand-muted); }
+
+/* Divider-line backgrounds (for thin separator elements) */
+.bg-border-default { background-color: var(--border-default); }
+.bg-border-subtle { background-color: var(--border-subtle); }
+
+/* Caret utilities */
+.caret-brand { caret-color: var(--brand); }
+
+/* Common form input pattern */
+.input-surface {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* Text size 11px (0.6875rem) — common in activity feeds */
+.text-11 { font-size: 0.6875rem; }
+/* Text size 13px (0.8125rem) */
+.text-13 { font-size: 0.8125rem; }
 
 /* Divider with gradient fade */
 .divider {
@@ -842,6 +926,23 @@ body {
   background: rgba(244, 63, 94, 0.12);
   color: #fda4af;
   border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+/* Decision graph — new node animation */
+@keyframes graph-node-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes graph-node-glow-pulse {
+  0% { stroke-opacity: 0.8; }
+  50% { stroke-opacity: 0.3; }
+  100% { stroke-opacity: 0; }
+}
+.graph-node-new {
+  animation: graph-node-fade-in 0.4s ease-out;
+}
+.graph-node-glow {
+  animation: graph-node-glow-pulse 1.5s ease-out forwards;
 }
 
 /* Skeleton loading */

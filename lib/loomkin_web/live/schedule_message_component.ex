@@ -34,24 +34,19 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
     ~H"""
     <div
       id={"schedule-popover-#{@target_agent || "team"}"}
-      class="absolute bottom-full right-0 mb-2 w-80 z-50 animate-scale-in"
-      style="background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);"
+      class="absolute bottom-full right-0 mb-2 w-80 z-50 animate-scale-in bg-surface-1 border border-subtle rounded-xl shadow-surface-lg"
       phx-click-away="close_scheduler"
     >
       <%!-- Header --%>
-      <div
-        class="flex items-center gap-2 px-4 py-3"
-        style="border-bottom: 1px solid var(--border-subtle);"
-      >
+      <div class="flex items-center gap-2 px-4 py-3 border-b border-subtle">
         <.icon name="hero-clock-mini" class="w-4 h-4 text-amber-400" />
-        <span class="text-sm font-medium" style="color: var(--text-primary);">
+        <span class="text-sm font-medium text-primary">
           Schedule Message
         </span>
         <div class="flex-1"></div>
         <button
           phx-click="close_scheduler"
-          class="p-1 rounded-md interactive"
-          style="color: var(--text-muted);"
+          class="p-1 rounded-md interactive text-muted"
         >
           <.icon name="hero-x-mark-mini" class="w-3.5 h-3.5" />
         </button>
@@ -60,13 +55,10 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
       <div class="p-4">
         <%!-- Target display --%>
         <div class="flex items-center gap-2 mb-3">
-          <span
-            class="text-[10px] font-medium uppercase tracking-wider"
-            style="color: var(--text-muted);"
-          >
+          <span class="text-[10px] font-medium uppercase tracking-wider text-muted">
             To
           </span>
-          <span class="text-xs font-medium" style="color: var(--text-brand);">
+          <span class="text-xs font-medium text-brand">
             {if @target_agent, do: @target_agent, else: "Team"}
           </span>
         </div>
@@ -84,8 +76,7 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
             name="content"
             rows="2"
             placeholder="Message content..."
-            class="w-full rounded-lg px-3 py-2 text-xs resize-none focus:outline-none mb-3"
-            style="background: var(--surface-0); border: 1px solid var(--border-subtle); color: var(--text-primary); caret-color: var(--brand);"
+            class="w-full rounded-lg px-3 py-2 text-xs resize-none focus:outline-none mb-3 bg-surface-0 border border-subtle text-primary caret-brand"
           >{@content}</textarea>
 
           <%!-- Quick delay buttons --%>
@@ -111,7 +102,7 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
           <%!-- Delivery time preview --%>
           <div class="flex items-center gap-2 mb-4">
             <.icon name="hero-arrow-right-mini" class="w-3 h-3 text-muted" />
-            <span class="text-[11px]" style="color: var(--text-secondary);">
+            <span class="text-[11px] text-secondary">
               Will send at
             </span>
             <span
@@ -132,15 +123,13 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
             <button
               type="button"
               phx-click="close_scheduler"
-              class="text-xs px-3 py-1.5 rounded-lg interactive"
-              style="color: var(--text-muted); border: 1px solid var(--border-subtle);"
+              class="text-xs px-3 py-1.5 rounded-lg interactive text-muted border border-subtle"
             >
               Cancel
             </button>
             <button
               type="submit"
-              class="text-xs px-3 py-1.5 rounded-lg font-medium text-white"
-              style="background: var(--brand);"
+              class="text-xs px-3 py-1.5 rounded-lg font-medium text-white bg-brand"
             >
               Schedule
             </button>
@@ -151,25 +140,21 @@ defmodule LoomkinWeb.ScheduleMessageComponent do
       <%!-- Scheduled messages list --%>
       <div
         :if={@scheduled_messages != []}
-        style="border-top: 1px solid var(--border-subtle);"
+        class="border-t border-subtle"
       >
         <div class="px-4 py-2">
-          <span
-            class="text-[10px] font-medium uppercase tracking-wider"
-            style="color: var(--text-muted);"
-          >
+          <span class="text-[10px] font-medium uppercase tracking-wider text-muted">
             Scheduled ({length(@scheduled_messages)})
           </span>
         </div>
         <div class="max-h-40 overflow-auto">
           <div
             :for={msg <- @scheduled_messages}
-            class="group/sched px-4 py-2.5 flex items-start gap-2"
-            style="border-top: 1px solid var(--border-subtle);"
+            class="group/sched px-4 py-2.5 flex items-start gap-2 border-t border-subtle"
           >
             <.icon name="hero-clock-mini" class="w-3.5 h-3.5 text-amber-400/60 flex-shrink-0 mt-0.5" />
             <div class="flex-1 min-w-0">
-              <p class="text-xs truncate" style="color: var(--text-secondary);">
+              <p class="text-xs truncate text-secondary">
                 {msg.content}
               </p>
               <div class="flex items-center gap-2 mt-0.5">

@@ -48,13 +48,9 @@ defmodule LoomkinWeb.ContextInspectorComponent do
       <div
         :if={!@collapsed}
         id="inspector-resize-handle"
-        class="hidden xl:flex absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 items-center justify-center group hover:bg-violet-500/20 active:bg-violet-500/30"
-        style="transition: background 0.15s;"
+        class="hidden xl:flex absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 items-center justify-center group hover:bg-violet-500/20 active:bg-violet-500/30 transition-[background] duration-150"
       >
-        <div
-          class="w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-violet-400 group-active:bg-violet-400"
-          style="transition: background 0.15s;"
-        >
+        <div class="w-0.5 h-8 rounded-full bg-zinc-600 group-hover:bg-violet-400 group-active:bg-violet-400 transition-[background] duration-150">
         </div>
       </div>
       <%= if @collapsed do %>
@@ -65,10 +61,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
         />
       <% else %>
         <%!-- Tab bar --%>
-        <div
-          class="flex items-center gap-0.5 overflow-x-auto px-1.5 py-1 flex-shrink-0"
-          style="background: var(--surface-1); border-bottom: 1px solid var(--border-subtle);"
-        >
+        <div class="flex items-center gap-0.5 overflow-x-auto px-1.5 py-1 flex-shrink-0 bg-surface-1 border-b border-subtle">
           <button
             :for={tab <- @tabs}
             phx-click="switch_inspector_tab"
@@ -89,8 +82,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
             <button
               phx-click="toggle_collapse"
               phx-target={@myself}
-              class="interactive p-1 rounded-md"
-              style="color: var(--text-muted); transition: all var(--transition-base);"
+              class="interactive p-1 rounded-md text-muted"
               title="Collapse panel"
             >
               <.icon name="hero-chevron-right-mini" class="w-3 h-3" />
@@ -101,8 +93,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
         <%!-- Content area --%>
         <div
           id="inspector-content"
-          class="flex-1 overflow-auto min-h-0 relative"
-          style="background: var(--surface-0);"
+          class="flex-1 overflow-auto min-h-0 relative bg-surface-0"
           phx-update="ignore"
         >
           <%!-- Decision graph is always mounted (stays subscribed to PubSub) --%>
@@ -128,10 +119,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
 
   defp collapsed_strip(assigns) do
     ~H"""
-    <div
-      class="flex h-full w-full items-center justify-center gap-0.5 px-1 py-1 xl:flex-col xl:items-center xl:justify-start xl:px-0 xl:py-1.5"
-      style="background: var(--surface-1);"
-    >
+    <div class="flex h-full w-full items-center justify-center gap-0.5 px-1 py-1 xl:flex-col xl:items-center xl:justify-start xl:px-0 xl:py-1.5 bg-surface-1">
       <button
         :for={tab <- @tabs}
         phx-click="switch_inspector_tab"
@@ -147,8 +135,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
         <button
           phx-click="toggle_collapse"
           phx-target={@myself}
-          class="interactive p-1 rounded-md"
-          style="color: var(--text-muted); transition: all var(--transition-base);"
+          class="interactive p-1 rounded-md text-muted"
           title="Expand panel"
         >
           <.icon name="hero-chevron-left-mini" class="w-3 h-3" />
@@ -181,8 +168,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
       <button
         phx-click="resume_follow"
         phx-target={@myself}
-        class="press-down text-[10px] px-2 py-0.5 rounded-full font-medium"
-        style="background: var(--brand-subtle); color: var(--text-brand); border: 1px solid var(--border-brand); transition: all var(--transition-fast);"
+        class="press-down text-[10px] px-2 py-0.5 rounded-full font-medium bg-brand-subtle text-brand border border-brand"
       >
         Resume
       </button>
@@ -208,13 +194,9 @@ defmodule LoomkinWeb.ContextInspectorComponent do
       </div>
       <div
         :if={@selected_file}
-        class="h-1/2 flex flex-col animate-fade-in-up"
-        style="border-top: 1px solid var(--border-subtle);"
+        class="h-1/2 flex flex-col animate-fade-in-up border-t border-subtle"
       >
-        <div
-          class="flex items-center justify-between px-3 py-2 bg-surface-2 flex-shrink-0"
-          style="border-bottom: 1px solid var(--border-subtle);"
-        >
+        <div class="flex items-center justify-between px-3 py-2 bg-surface-2 flex-shrink-0 border-b border-subtle">
           <div class="flex items-center gap-2 truncate">
             <.icon name="hero-document-text-mini" class="w-3.5 h-3.5 text-brand flex-shrink-0" />
             <span class="text-xs text-brand font-mono truncate">{@selected_file}</span>

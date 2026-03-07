@@ -85,8 +85,6 @@ defmodule LoomkinWeb.WorkspaceLive do
         schedule_popover: false,
         agent_queues: %{},
         scheduled_messages: [],
-        queue_selected_ids: MapSet.new(),
-        queue_editing_id: nil,
         schedule_delay_minutes: 5,
         # Kin management panel
         kin_panel_open: false,
@@ -839,23 +837,13 @@ defmodule LoomkinWeb.WorkspaceLive do
   # --- Queue Drawer ---
 
   def handle_event("open_queue_drawer", %{"agent" => agent_name, "team-id" => team_id}, socket) do
-    {:noreply,
-     assign(socket,
-       queue_drawer: %{agent: agent_name, team_id: team_id},
-       queue_selected_ids: MapSet.new(),
-       queue_editing_id: nil
-     )}
+    {:noreply, assign(socket, queue_drawer: %{agent: agent_name, team_id: team_id})}
   end
 
   def handle_event("toggle_queue_from_composer", _params, socket) do
     case socket.assigns.reply_target do
       %{agent: agent_name, team_id: team_id} ->
-        {:noreply,
-         assign(socket,
-           queue_drawer: %{agent: agent_name, team_id: team_id},
-           queue_selected_ids: MapSet.new(),
-           queue_editing_id: nil
-         )}
+        {:noreply, assign(socket, queue_drawer: %{agent: agent_name, team_id: team_id})}
 
       _ ->
         {:noreply, socket}
@@ -863,113 +851,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_event("close_queue_drawer", _params, socket) do
-    {:noreply,
-     assign(socket,
-       queue_drawer: nil,
-       queue_selected_ids: MapSet.new(),
-       queue_editing_id: nil
-     )}
-  end
-
-  def handle_event("toggle_queue_select", %{"agent" => _agent, "id" => id}, socket) do
-    selected = socket.assigns.queue_selected_ids
-
-    selected =
-      if MapSet.member?(selected, id) do
-        MapSet.delete(selected, id)
-      else
-        MapSet.put(selected, id)
-      end
-
-    {:noreply, assign(socket, queue_selected_ids: selected)}
-  end
-
-  def handle_event("deselect_all_queued", _params, socket) do
-    {:noreply, assign(socket, queue_selected_ids: MapSet.new())}
-  end
-
-  def handle_event("start_queued_edit", %{"id" => id}, socket) do
-    {:noreply, assign(socket, queue_editing_id: id)}
-  end
-
-  def handle_event("cancel_queued_edit", _params, socket) do
-    {:noreply, assign(socket, queue_editing_id: nil)}
-  end
-
-  def handle_event(
-        "save_queued_edit",
-        %{"agent" => agent_name, "message_id" => id, "content" => content},
-        socket
-      ) do
-    team_id = get_in(socket.assigns, [:queue_drawer, :team_id]) || socket.assigns.active_team_id
-
-    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-      {:ok, pid} ->
-        Loomkin.Teams.Agent.edit_queued(pid, id, content)
-
-      :error ->
-        :ok
-    end
-
-    {:noreply, assign(socket, queue_editing_id: nil)}
-  end
-
-  def handle_event("delete_queued", %{"agent" => agent_name, "id" => id}, socket) do
-    team_id = get_in(socket.assigns, [:queue_drawer, :team_id]) || socket.assigns.active_team_id
-
-    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-      {:ok, pid} ->
-        Loomkin.Teams.Agent.delete_queued(pid, id)
-
-      :error ->
-        :ok
-    end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("delete_selected_queued", %{"agent" => agent_name}, socket) do
-    team_id = get_in(socket.assigns, [:queue_drawer, :team_id]) || socket.assigns.active_team_id
-    ids = MapSet.to_list(socket.assigns.queue_selected_ids)
-
-    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-      {:ok, pid} ->
-        Enum.each(ids, fn id -> Loomkin.Teams.Agent.delete_queued(pid, id) end)
-
-      :error ->
-        :ok
-    end
-
-    {:noreply, assign(socket, queue_selected_ids: MapSet.new())}
-  end
-
-  def handle_event("squash_queued", %{"agent" => agent_name}, socket) do
-    team_id = get_in(socket.assigns, [:queue_drawer, :team_id]) || socket.assigns.active_team_id
-    ids = MapSet.to_list(socket.assigns.queue_selected_ids)
-
-    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-      {:ok, pid} ->
-        Loomkin.Teams.Agent.squash_queued(pid, ids)
-
-      :error ->
-        :ok
-    end
-
-    {:noreply, assign(socket, queue_selected_ids: MapSet.new())}
-  end
-
-  def handle_event("reorder_queue", %{"agent" => agent_name, "ids" => ordered_ids}, socket) do
-    team_id = get_in(socket.assigns, [:queue_drawer, :team_id]) || socket.assigns.active_team_id
-
-    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
-      {:ok, pid} ->
-        Loomkin.Teams.Agent.reorder_queue(pid, :pending, ordered_ids)
-
-      :error ->
-        :ok
-    end
-
-    {:noreply, socket}
+    {:noreply, assign(socket, queue_drawer: nil)}
   end
 
   # --- Schedule Messages ---
@@ -2046,8 +1928,9 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
-  # Team decision and context events — buffer for activity feed + comms
+  # Team decision and context events — refresh graph + buffer for activity feed + comms
   def handle_info({:decision_logged, _node_id, _agent_name} = event, socket) do
+    refresh_decision_graphs(socket)
     {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
@@ -2069,17 +1952,17 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
-  # Messages from AgentRosterComponent
+  # Focus/pin an agent in the inspector panel
   def handle_info({:focus_agent, agent_name}, socket) do
     {:noreply, assign(socket, focused_agent: agent_name, inspector_mode: :pinned)}
   end
 
-  # Forwarded from AgentRosterComponent reply button
+  # Set reply target for the message composer
   def handle_info({:reply_to_agent, agent_name, team_id}, socket) do
     {:noreply, assign(socket, reply_target: %{agent: agent_name, team_id: team_id})}
   end
 
-  # Pause/Resume/Steer messages from AgentRosterComponent
+  # Pause/Resume/Steer agent actions from card controls
   def handle_info({:pause_agent, agent_name, team_id}, socket) do
     case find_agent_pid(socket, agent_name, team_id) do
       {:ok, pid} ->
@@ -2288,6 +2171,60 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, put_flash(socket, :info, "Scheduled message delivered to #{agent_name}")}
   end
 
+  # --- Queue drawer actions (delegated from MessageQueueComponent) ---
+
+  def handle_info({:queue_action, :close_drawer}, socket) do
+    {:noreply, assign(socket, queue_drawer: nil)}
+  end
+
+  def handle_info(
+        {:queue_action, :save_edit, agent_name, team_id, %{id: id, content: content}},
+        socket
+      ) do
+    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
+      {:ok, pid} -> Loomkin.Teams.Agent.edit_queued(pid, id, content)
+      :error -> :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:queue_action, :delete, agent_name, team_id, id}, socket) do
+    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
+      {:ok, pid} -> Loomkin.Teams.Agent.delete_queued(pid, id)
+      :error -> :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:queue_action, :delete_selected, agent_name, team_id, ids}, socket) do
+    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
+      {:ok, pid} -> Enum.each(ids, fn id -> Loomkin.Teams.Agent.delete_queued(pid, id) end)
+      :error -> :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:queue_action, :squash, agent_name, team_id, ids}, socket) do
+    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
+      {:ok, pid} -> Loomkin.Teams.Agent.squash_queued(pid, ids)
+      :error -> :ok
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:queue_action, :reorder, agent_name, team_id, ordered_ids}, socket) do
+    case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
+      {:ok, pid} -> Loomkin.Teams.Agent.reorder_queue(pid, :pending, ordered_ids)
+      :error -> :ok
+    end
+
+    {:noreply, socket}
+  end
+
   # Catch-all
   def handle_info(msg, socket) do
     require Logger
@@ -2326,10 +2263,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       {render_command_palette(assigns)}
 
       <%!-- ── Header ── --%>
-      <header
-        class="flex-shrink-0 flex items-center gap-2 px-3 py-2 sm:px-4 lg:px-5 relative"
-        style="background: var(--surface-1); border-bottom: 1px solid var(--border-subtle); z-index: 50;"
-      >
+      <header class="flex-shrink-0 flex items-center gap-2 px-3 py-2 sm:px-4 lg:px-5 relative bg-surface-1 border-b border-subtle z-50">
         <%!-- Brand mark --%>
         <a href="/" class="flex items-center gap-2 flex-shrink-0 group mr-1">
           <svg
@@ -2353,8 +2287,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         </a>
 
         <%!-- Separator --%>
-        <div class="hidden sm:block w-px h-4 flex-shrink-0" style="background: var(--border-default);">
-        </div>
+        <div class="hidden sm:block w-px h-4 flex-shrink-0 bg-border-default"></div>
 
         <%!-- Thinking model selector --%>
         <.live_component
@@ -2381,14 +2314,12 @@ defmodule LoomkinWeb.WorkspaceLive do
         />
 
         <%!-- Separator --%>
-        <div class="hidden md:block w-px h-4 flex-shrink-0" style="background: var(--border-default);">
-        </div>
+        <div class="hidden md:block w-px h-4 flex-shrink-0 bg-border-default"></div>
 
         <%!-- Project pill --%>
         <button
           phx-click="initiate_switch_project"
-          class="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md text-xs interactive press-down"
-          style="color: var(--text-secondary);"
+          class="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-md text-xs interactive press-down text-secondary"
           title={@project_path}
         >
           <span class="relative flex h-1.5 w-1.5 flex-shrink-0">
@@ -2404,18 +2335,15 @@ defmodule LoomkinWeb.WorkspaceLive do
           :if={@mode == :mission_control && @active_team_id}
           class="hidden md:flex items-center gap-1.5"
         >
-          <div class="w-px h-4 flex-shrink-0" style="background: var(--border-default);"></div>
-          <div
-            class="flex items-center gap-1.5 px-2 py-1 rounded-md"
-            style="background: var(--brand-subtle);"
-          >
-            <span style="color: var(--text-brand);">
+          <div class="w-px h-4 flex-shrink-0 bg-border-default"></div>
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-brand-subtle">
+            <span class="text-brand">
               <.icon name="hero-user-group-mini" class="w-3 h-3" />
             </span>
-            <span class="text-xs font-medium" style="color: var(--text-brand);">
+            <span class="text-xs font-medium text-brand">
               {short_team_id(@active_team_id)}
             </span>
-            <span class="text-[10px]" style="color: var(--text-muted);">
+            <span class="text-[10px] text-muted">
               {length(@cached_agents)}
             </span>
           </div>
@@ -2425,8 +2353,7 @@ defmodule LoomkinWeb.WorkspaceLive do
             :if={@child_teams != []}
             phx-change="switch_team"
             name="team-id"
-            class="max-w-[8rem] truncate text-xs rounded-md px-2 py-1 focus:outline-none"
-            style="background: var(--surface-2); border: 1px solid var(--border-subtle); color: var(--text-secondary);"
+            class="max-w-[8rem] truncate text-xs rounded-md px-2 py-1 focus:outline-none bg-surface-2 border border-subtle text-secondary"
           >
             <option
               :for={tid <- [@team_id | @child_teams]}
@@ -2446,20 +2373,16 @@ defmodule LoomkinWeb.WorkspaceLive do
           <%!-- Cost pill --%>
           <a
             href="/dashboard"
-            class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all duration-200 interactive"
-            style="color: var(--text-muted);"
+            class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-all duration-200 interactive text-muted"
             title="View dashboard"
           >
-            <span style="color: var(--text-brand); opacity: 0.7;">
+            <span class="text-brand opacity-70">
               <.icon name="hero-sparkles-mini" class="w-3 h-3" />
             </span>
-            <span class="font-mono" style="color: var(--text-secondary);">
+            <span class="font-mono text-secondary">
               ${format_cost(@session_cost)}
             </span>
-            <span
-              class="hidden font-mono sm:inline"
-              style="color: var(--text-muted); font-size: 10px;"
-            >
+            <span class="hidden font-mono sm:inline text-muted text-[10px]">
               {format_tokens(@session_tokens)}t
             </span>
           </a>
@@ -2467,8 +2390,7 @@ defmodule LoomkinWeb.WorkspaceLive do
           <%!-- Kin Management --%>
           <button
             phx-click="open_kin_panel"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-surface-2"
-            style="color: var(--text-muted);"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors hover:bg-surface-2 text-muted"
             title="Manage Kin"
           >
             <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -2478,7 +2400,7 @@ defmodule LoomkinWeb.WorkspaceLive do
           </button>
 
           <%!-- Separator --%>
-          <div class="w-px h-4 flex-shrink-0" style="background: var(--border-default);"></div>
+          <div class="w-px h-4 flex-shrink-0 bg-border-default"></div>
 
           <%!-- Session switcher --%>
           <.live_component
@@ -2537,8 +2459,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       <%!-- Pending ask_user questions (also shown in solo mode) --%>
       <div
         :if={@pending_questions != []}
-        class="flex-shrink-0 px-3 py-2"
-        style="border-top: 1px solid var(--border-brand); background: var(--surface-1);"
+        class="flex-shrink-0 px-3 py-2 border-t border-brand bg-surface-1"
       >
         <.live_component
           module={LoomkinWeb.AskUserComponent}
@@ -2551,15 +2472,9 @@ defmodule LoomkinWeb.WorkspaceLive do
     </div>
 
     <%!-- Right: Sidebar --%>
-    <div
-      class="h-[20rem] w-full flex flex-col xl:h-auto xl:w-80 bg-surface-1"
-      style="border-top: 1px solid var(--border-subtle);"
-    >
+    <div class="h-[20rem] w-full flex flex-col xl:h-auto xl:w-80 bg-surface-1 border-t border-subtle">
       <%!-- Sidebar tab bar --%>
-      <div
-        class="flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto flex-shrink-0"
-        style="border-bottom: 1px solid var(--border-subtle);"
-      >
+      <div class="flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto flex-shrink-0 border-b border-subtle">
         <button
           :for={tab <- [:files, :diff, :terminal, :graph]}
           phx-click="switch_tab"
@@ -2576,8 +2491,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
       <%!-- Sidebar content --%>
       <div
-        class="flex-1 overflow-auto p-3 tab-content-enter"
-        style="background: var(--surface-0);"
+        class="flex-1 overflow-auto p-3 tab-content-enter bg-surface-0"
         phx-hook="TabTransition"
         id={"tab-content-#{@active_tab}"}
       >
@@ -2599,18 +2513,14 @@ defmodule LoomkinWeb.WorkspaceLive do
 
     ~H"""
     <%!-- Left: Agent Cards + Comms + Composer (flex-1) --%>
-    <div
-      class="flex-1 flex flex-col min-w-0 min-h-0 bg-surface-0"
-      style="border-right: 1px solid var(--border-subtle);"
-    >
+    <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-surface-0 border-r border-subtle">
       <%= if @focused_card do %>
         <%!-- Focused single-agent view --%>
         <div class="flex-1 flex flex-col min-h-0 p-3 overflow-hidden">
           <div class="flex items-center gap-2 mb-3 flex-shrink-0">
             <button
               phx-click="unfocus_agent"
-              class="text-xs text-muted hover:text-brand flex items-center gap-1"
-              style="transition: color var(--transition-base);"
+              class="text-xs text-muted hover:text-brand flex items-center gap-1 interactive"
             >
               <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
                 <path
@@ -2627,10 +2537,7 @@ defmodule LoomkinWeb.WorkspaceLive do
             >
               {@focused_card.name}
             </span>
-            <span
-              class="text-[10px] px-1.5 py-0.5 rounded font-medium text-muted"
-              style="background: var(--brand-muted);"
-            >
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium text-muted bg-brand-muted">
               {format_agent_role(@focused_card.role)}
             </span>
           </div>
@@ -2676,20 +2583,16 @@ defmodule LoomkinWeb.WorkspaceLive do
               </svg>
               <span class="text-xs font-medium text-muted uppercase tracking-wider">Kin</span>
             </div>
-            <span
-              class="text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium text-muted"
-              style="background: var(--surface-2);"
-            >
+            <span class="text-[10px] tabular-nums px-1.5 py-0.5 rounded-full font-medium text-muted bg-surface-2">
               {length(@worker_card_names)}
             </span>
-            <div class="flex-1 h-px" style="background: var(--border-subtle);"></div>
+            <div class="flex-1 h-px bg-border-subtle"></div>
           </div>
 
           <%!-- Waiting state: session exists but agents haven't spawned yet --%>
           <div
             :if={@concierge_card_names == [] && @worker_card_names == [] && @active_team_id}
-            class="rounded-lg py-4 px-4 text-center"
-            style="background: var(--surface-1); border: 1px solid var(--border-subtle);"
+            class="rounded-lg py-4 px-4 text-center bg-surface-1 border border-subtle"
           >
             <div class="flex justify-center gap-3 mb-2">
               <div class="w-8 h-8 rounded-full bg-violet-500/15 flex items-center justify-center text-violet-400 text-xs font-bold">
@@ -2699,21 +2602,20 @@ defmodule LoomkinWeb.WorkspaceLive do
                 O
               </div>
             </div>
-            <div class="text-xs font-medium" style="color: var(--text-secondary);">
+            <div class="text-xs font-medium text-secondary">
               Concierge & Orienter ready
             </div>
-            <div class="text-[10px] mt-0.5" style="color: var(--text-muted);">
+            <div class="text-[10px] mt-0.5 text-muted">
               Send a message to wake them up
             </div>
           </div>
           <%!-- No session state --%>
           <div
             :if={@concierge_card_names == [] && @worker_card_names == [] && !@active_team_id}
-            class="rounded-lg border border-dashed py-4 px-4 text-center"
-            style="border-color: var(--border-subtle);"
+            class="rounded-lg border border-dashed border-subtle py-4 px-4 text-center"
           >
             <div class="text-muted text-xs">Start a session to meet your kin</div>
-            <div class="text-[10px] mt-0.5" style="color: var(--text-muted);">
+            <div class="text-[10px] mt-0.5 text-muted">
               Concierge + Orienter spawn automatically
             </div>
           </div>
@@ -2741,10 +2643,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         </div>
 
         <%!-- Comms Feed (scrollable, takes remaining space) --%>
-        <div
-          class="flex-1 overflow-auto min-h-0"
-          style="border-top: 1px solid var(--border-subtle);"
-        >
+        <div class="flex-1 overflow-auto min-h-0 border-t border-subtle">
           <LoomkinWeb.AgentCommsComponent.comms_feed
             stream={@streams.comms_events}
             event_count={@comms_event_count}
@@ -2763,13 +2662,13 @@ defmodule LoomkinWeb.WorkspaceLive do
       {render_input_bar(assigns)}
 
       <%!-- Queue drawer overlay --%>
-      <LoomkinWeb.MessageQueueComponent.queue_drawer
+      <.live_component
         :if={@queue_drawer}
+        module={LoomkinWeb.MessageQueueComponent}
+        id={"queue-drawer-#{@queue_drawer.agent}"}
         queue={Map.get(@agent_queues, @queue_drawer.agent, [])}
         agent_name={@queue_drawer.agent}
         team_id={@queue_drawer.team_id}
-        selected_ids={@queue_selected_ids}
-        editing_id={@queue_editing_id}
       />
     </div>
 
@@ -2819,29 +2718,21 @@ defmodule LoomkinWeb.WorkspaceLive do
         :for={kin <- @dormant_kin}
         phx-click="spawn_dormant_kin"
         phx-value-id={kin.id}
-        class="group flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed transition-all hover:border-solid hover:bg-surface-2"
-        style="border-color: var(--border-subtle);"
+        class="group flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-subtle transition-all hover:border-solid hover:bg-surface-2"
         title={"Spawn #{kin.display_name || kin.name}"}
       >
         <span
           class="w-1.5 h-1.5 rounded-full opacity-50"
           style={"background: #{kin_potency_color(kin.potency)};"}
         />
-        <span
-          class="text-xs font-medium opacity-60 group-hover:opacity-100 transition-opacity"
-          style="color: var(--text-secondary);"
-        >
+        <span class="text-xs font-medium opacity-60 group-hover:opacity-100 transition-opacity text-secondary">
           {kin.display_name || kin.name}
         </span>
-        <span
-          class="text-[9px] px-1 py-0.5 rounded font-medium opacity-40"
-          style="background: var(--brand-muted); color: var(--text-muted);"
-        >
+        <span class="text-[9px] px-1 py-0.5 rounded font-medium opacity-40 bg-brand-muted text-muted">
           {format_agent_role(kin.role)}
         </span>
         <svg
-          class="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity"
-          style="color: var(--text-muted);"
+          class="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity text-muted"
           viewBox="0 0 20 20"
           fill="currentColor"
         >
@@ -2879,24 +2770,18 @@ defmodule LoomkinWeb.WorkspaceLive do
       |> assign(:color_class, color_class)
 
     ~H"""
-    <div
-      class="flex-shrink-0 px-4 py-2 flex items-center gap-3"
-      style="border-top: 1px solid var(--border-subtle); background: var(--surface-1);"
-    >
+    <div class="flex-shrink-0 px-4 py-2 flex items-center gap-3 border-t border-subtle bg-surface-1">
       <span class="text-[10px] font-semibold text-muted uppercase tracking-widest flex-shrink-0">
         Budget
       </span>
-      <div class="flex-1 rounded-full h-1.5 overflow-hidden" style="background: var(--surface-3);">
+      <div class="flex-1 rounded-full h-1.5 overflow-hidden bg-surface-3">
         <div
           class={["h-full rounded-full", @color_class]}
           style={"width: #{min(@pct, 100)}%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);"}
         >
         </div>
       </div>
-      <span
-        class="text-[11px] font-mono tabular-nums flex-shrink-0"
-        style="color: var(--text-secondary);"
-      >
+      <span class="text-[11px] font-mono tabular-nums flex-shrink-0 text-secondary">
         ${format_decimal_cost(@budget.spent)}
         <span class="text-muted">/ ${format_decimal_cost(@budget.limit)}</span>
       </span>
@@ -2931,26 +2816,17 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   defp render_last_message_strip(assigns) do
     ~H"""
-    <div
-      class="flex-shrink-0 px-4 py-1.5 flex items-center gap-2 overflow-hidden"
-      style="border-top: 1px solid var(--border-subtle); background: var(--surface-1);"
-    >
+    <div class="flex-shrink-0 px-4 py-1.5 flex items-center gap-2 overflow-hidden border-t border-subtle bg-surface-1">
       <span class="text-[10px] font-semibold text-muted uppercase tracking-widest flex-shrink-0">
         You
       </span>
-      <span class="text-[10px] flex-shrink-0" style="color: var(--text-muted);">
+      <span class="text-[10px] flex-shrink-0 text-muted">
         &rarr;
       </span>
-      <span
-        class="text-[10px] font-medium flex-shrink-0"
-        style="color: var(--brand);"
-      >
+      <span class="text-[10px] font-medium flex-shrink-0 text-brand">
         {@last_user_message.to}
       </span>
-      <span
-        class="text-[11px] truncate flex-1 min-w-0"
-        style="color: var(--text-secondary);"
-      >
+      <span class="text-[11px] truncate flex-1 min-w-0 text-secondary">
         {@last_user_message.text}
       </span>
     </div>
@@ -2964,26 +2840,21 @@ defmodule LoomkinWeb.WorkspaceLive do
     assigns = assign(assigns, :picker_agents, agents)
 
     ~H"""
-    <div
-      class="flex-shrink-0"
-      style="background: var(--surface-1); border-top: 1px solid var(--border-subtle);"
-    >
+    <div class="flex-shrink-0 bg-surface-1 border-t border-subtle">
       <form phx-submit="send_message" class="px-3 py-2.5 sm:px-4 sm:py-3">
         <%!-- Reply indicator --%>
         <div
           :if={@reply_target}
-          class="flex items-center gap-2 mb-2 px-2.5 py-1.5 rounded-lg animate-fade-in"
-          style="background: var(--brand-subtle); border: 1px solid var(--border-brand);"
+          class="flex items-center gap-2 mb-2 px-2.5 py-1.5 rounded-lg animate-fade-in bg-brand-subtle border border-brand"
         >
-          <span class="badge" style="padding: 1px 6px; font-size: 10px;">
+          <span class="badge px-1.5 py-px text-[10px]">
             {@reply_target.agent}
           </span>
-          <span class="text-[11px]" style="color: var(--text-muted);">Replying</span>
+          <span class="text-[11px] text-muted">Replying</span>
           <button
             type="button"
             phx-click="cancel_reply"
-            class="ml-auto rounded-full p-0.5 transition-colors interactive"
-            style="color: var(--text-muted);"
+            class="ml-auto rounded-full p-0.5 transition-colors interactive text-muted"
           >
             <.icon name="hero-x-mark-mini" class="w-3 h-3" />
           </button>
@@ -2995,8 +2866,10 @@ defmodule LoomkinWeb.WorkspaceLive do
             <button
               type="button"
               phx-click="toggle_agent_picker"
-              class="flex items-center justify-center h-9 px-2 rounded-lg transition-all duration-200 press-down"
-              style={"border: 1px solid " <> if(@reply_target, do: "var(--border-brand)", else: "var(--border-subtle)") <> "; color: " <> if(@reply_target, do: "var(--text-brand)", else: "var(--text-muted)") <> "; background: transparent;"}
+              class={[
+                "flex items-center justify-center h-9 px-2 rounded-lg transition-all duration-200 press-down bg-transparent border",
+                if(@reply_target, do: "border-brand text-brand", else: "border-subtle text-muted")
+              ]}
               title={if @reply_target, do: @reply_target.agent, else: "Send to team"}
             >
               <.icon name="hero-at-symbol-mini" class="w-3.5 h-3.5" />
@@ -3011,11 +2884,8 @@ defmodule LoomkinWeb.WorkspaceLive do
               class="card-elevated absolute bottom-full left-0 mb-2 w-52 max-h-60 overflow-y-auto py-1 z-50 animate-scale-in"
               phx-click-away="close_agent_picker"
             >
-              <div class="px-2.5 py-1.5" style="border-bottom: 1px solid var(--border-subtle);">
-                <span
-                  class="text-[10px] font-medium uppercase tracking-wider"
-                  style="color: var(--text-muted);"
-                >
+              <div class="px-2.5 py-1.5 border-b border-subtle">
+                <span class="text-[10px] font-medium uppercase tracking-wider text-muted">
                   Send to
                 </span>
               </div>
@@ -3023,8 +2893,7 @@ defmodule LoomkinWeb.WorkspaceLive do
                 type="button"
                 phx-click="select_reply_target"
                 phx-value-agent="team"
-                class={"flex items-center gap-2 w-full px-2.5 py-1.5 text-left text-xs transition-colors interactive " <> if(!@reply_target, do: "bg-surface-3", else: "")}
-                style="color: var(--text-primary);"
+                class={"flex items-center gap-2 w-full px-2.5 py-1.5 text-left text-xs transition-colors interactive text-primary " <> if(!@reply_target, do: "bg-surface-3", else: "")}
               >
                 <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-emerald-400" />
                 <span class="font-medium">Entire Kin</span>
@@ -3041,7 +2910,7 @@ defmodule LoomkinWeb.WorkspaceLive do
                 <span class="truncate" style={"color: #{agent_color(agent.name)};"}>
                   {agent.name}
                 </span>
-                <span class="ml-auto text-[10px]" style="color: var(--text-muted);">
+                <span class="ml-auto text-[10px] text-muted">
                   {agent[:role] || agent[:status]}
                 </span>
               </button>
@@ -3053,8 +2922,7 @@ defmodule LoomkinWeb.WorkspaceLive do
             <button
               type="button"
               phx-click="toggle_queue_from_composer"
-              class="flex items-center justify-center h-9 px-2 rounded-lg transition-all duration-200 press-down"
-              style="border: 1px solid var(--border-subtle); color: var(--text-muted); background: transparent;"
+              class="flex items-center justify-center h-9 px-2 rounded-lg transition-all duration-200 press-down border border-subtle text-muted bg-transparent"
               title="View message queue"
             >
               <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -3073,8 +2941,7 @@ defmodule LoomkinWeb.WorkspaceLive do
                   do: "Reply to #{@reply_target.agent}...",
                   else: "What should we work on?"
               }
-              class="w-full rounded-lg px-3 py-2 text-sm resize-none focus:outline-none transition-all duration-200"
-              style="background: var(--surface-0); border: 1px solid var(--border-subtle); color: var(--text-primary); caret-color: var(--brand);"
+              class="w-full rounded-lg px-3 py-2 text-sm resize-none focus:outline-none transition-all duration-200 bg-surface-0 border border-subtle text-primary caret-brand"
               onfocus="this.style.borderColor='var(--border-brand)'; this.style.boxShadow='0 0 0 1px rgba(124, 58, 237, 0.2)';"
               onblur="this.style.borderColor='var(--border-subtle)'; this.style.boxShadow='none';"
               phx-hook="ShiftEnterSubmit"
@@ -3126,8 +2993,10 @@ defmodule LoomkinWeb.WorkspaceLive do
             <button
               type="button"
               phx-click="toggle_scheduler"
-              class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 press-down"
-              style={"border: 1px solid #{if(@schedule_popover, do: "var(--border-brand)", else: "var(--border-subtle)")}; color: #{if(@schedule_popover, do: "var(--text-brand)", else: "var(--text-muted)")}; background: transparent;"}
+              class={[
+                "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 press-down bg-transparent border",
+                if(@schedule_popover, do: "border-brand text-brand", else: "border-subtle text-muted")
+              ]}
               title="Schedule message"
             >
               <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -3154,8 +3023,7 @@ defmodule LoomkinWeb.WorkspaceLive do
             :if={@status != :thinking && @reply_target}
             type="button"
             phx-click="enqueue_message"
-            class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 press-down"
-            style="border: 1px solid var(--border-subtle); color: var(--text-muted); background: transparent;"
+            class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 press-down border border-subtle text-muted bg-transparent"
             title={"Add to #{@reply_target.agent}'s queue"}
           >
             <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -3187,10 +3055,10 @@ defmodule LoomkinWeb.WorkspaceLive do
         </div>
 
         <div class="flex items-center gap-3 mt-1 pl-0.5">
-          <span class="text-[10px]" style="color: var(--text-muted); opacity: 0.6;">
+          <span class="text-[10px] text-muted opacity-60">
             <kbd class="font-mono text-[9px]">&#8679;&#9166;</kbd> new line
           </span>
-          <span class="text-[10px]" style="color: var(--text-muted); opacity: 0.6;">
+          <span class="text-[10px] text-muted opacity-60">
             <kbd class="font-mono text-[9px]">/</kbd> focus
           </span>
         </div>
@@ -3658,11 +3526,14 @@ defmodule LoomkinWeb.WorkspaceLive do
     # "inspector-graph" is always mounted in the context inspector (mission control).
     # "decision-graph" lives in the sidebar graph tab (solo mode).
     # "team-decision-graph" lives in the team sub-tab (solo mode, :team tab, :graph sub-tab).
+    ref = System.unique_integer()
+
     if socket.assigns[:mode] == :mission_control do
       send_update(LoomkinWeb.DecisionGraphComponent,
         id: "inspector-graph",
         session_id: socket.assigns[:session_id],
-        team_id: socket.assigns[:active_team_id]
+        team_id: socket.assigns[:active_team_id],
+        refresh_ref: ref
       )
     end
 
@@ -3670,7 +3541,8 @@ defmodule LoomkinWeb.WorkspaceLive do
       send_update(LoomkinWeb.DecisionGraphComponent,
         id: "decision-graph",
         session_id: socket.assigns[:session_id],
-        team_id: socket.assigns[:active_team_id]
+        team_id: socket.assigns[:active_team_id],
+        refresh_ref: ref
       )
     end
 
@@ -3678,7 +3550,8 @@ defmodule LoomkinWeb.WorkspaceLive do
       send_update(LoomkinWeb.DecisionGraphComponent,
         id: "team-decision-graph",
         session_id: socket.assigns[:session_id],
-        team_id: socket.assigns[:display_team_id]
+        team_id: socket.assigns[:display_team_id],
+        refresh_ref: ref
       )
     end
   end
@@ -4531,7 +4404,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
-  # --- Roster data helpers (for AgentRosterComponent) ---
+  # --- Roster data helpers ---
 
   defp find_agent_pid(socket, agent_name, team_id) do
     effective_team_id =
@@ -4949,13 +4822,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         phx-hook="CommandPalette"
         id="command-palette"
       >
-        <div
-          class="flex items-center gap-2 px-4 py-3"
-          style="border-bottom: 1px solid var(--border-subtle);"
-        >
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-subtle">
           <svg
-            class="w-4 h-4 flex-shrink-0"
-            style="color: var(--text-muted);"
+            class="w-4 h-4 flex-shrink-0 text-muted"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
@@ -4974,15 +4843,11 @@ defmodule LoomkinWeb.WorkspaceLive do
             value={@command_palette_query}
             phx-keyup="palette_search"
             name="query"
-            class="flex-1 bg-transparent text-sm outline-none"
-            style="color: var(--text-primary); caret-color: var(--brand);"
+            class="flex-1 bg-transparent text-sm outline-none text-primary caret-brand"
             autocomplete="off"
             phx-debounce="100"
           />
-          <kbd
-            class="px-1.5 py-0.5 text-[10px] font-mono rounded"
-            style="background: var(--surface-2); color: var(--text-muted);"
-          >
+          <kbd class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-surface-2 text-muted">
             Esc
           </kbd>
         </div>
@@ -4990,8 +4855,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         <div class="max-h-72 overflow-y-auto py-1">
           <div
             :if={@command_palette_results == []}
-            class="px-4 py-6 text-center text-sm"
-            style="color: var(--text-muted);"
+            class="px-4 py-6 text-center text-sm text-muted"
           >
             No results found
           </div>
@@ -5005,31 +4869,26 @@ defmodule LoomkinWeb.WorkspaceLive do
           >
             <div class="flex items-center gap-2 min-w-0">
               <span class={palette_icon_class(item.type)} />
-              <span class="truncate" style="color: var(--text-secondary);">{item.label}</span>
+              <span class="truncate text-secondary">{item.label}</span>
             </div>
-            <span class="text-xs flex-shrink-0 ml-2" style="color: var(--text-muted);">
+            <span class="text-xs flex-shrink-0 ml-2 text-muted">
               {item.detail}
             </span>
           </button>
         </div>
 
-        <div
-          class="flex items-center gap-4 px-4 py-2 text-[10px]"
-          style="border-top: 1px solid var(--border-subtle); color: var(--text-muted); opacity: 0.7;"
-        >
+        <div class="flex items-center gap-4 px-4 py-2 text-[10px] border-t border-subtle text-muted opacity-70">
           <span>
-            <kbd class="px-1 py-0.5 rounded font-mono" style="background: var(--surface-2);">↑↓</kbd>
-            navigate
+            <kbd class="px-1 py-0.5 rounded font-mono bg-surface-2">↑↓</kbd> navigate
           </span>
           <span>
-            <kbd class="px-1 py-0.5 rounded font-mono" style="background: var(--surface-2);">
+            <kbd class="px-1 py-0.5 rounded font-mono bg-surface-2">
               Enter
             </kbd>
             select
           </span>
           <span>
-            <kbd class="px-1 py-0.5 rounded font-mono" style="background: var(--surface-2);">Esc</kbd>
-            close
+            <kbd class="px-1 py-0.5 rounded font-mono bg-surface-2">Esc</kbd> close
           </span>
         </div>
       </div>
