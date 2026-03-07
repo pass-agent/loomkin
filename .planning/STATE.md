@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-07T23:02:30Z"
-last_activity: 2026-03-07 — Completed 02-03 workspace_live teambroadcaster wiring
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-07T23:16:32Z"
+last_activity: 2026-03-07 — Completed 02-04 gap closure direct bus subscription removal
 progress:
   total_phases: 10
   completed_phases: 1
   total_plans: 9
-  completed_plans: 9
+  completed_plans: 10
   percent: 20
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 2 of 10 (Signal Infrastructure)
-Plan: 3 of 3 in current phase
+Plan: 4 of 4 in current phase
 Status: Phase 02 complete, ready for Phase 3
-Last activity: 2026-03-07 — Completed 02-03 workspace_live teambroadcaster wiring
+Last activity: 2026-03-07 — Completed 02-04 gap closure direct bus subscription removal
 
 Progress: [##░░░░░░░░] 20%
 
@@ -50,6 +50,7 @@ Progress: [##░░░░░░░░] 20%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 02-signal-infrastructure P04 | 2 | 2 tasks | 1 files |
 | Phase 02-signal-infrastructure P03 | 4 | 2 tasks | 2 files |
 | Phase 02-signal-infrastructure P02 | 3 | 2 tasks | 3 files |
 | Phase 02-signal-infrastructure P01 | 4 | 2 tasks | 6 files |
@@ -81,6 +82,7 @@ Recent decisions affecting current work:
 - [Phase 02-02]: Batchable signals grouped into 4 categories (streaming, tools, status, activity) for structured batch delivery
 - [Phase 02-02]: Critical signal types defined as MapSet constant for O(1) lookup; direct send/2 delivery matching Jido pattern
 - [Phase 02-03]: workspace_live uses send(self(), {:signal, sig}) dispatch from batch handler to reuse existing handle_info clauses; subscribe_global_signals and signal_for_workspace? fully removed
+- [Phase 02-04]: removed last two direct Loomkin.Signals.subscribe calls from workspace_live; all signal delivery now exclusively through TeamBroadcaster
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-07T23:02:30Z
-Stopped at: Completed 02-03-PLAN.md
-Resume file: .planning/phases/02-signal-infrastructure/02-03-SUMMARY.md
+Last session: 2026-03-07T23:16:32Z
+Stopped at: Completed 02-04-PLAN.md
+Resume file: .planning/phases/02-signal-infrastructure/02-04-SUMMARY.md
