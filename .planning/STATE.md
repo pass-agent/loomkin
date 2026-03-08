@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-08T05:25:43.000Z"
-last_activity: 2026-03-08 — Implemented agent state machine guards (pause_queued, guarded request_pause, permission_response auto-pause)
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-08T05:27:39.000Z"
+last_activity: 2026-03-08 — Team-wide broadcast messaging with inject_broadcast/2, composer indicator, and paused agent injection
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 20
-  completed_plans: 18
-  percent: 90
+  completed_plans: 19
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-07)
 ## Current Position
 
 Phase: 5 of 10 (Chat Injection & State Machines)
-Plan: 2 of 4 in current phase
-Status: Completed 05-01 agent state machine guards
-Last activity: 2026-03-08 — Implemented agent state machine guards (pause_queued, guarded request_pause, permission_response auto-pause)
+Plan: 3 of 4 in current phase
+Status: Completed 05-02 team broadcast messaging
+Last activity: 2026-03-08 — Team-wide broadcast messaging with inject_broadcast/2, composer indicator, and paused agent injection
 
-Progress: [█████████░] 90%
+Progress: [█████████▌] 95%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 90%
 | Phase 04 P03 | 8 | 3 tasks | 3 files |
 | Phase 05 P00 | 2 | 1 tasks | 5 files |
 | Phase 05 P01 | 6 | 1 tasks | 4 files |
+| Phase 05 P02 | 7 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,8 @@ Recent decisions affecting current work:
 - [Phase 05]: test stubs already existed on branch from prior work; verified correctness rather than recreating
 - [Phase 05-01]: pause_queued field separate from pause_requested to avoid conflating two distinct mechanisms
 - [Phase 05-01]: broadcast_team for pause_queued reuses Agent.Status signal with :pause_queued atom status
+- [Phase 05-02]: inject_broadcast delegates to send_message for non-paused agents instead of checking status externally
+- [Phase 05-02]: broadcast_mode defaults to true in team sessions, false in solo -- reset only on explicit agent selection
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:25:43.000Z
-Stopped at: Completed 05-01-PLAN.md
-Resume file: .planning/phases/05-chat-injection-state-machines/05-01-SUMMARY.md
+Last session: 2026-03-08T05:27:39.000Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: .planning/phases/05-chat-injection-state-machines/05-02-SUMMARY.md

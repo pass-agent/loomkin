@@ -111,7 +111,7 @@ Plans:
 Plans:
 - [x] 05-00-PLAN.md — Wave 0: create test stub files for all Phase 5 test targets
 - [x] 05-01-PLAN.md — State machine guards: pause_queued, guard clauses, approval_pending pre-wire (TDD)
-- [ ] 05-02-PLAN.md — Broadcast messaging: broadcast_mode, send_message branch, paused agent injection, composer indicator, comms types
+- [x] 05-02-PLAN.md — Broadcast messaging: broadcast_mode, send_message branch, paused agent injection, composer indicator, comms types
 - [ ] 05-03-PLAN.md — UI wiring: distinct card controls, dual state indicator, force-pause, steer-only resume, visual verification
 
 ### Phase 6: Approval Gates
