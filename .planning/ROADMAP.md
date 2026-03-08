@@ -190,7 +190,7 @@ Plans:
 | 3. Live Comms Feed | 2/2 | Complete   | 2026-03-08 |
 | 4. Task Graph & Crash Recovery | 3/4 | Gap closure | - |
 | 5. Chat Injection & State Machines | 5/5 | Complete   | 2026-03-08 |
-| 6. Approval Gates | 0/4 | Planned | - |
+| 6. Approval Gates | 1/4 | In Progress|  |
 | 7. Confidence Triggers | 0/TBD | Not started | - |
 | 8. Dynamic Tree Visibility | 0/TBD | Not started | - |
 | 9. Spawn Safety | 0/TBD | Not started | - |
