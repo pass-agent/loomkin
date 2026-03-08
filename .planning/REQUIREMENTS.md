@@ -15,7 +15,7 @@
 
 - [x] **VISB-01**: Agent-to-agent messages visible in real-time comms feed for dynamically spawned sub-teams (bus subscription wired for dynamic team join)
 - [x] **VISB-02**: Newly spawned agents auto-insert into comms feed and agent card grid without page reload
-- [ ] **VISB-03**: Task dependency graph displays blocked-by relationships visually (not just flat list)
+- [x] **VISB-03**: Task dependency graph displays blocked-by relationships visually (not just flat list)
 - [ ] **VISB-04**: OTP crash recovery reflected in UI — crashed agent restarts show recovered status with no manual refresh
 
 ### Human Intervention
@@ -75,7 +75,7 @@
 | FOUN-03 | Phase 2 — Signal Infrastructure | Complete |
 | VISB-01 | Phase 3 — Live Comms Feed | In Progress (03-01 complete) |
 | VISB-02 | Phase 3 — Live Comms Feed | In Progress (03-01 complete) |
-| VISB-03 | Phase 4 — Task Graph & Crash Recovery | Pending |
+| VISB-03 | Phase 4 — Task Graph & Crash Recovery | Complete |
 | VISB-04 | Phase 4 — Task Graph & Crash Recovery | In Progress (04-01 signals complete) |
 | INTV-01 | Phase 5 — Chat Injection & State Machines | Pending |
 | INTV-04 | Phase 5 — Chat Injection & State Machines | Pending |

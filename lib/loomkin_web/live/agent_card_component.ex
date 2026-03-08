@@ -190,6 +190,12 @@ defmodule LoomkinWeb.AgentCardComponent do
               >
                 {@card.name}
               </span>
+              <span
+                :if={@card[:crash_count] && @card[:crash_count] > 0}
+                class="ml-1 px-1 py-0.5 text-[8px] font-mono bg-red-900/50 text-red-300 rounded"
+              >
+                {"#{@card[:crash_count]}x crashed"}
+              </span>
             </div>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span
@@ -385,6 +391,9 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp card_state_class(_content_type, :paused), do: "agent-card-paused"
   defp card_state_class(_content_type, :blocked), do: "agent-card-blocked"
   defp card_state_class(_content_type, :error), do: "card-error"
+  defp card_state_class(_content_type, :crashed), do: "card-error"
+  defp card_state_class(_content_type, :recovering), do: "card-error"
+  defp card_state_class(_content_type, :permanently_failed), do: "card-error"
   defp card_state_class(nil, :idle), do: "card-idle"
   defp card_state_class(_content_type, _status), do: nil
 
@@ -410,6 +419,9 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_dot_class(:error), do: "bg-red-400 agent-dot-error"
   defp status_dot_class(:waiting_permission), do: "bg-amber-400 agent-dot-thinking"
   defp status_dot_class(:complete), do: "bg-emerald-400"
+  defp status_dot_class(:crashed), do: "bg-red-500 animate-pulse"
+  defp status_dot_class(:recovering), do: "bg-amber-400 animate-pulse"
+  defp status_dot_class(:permanently_failed), do: "bg-red-600"
   defp status_dot_class(_), do: "bg-zinc-500"
 
   defp status_label(:working), do: "Working"
@@ -419,6 +431,9 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_label(:error), do: "Error"
   defp status_label(:waiting_permission), do: "Waiting for permission"
   defp status_label(:complete), do: "Complete"
+  defp status_label(:crashed), do: "Crashed"
+  defp status_label(:recovering), do: "Recovering"
+  defp status_label(:permanently_failed), do: "Failed (max restarts)"
   defp status_label(_), do: "Unknown"
 
   # --- Capability bars ---
