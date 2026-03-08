@@ -206,7 +206,7 @@ Plans:
 | 5. Chat Injection & State Machines | 5/5 | Complete   | 2026-03-08 |
 | 6. Approval Gates | 5/5 | Complete   | 2026-03-08 |
 | 7. Confidence Triggers | 4/4 | Complete   | 2026-03-08 |
-| 8. Dynamic Tree Visibility | 0/TBD | Not started | - |
+| 8. Dynamic Tree Visibility | 1/5 | In Progress|  |
 | 9. Spawn Safety | 0/TBD | Not started | - |
 | 10. Leader Research Protocol | 0/TBD | Not started | - |
 
