@@ -877,7 +877,13 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info(%Jido.Signal{type: "agent.status"} = sig, socket) do
     %{agent_name: agent_name, status: status} = sig.data
-    handle_info({:agent_status, agent_name, status}, socket)
+
+    metadata = %{
+      previous_status: sig.data[:previous_status],
+      pause_queued: sig.data[:pause_queued] || false
+    }
+
+    handle_info({:agent_status, agent_name, status, metadata}, socket)
   end
 
   def handle_info(%Jido.Signal{type: "agent.role.changed"} = sig, socket) do
@@ -1575,6 +1581,18 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   # Team PubSub events -- forward to team components via send_update
+  def handle_info({:agent_status, agent_name, status, metadata}, socket) do
+    forward_to_team_components(socket)
+
+    socket =
+      socket
+      |> schedule_roster_refresh()
+      |> update_card_status(agent_name, status, metadata)
+      |> forward_to_cards_and_comms({:agent_status, agent_name, status})
+
+    {:noreply, forward_to_activity(socket, {:agent_status, agent_name, status})}
+  end
+
   def handle_info({:agent_status, agent_name, status} = event, socket) do
     forward_to_team_components(socket)
 
@@ -1989,16 +2007,8 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:resume_agent, agent_name, team_id}, socket) do
-    case find_agent_pid(socket, agent_name, team_id) do
-      {:ok, pid} ->
-        Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
-          Loomkin.Teams.Agent.resume(pid)
-        end)
-
-      :error ->
-        :ok
-    end
-
+    # Redirect resume to steer flow — resuming requires mandatory guidance text
+    send(self(), {:steer_agent, agent_name, team_id})
     {:noreply, socket}
   end
 
@@ -2335,6 +2345,24 @@ defmodule LoomkinWeb.WorkspaceLive do
         socket
       ) do
     send(self(), {:steer_agent, agent_name, team_id})
+    {:noreply, socket}
+  end
+
+  def handle_info(
+        {:mission_control_event, "force_pause_card_agent",
+         %{"agent" => agent_name, "team-id" => team_id}},
+        socket
+      ) do
+    case find_agent_pid(socket, agent_name, team_id) do
+      {:ok, pid} ->
+        Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
+          Loomkin.Teams.Agent.force_pause(pid)
+        end)
+
+      :error ->
+        :ok
+    end
+
     {:noreply, socket}
   end
 
@@ -3741,7 +3769,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
-  defp update_card_status(socket, agent_name, status) do
+  defp update_card_status(socket, agent_name, status, metadata \\ %{}) do
     # Clear stale :last_thinking content when agent goes idle or complete
     extra =
       if status in [:idle, :complete] do
@@ -3764,6 +3792,16 @@ defmodule LoomkinWeb.WorkspaceLive do
       else
         extra
       end
+
+    # Propagate pause_queued and previous_status from signal metadata
+    extra =
+      if metadata[:previous_status] do
+        Map.put(extra, :previous_status, metadata[:previous_status])
+      else
+        extra
+      end
+
+    extra = Map.put(extra, :pause_queued, metadata[:pause_queued] || false)
 
     update_agent_card(
       socket,

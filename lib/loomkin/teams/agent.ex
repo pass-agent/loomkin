@@ -104,6 +104,11 @@ defmodule Loomkin.Teams.Agent do
     GenServer.cast(pid, :request_pause)
   end
 
+  @doc "Force-pause an agent that is waiting for permission, cancelling the pending permission."
+  def force_pause(pid) do
+    GenServer.call(pid, :force_pause)
+  end
+
   @doc "Resume a paused agent, optionally injecting guidance text."
   def resume(pid, opts \\ []) do
     GenServer.call(pid, {:resume, opts}, 15_000)
@@ -579,6 +584,41 @@ defmodule Loomkin.Teams.Agent do
     state = %{state | priority_queue: state.priority_queue ++ [qm]}
     broadcast_queue_update(state)
     {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call(:force_pause, _from, %{status: :waiting_permission} = state) do
+    cancelled =
+      case state.pending_permission do
+        nil ->
+          nil
+
+        p ->
+          %{tool: p.tool_name, path: p.tool_path}
+      end
+
+    paused_state = %{
+      messages: state.messages,
+      iteration: nil,
+      reason: :force_paused,
+      cancelled_permission: cancelled
+    }
+
+    state = %{
+      state
+      | pending_permission: nil,
+        pause_queued: false,
+        pause_requested: false,
+        paused_state: paused_state,
+        loop_task: nil
+    }
+
+    state = set_status_and_broadcast(state, :paused)
+    {:reply, :ok, state}
+  end
+
+  def handle_call(:force_pause, _from, state) do
+    {:reply, {:error, :not_waiting_permission}, state}
   end
 
   @impl true
@@ -2333,8 +2373,15 @@ defmodule Loomkin.Teams.Agent do
     if state.status == new_status do
       state
     else
+      previous_status = state.status
       state = set_status(state, new_status)
-      broadcast_team(state, {:agent_status, state.name, new_status})
+
+      broadcast_team(
+        state,
+        {:agent_status, state.name, new_status,
+         %{previous_status: previous_status, pause_queued: state.pause_queued}}
+      )
+
       state
     end
   end
@@ -2415,11 +2462,13 @@ defmodule Loomkin.Teams.Agent do
     signal_team_id == nil or signal_team_id == state.team_id
   end
 
-  defp broadcast_team(state, {:agent_status, agent_name, status}) do
+  defp broadcast_team(state, {:agent_status, agent_name, status, metadata}) do
     Loomkin.Signals.Agent.Status.new!(%{
       agent_name: to_string(agent_name),
       team_id: state.team_id,
-      status: status
+      status: status,
+      previous_status: metadata[:previous_status],
+      pause_queued: metadata[:pause_queued] || false
     })
     |> Loomkin.Signals.Extensions.Causality.attach(
       team_id: state.team_id,
@@ -2429,6 +2478,10 @@ defmodule Loomkin.Teams.Agent do
   rescue
     _ ->
       :ok
+  end
+
+  defp broadcast_team(state, {:agent_status, agent_name, status}) do
+    broadcast_team(state, {:agent_status, agent_name, status, %{}})
   end
 
   defp broadcast_team(state, {:agent_pause_queued, agent_name}) do

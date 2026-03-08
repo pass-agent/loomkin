@@ -85,7 +85,9 @@ defmodule Loomkin.Signals.Agent do
       schema: [
         agent_name: [type: :string, required: true],
         team_id: [type: :string, required: true],
-        status: [type: :atom, required: true]
+        status: [type: :atom, required: true],
+        previous_status: [type: :atom, required: false],
+        pause_queued: [type: :boolean, required: false]
       ]
   end
 

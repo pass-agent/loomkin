@@ -196,6 +196,15 @@ defmodule LoomkinWeb.AgentCardComponent do
               >
                 {"#{@card[:crash_count]}x crashed"}
               </span>
+              <span
+                :if={@card[:pause_queued]}
+                class="ml-1 px-1 py-0.5 text-[8px] font-mono bg-blue-900/50 text-blue-300 rounded animate-pulse"
+              >
+                pause queued
+              </span>
+              <span :if={@card[:previous_status]} class="text-[8px] text-muted ml-1">
+                from: {@card[:previous_status]}
+              </span>
             </div>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span
@@ -258,19 +267,29 @@ defmodule LoomkinWeb.AgentCardComponent do
                 />
               </svg>
             </button>
+            <div :if={@card.status == :waiting_permission} class="flex items-center gap-1">
+              <span
+                class="text-[9px] text-amber-300/70 truncate max-w-[6rem]"
+                title={@card[:pending_tool]}
+              >
+                {@card[:pending_tool] || "permission"}
+              </span>
+            </div>
             <button
-              :if={@card.status == :paused}
-              phx-click="resume_card_agent"
+              :if={@card.status == :waiting_permission}
+              phx-click="force_pause_card_agent"
               phx-value-agent={@card.name}
               phx-value-team-id={@team_id}
-              aria-label={"Resume #{@card.name}"}
-              class="text-muted hover:text-green-400 p-1 rounded hover:bg-surface-3 flex-shrink-0"
+              aria-label={"Force pause #{@card.name} (cancels pending permission)"}
+              title="Force pause (cancels pending permission)"
+              class="text-muted hover:text-red-400 p-1 rounded hover:bg-surface-3 flex-shrink-0"
               style="transition: color var(--transition-base), background var(--transition-base);"
+              data-confirm="This will cancel the pending permission request. Continue?"
             >
               <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
                   fill-rule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
                   clip-rule="evenodd"
                 />
               </svg>
