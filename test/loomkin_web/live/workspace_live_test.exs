@@ -12,7 +12,14 @@ defmodule LoomkinWeb.WorkspaceLiveTest do
 
   describe "live mount and component rendering" do
     test "mounting workspace renders all extracted components", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/sessions/new")
+      {:ok, _view, html} =
+        case live(conn, "/sessions/new") do
+          {:ok, view, html} ->
+            {:ok, view, html}
+
+          {:error, {:live_redirect, %{to: path}}} ->
+            live(conn, path)
+        end
 
       # CommandPaletteComponent renders its wrapper div
       assert html =~ "command-palette"
