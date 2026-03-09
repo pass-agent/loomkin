@@ -47,6 +47,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         # Mission control assigns — agent cards + comms
         agent_cards: %{},
         concierge_card_names: [],
+        system_card_names: [],
         worker_card_names: [],
         comms_event_count: 0,
         roster_refresh_timer: nil,
@@ -3256,6 +3257,7 @@ defmodule LoomkinWeb.WorkspaceLive do
               id="mission-control-panel"
               agent_cards={@agent_cards}
               concierge_card_names={@concierge_card_names}
+              system_card_names={@system_card_names}
               worker_card_names={@worker_card_names}
               comms_event_count={@comms_event_count}
               comms_stream={@streams.comms_events}
@@ -4552,14 +4554,20 @@ defmodule LoomkinWeb.WorkspaceLive do
   defp update_card_ordering(socket) do
     cards = socket.assigns.agent_cards
 
-    {concierge_names, worker_names} =
-      cards
-      |> Enum.split_with(fn {_, c} -> c.role in [:concierge] end)
-      |> then(fn {c, w} ->
-        {Enum.map(c, &elem(&1, 0)), Enum.map(w, &elem(&1, 0))}
+    {concierge_names, system_names, worker_names} =
+      Enum.reduce(cards, {[], [], []}, fn {name, card}, {c, s, w} ->
+        cond do
+          card.role in [:concierge] -> {[name | c], s, w}
+          card.role in [:orienter] -> {c, [name | s], w}
+          true -> {c, s, [name | w]}
+        end
       end)
 
-    assign(socket, concierge_card_names: concierge_names, worker_card_names: worker_names)
+    assign(socket,
+      concierge_card_names: concierge_names,
+      system_card_names: system_names,
+      worker_card_names: worker_names
+    )
   end
 
   # --- Human-readable tool descriptions ---

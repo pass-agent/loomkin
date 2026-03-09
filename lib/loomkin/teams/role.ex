@@ -515,7 +515,14 @@ defmodule Loomkin.Teams.Role do
       reasoning_strategy: :cot,
       tools:
         @read_only_tools ++
-          @decision_tools ++ @peer_tools ++ @cross_team_tools ++ [Loomkin.Tools.Git],
+          @decision_tools ++
+          [
+            Loomkin.Tools.PeerMessage,
+            Loomkin.Tools.ContextRetrieve,
+            Loomkin.Tools.SearchKeepers,
+            Loomkin.Tools.ContextOffload,
+            Loomkin.Tools.Git
+          ],
       system_prompt: """
       You are the Orienter — a silent background agent that scans the project and decision
       graph at session start to build situational awareness.

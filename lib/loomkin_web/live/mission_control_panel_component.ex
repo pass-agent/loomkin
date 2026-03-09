@@ -12,6 +12,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
   Parent-provided assigns:
     - agent_cards               map of agent_name => card struct
     - concierge_card_names      list of agent names with concierge role
+    - system_card_names         list of agent names with system/infrastructure roles (orienter)
     - worker_card_names         list of agent names with worker roles
     - comms_event_count         integer
     - focused_agent             binary | nil
@@ -118,6 +119,25 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
           />
         </div>
 
+        <%!-- System agents (orienter etc.) — compact status, no interactive buttons --%>
+        <div :if={system_card_names(assigns) != []} class="px-3 pb-2">
+          <div
+            :for={name <- system_card_names(assigns)}
+            class="flex items-center gap-2 py-1 px-2 rounded bg-surface-1/50"
+          >
+            <span class={[
+              "w-1.5 h-1.5 rounded-full flex-shrink-0",
+              system_status_dot(@agent_cards[name])
+            ]} />
+            <span class="text-[10px] font-medium text-muted truncate">
+              {format_system_name(name)}
+            </span>
+            <span class="text-[9px] text-muted opacity-60 ml-auto flex-shrink-0">
+              {system_agent_status_label(@agent_cards[name])}
+            </span>
+          </div>
+        </div>
+
         <%!-- Team Agents Section --%>
         <div class="flex-shrink p-3 pb-0 overflow-y-auto max-h-[50%] min-h-[120px]">
           <div class="flex items-center gap-2 mb-2">
@@ -139,19 +159,16 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
             :if={@concierge_card_names == [] && @worker_card_names == [] && @active_team_id}
             class="rounded-lg py-4 px-4 text-center bg-surface-1 border border-subtle"
           >
-            <div class="flex justify-center gap-3 mb-2">
+            <div class="flex justify-center mb-2">
               <div class="w-8 h-8 rounded-full bg-violet-500/15 flex items-center justify-center text-violet-400 text-xs font-bold">
                 C
               </div>
-              <div class="w-8 h-8 rounded-full bg-sky-500/15 flex items-center justify-center text-sky-400 text-xs font-bold">
-                O
-              </div>
             </div>
             <div class="text-xs font-medium text-secondary">
-              Concierge & Orienter ready
+              Concierge ready
             </div>
             <div class="text-[10px] mt-0.5 text-muted">
-              Send a message to wake them up
+              Send a message to get started
             </div>
           </div>
           <%!-- No session state --%>
@@ -321,4 +338,34 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
   end
 
   defp format_agent_role(_), do: "-"
+
+  defp system_card_names(assigns), do: assigns[:system_card_names] || []
+
+  defp system_status_dot(nil), do: "bg-zinc-500"
+
+  defp system_status_dot(card) do
+    case card.status do
+      s when s in [:complete, :idle] -> "bg-emerald-400"
+      s when s in [:working, :thinking] -> "bg-amber-400 animate-pulse"
+      :error -> "bg-red-400"
+      _ -> "bg-zinc-500"
+    end
+  end
+
+  defp system_agent_status_label(nil), do: "starting..."
+
+  defp system_agent_status_label(card) do
+    case card.status do
+      s when s in [:working, :thinking] -> "scanning..."
+      s when s in [:complete, :idle] -> "scan complete"
+      :error -> "scan failed"
+      _ -> "initializing..."
+    end
+  end
+
+  defp format_system_name(name) when is_binary(name) do
+    name |> String.replace("_", " ") |> String.capitalize()
+  end
+
+  defp format_system_name(name), do: to_string(name)
 end
