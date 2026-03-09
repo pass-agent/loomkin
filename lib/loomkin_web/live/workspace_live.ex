@@ -710,6 +710,10 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
+  def handle_event("focus_card_agent", %{"agent" => agent_name}, socket) do
+    {:noreply, assign(socket, focused_agent: agent_name, inspector_mode: :pinned)}
+  end
+
   def handle_event("toggle_mode", _, socket) do
     new_mode = if socket.assigns.mode == :solo, do: :mission_control, else: :solo
     {:noreply, assign(socket, mode: new_mode)}
@@ -2174,11 +2178,19 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   # Agent streaming events — show thoughts live in activity feed + agent cards
   def handle_info({:agent_stream_start, agent_name, _payload}, socket) do
+    card = get_in(socket.assigns, [:agent_cards, agent_name])
+    # Clear stuck :error status — if the agent is streaming it has recovered and is working
+    status_update = if card && card.status == :error, do: %{status: :working}, else: %{}
+
     socket =
-      update_agent_card(socket, agent_name, %{
-        content_type: :thinking,
-        latest_content: ""
-      })
+      update_agent_card(
+        socket,
+        agent_name,
+        Map.merge(status_update, %{
+          content_type: :thinking,
+          latest_content: ""
+        })
+      )
 
     {:noreply, socket}
   end
@@ -2837,7 +2849,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info({:mission_control_event, "unfocus_agent", _params}, socket) do
-    {:noreply, assign(socket, focused_agent: nil, inspector_mode: nil)}
+    {:noreply, assign(socket, focused_agent: nil, inspector_mode: :auto_follow)}
   end
 
   def handle_info(
