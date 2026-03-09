@@ -365,6 +365,11 @@ defmodule LoomkinWeb.AgentCardComponent do
       >
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] font-semibold text-violet-400">Approval required</span>
+          <%!--
+            started_at is fixed at the moment the gate opens and never changes,
+            so this deadline is stable across LiveView re-renders and will not
+            reset the CountdownTimer hook on patches.
+          --%>
           <span
             id={"countdown-#{@card.name}"}
             phx-hook="CountdownTimer"
@@ -388,6 +393,7 @@ defmodule LoomkinWeb.AgentCardComponent do
             phx-value-gate-id={@card[:pending_approval][:gate_id]}
             phx-value-agent={@card.name}
             phx-value-context=""
+            phx-disable-with="Approving..."
             class="px-3 py-1.5 text-[11px] font-medium rounded bg-violet-600/80 hover:bg-violet-600 text-white border border-violet-500/50 transition-colors cursor-pointer"
           >
             Approve
@@ -424,6 +430,7 @@ defmodule LoomkinWeb.AgentCardComponent do
           <input type="hidden" name="agent" value={@card.name} />
           <button
             type="submit"
+            phx-disable-with="Approving..."
             class="self-start px-3 py-1 text-[11px] font-medium rounded bg-violet-600/80 hover:bg-violet-600 text-white border border-violet-500/50 transition-colors cursor-pointer"
           >
             Send Approval
@@ -446,6 +453,7 @@ defmodule LoomkinWeb.AgentCardComponent do
           <input type="hidden" name="agent" value={@card.name} />
           <button
             type="submit"
+            phx-disable-with="Denying..."
             class="self-start px-3 py-1 text-[11px] font-medium rounded bg-rose-900/50 hover:bg-rose-800/60 text-rose-300 border border-rose-700/30 transition-colors cursor-pointer"
           >
             Confirm Denial
@@ -464,6 +472,11 @@ defmodule LoomkinWeb.AgentCardComponent do
         <%!-- Header row: label + countdown --%>
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] font-semibold text-violet-400">Spawn approval required</span>
+          <%!--
+            started_at is fixed at the moment the gate opens and never changes,
+            so this deadline is stable across LiveView re-renders and will not
+            reset the CountdownTimer hook on patches.
+          --%>
           <span
             id={"spawn-countdown-#{@card.name}"}
             phx-hook="CountdownTimer"
@@ -527,6 +540,7 @@ defmodule LoomkinWeb.AgentCardComponent do
             phx-value-gate-id={@card[:pending_approval][:gate_id]}
             phx-value-agent={@card.name}
             phx-value-context=""
+            phx-disable-with="Approving..."
             class="px-3 py-1.5 text-[11px] font-medium rounded bg-violet-600/80 hover:bg-violet-600 text-white border border-violet-500/50 transition-colors cursor-pointer"
           >
             Approve
@@ -563,6 +577,7 @@ defmodule LoomkinWeb.AgentCardComponent do
           <input type="hidden" name="agent" value={@card.name} />
           <button
             type="submit"
+            phx-disable-with="Approving..."
             class="self-start px-3 py-1 text-[11px] font-medium rounded bg-violet-600/80 hover:bg-violet-600 text-white border border-violet-500/50 transition-colors cursor-pointer"
           >
             Send Approval
@@ -585,6 +600,7 @@ defmodule LoomkinWeb.AgentCardComponent do
           <input type="hidden" name="agent" value={@card.name} />
           <button
             type="submit"
+            phx-disable-with="Denying..."
             class="self-start px-3 py-1 text-[11px] font-medium rounded bg-rose-900/50 hover:bg-rose-800/60 text-rose-300 border border-rose-700/30 transition-colors cursor-pointer"
           >
             Confirm Denial
@@ -607,11 +623,17 @@ defmodule LoomkinWeb.AgentCardComponent do
         <div :for={q <- @card[:pending_questions] || []} class="flex flex-col gap-1.5">
           <p class="text-xs text-zinc-300 leading-relaxed">{q.question}</p>
           <div class="flex flex-wrap gap-1.5">
+            <%!--
+              HEEx auto-escapes all `{...}` interpolations, so special characters
+              in option values (quotes, angle brackets, etc.) are safe in both
+              the button text and the phx-value-answer attribute.
+            --%>
             <button
               :for={option <- q.options}
               phx-click="ask_user_answer"
               phx-value-question-id={q.question_id}
               phx-value-answer={option}
+              phx-disable-with="Sending..."
               class="px-3 py-1.5 text-[11px] font-medium rounded bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/30 transition-colors cursor-pointer"
             >
               {option}
@@ -623,6 +645,7 @@ defmodule LoomkinWeb.AgentCardComponent do
         <button
           phx-click="let_team_decide"
           phx-value-agent={@card.name}
+          phx-disable-with="Deciding..."
           class="self-start px-3 py-1.5 text-[11px] font-medium rounded bg-zinc-700/60 hover:bg-zinc-600/60 text-zinc-300 border border-zinc-600/30 transition-colors cursor-pointer"
         >
           Let the team decide

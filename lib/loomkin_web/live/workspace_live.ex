@@ -750,9 +750,17 @@ defmodule LoomkinWeb.WorkspaceLive do
         socket = handle_collective_decision(socket, question)
         {:noreply, assign(socket, pending_questions: remaining)}
       else
-        # Send answer directly back to the waiting agent
-        send_ask_user_answer(question_id, answer)
-        {:noreply, assign(socket, pending_questions: remaining)}
+        # Validate that the submitted answer is one of the original options to prevent
+        # arbitrary answers submitted via DOM manipulation
+        valid_options = question.options || []
+
+        if answer in valid_options do
+          # Send answer directly back to the waiting agent
+          send_ask_user_answer(question_id, answer)
+          {:noreply, assign(socket, pending_questions: remaining)}
+        else
+          {:noreply, socket}
+        end
       end
     else
       {:noreply, socket}

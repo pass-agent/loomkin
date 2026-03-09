@@ -18,8 +18,20 @@ defmodule LoomkinWeb.TeamTreeComponent do
   end
 
   def handle_event("select_team", %{"team-id" => team_id}, socket) do
-    send(self(), {:switch_team, team_id})
-    {:noreply, assign(socket, open: false)}
+    # Validate that team_id belongs to the known tree before switching.
+    # The tree map keys are parent team ids; values are lists of child team ids.
+    # A team is valid if it appears as a key or as a child in any key's list.
+    tree = socket.assigns.team_tree
+
+    known =
+      Map.has_key?(tree, team_id) or Enum.any?(tree, fn {_, children} -> team_id in children end)
+
+    if known do
+      send(self(), {:switch_team, team_id})
+      {:noreply, assign(socket, open: false)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def render(assigns) do

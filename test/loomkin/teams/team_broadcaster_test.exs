@@ -136,7 +136,7 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
 
   describe "approval gate critical classification" do
     test "agent.approval.requested is classified as critical" do
-      # This test fails until Plan 02 adds "agent.approval.requested" to @critical_types
+      # Verifies that "agent.approval.requested" is in @critical_types and delivers immediately
       broadcaster = start_broadcaster()
       TeamBroadcaster.subscribe(broadcaster, self())
 
@@ -148,7 +148,7 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
     end
 
     test "agent.approval.resolved is classified as critical" do
-      # This test fails until Plan 02 adds "agent.approval.resolved" to @critical_types
+      # Verifies that "agent.approval.resolved" is in @critical_types and delivers immediately
       broadcaster = start_broadcaster()
       TeamBroadcaster.subscribe(broadcaster, self())
 
@@ -162,7 +162,7 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
 
   describe "spawn gate critical classification" do
     test "agent.spawn.gate.requested is classified as critical" do
-      # This test fails until Plan 02 adds "agent.spawn.gate.requested" to @critical_types
+      # Verifies that "agent.spawn.gate.requested" is in @critical_types and delivers immediately
       broadcaster = start_broadcaster()
       TeamBroadcaster.subscribe(broadcaster, self())
 
@@ -174,7 +174,7 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
     end
 
     test "agent.spawn.gate.resolved is classified as critical" do
-      # This test fails until Plan 02 adds "agent.spawn.gate.resolved" to @critical_types
+      # Verifies that "agent.spawn.gate.resolved" is in @critical_types and delivers immediately
       broadcaster = start_broadcaster()
       TeamBroadcaster.subscribe(broadcaster, self())
 

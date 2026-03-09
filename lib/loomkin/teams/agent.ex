@@ -246,7 +246,10 @@ defmodule Loomkin.Teams.Agent do
       try do
         Manager.dissolve_team(child_team_id)
       catch
-        :exit, _ -> :ok
+        :exit, reason ->
+          Logger.warning(
+            "[Kin:agent] failed to dissolve child team on terminate name=#{state.name} team=#{state.team_id} child_team=#{child_team_id} reason=#{inspect(reason)}"
+          )
       end
     end
 
@@ -2281,7 +2284,8 @@ defmodule Loomkin.Teams.Agent do
               team_id,
               agent_name,
               estimated_cost,
-              roles
+              roles,
+              auto_approve
             )
           end
       end
@@ -2296,7 +2300,8 @@ defmodule Loomkin.Teams.Agent do
          team_id,
          agent_name,
          estimated_cost,
-         roles
+         roles,
+         auto_approve
        ) do
     gate_id = Ecto.UUID.generate()
 
@@ -2309,8 +2314,6 @@ defmodule Loomkin.Teams.Agent do
 
     limit_warning = compute_limit_warning(team_id, length(roles))
 
-    %{auto_approve_spawns: auto_approve} = GenServer.call(agent_pid, :get_spawn_settings)
-
     pending_info = %{
       type: :spawn_gate,
       gate_id: gate_id,
@@ -2320,10 +2323,8 @@ defmodule Loomkin.Teams.Agent do
       limit_warning: limit_warning
     }
 
-    # Open gate: mark agent approval_pending via cast (non-blocking from tool task)
-    GenServer.cast(agent_pid, {:open_spawn_gate, gate_id, pending_info})
-
-    # Register this tool task process for response routing
+    # Register this tool task process for response routing before casting (prevents race condition
+    # where LiveView receives the signal and user approves before the gate_id is registered)
     case Registry.register(Loomkin.Teams.AgentRegistry, {:spawn_gate, gate_id}, self()) do
       {:error, {:already_registered, _}} ->
         AgentLoop.format_tool_result(
@@ -2332,6 +2333,9 @@ defmodule Loomkin.Teams.Agent do
         )
 
       _ ->
+        # Open gate: mark agent approval_pending via cast (after registration to avoid race condition)
+        GenServer.cast(agent_pid, {:open_spawn_gate, gate_id, pending_info})
+
         # Publish GateRequested signal for LiveView to render the gate ui
         signal =
           Loomkin.Signals.Spawn.GateRequested.new!(%{
