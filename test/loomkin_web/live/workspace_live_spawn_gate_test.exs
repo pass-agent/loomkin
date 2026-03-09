@@ -183,6 +183,69 @@ defmodule LoomkinWeb.Live.WorkspaceLiveSpawnGateTest do
   end
 
   # ---------------------------------------------------------------------------
+  # handle_info: spawn gate comms feed events
+  # ---------------------------------------------------------------------------
+
+  describe "spawn gate comms feed events" do
+    test "SpawnGateRequested inserts a spawn_gate_opened comms event" do
+      socket = build_test_socket(agent_name: "leader", gate_id: nil)
+
+      sig = %Jido.Signal{
+        id: Jido.Signal.ID.generate(),
+        type: "agent.spawn.gate.requested",
+        source: "/test/spawn",
+        data: %{
+          gate_id: "gate-comms-1",
+          agent_name: "leader",
+          team_name: "research-team",
+          roles: %{researcher: 2},
+          estimated_cost: 0.05
+        },
+        datacontenttype: "application/json",
+        specversion: "1.0.1"
+      }
+
+      {:noreply, updated_socket} = WorkspaceLive.handle_info(sig, socket)
+
+      assert updated_socket.assigns.comms_event_count == socket.assigns.comms_event_count + 1
+    end
+
+    test "SpawnGateResolved inserts a spawn_gate_resolved comms event" do
+      socket = build_test_socket(agent_name: "leader", gate_id: "gate-comms-2")
+
+      sig = %Jido.Signal{
+        id: Jido.Signal.ID.generate(),
+        type: "agent.spawn.gate.resolved",
+        source: "/test/spawn",
+        data: %{agent_name: "leader", outcome: :approved},
+        datacontenttype: "application/json",
+        specversion: "1.0.1"
+      }
+
+      {:noreply, updated_socket} = WorkspaceLive.handle_info(sig, socket)
+
+      assert updated_socket.assigns.comms_event_count == socket.assigns.comms_event_count + 1
+    end
+
+    test "SpawnGateResolved with denied outcome inserts denied comms event" do
+      socket = build_test_socket(agent_name: "leader", gate_id: "gate-comms-3")
+
+      sig = %Jido.Signal{
+        id: Jido.Signal.ID.generate(),
+        type: "agent.spawn.gate.resolved",
+        source: "/test/spawn",
+        data: %{agent_name: "leader", outcome: :denied},
+        datacontenttype: "application/json",
+        specversion: "1.0.1"
+      }
+
+      {:noreply, updated_socket} = WorkspaceLive.handle_info(sig, socket)
+
+      assert updated_socket.assigns.comms_event_count == socket.assigns.comms_event_count + 1
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
 

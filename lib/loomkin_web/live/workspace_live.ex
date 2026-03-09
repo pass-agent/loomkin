@@ -1928,6 +1928,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       |> schedule_roster_refresh()
       |> update_card_status(agent_name, status, metadata)
       |> forward_to_cards_and_comms({:agent_status, agent_name, status})
+      |> maybe_insert_synthesis_comms_event(agent_name, status, metadata)
 
     {:noreply, forward_to_activity(socket, {:agent_status, agent_name, status})}
   end
@@ -4717,4 +4718,45 @@ defmodule LoomkinWeb.WorkspaceLive do
     |> Map.delete(dissolved_id)
     |> Map.new(fn {parent, children} -> {parent, List.delete(children, dissolved_id)} end)
   end
+
+  # --- Synthesis comms event helpers ---
+
+  defp maybe_insert_synthesis_comms_event(socket, agent_name, :awaiting_synthesis, _metadata) do
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :awaiting_synthesis_started,
+      agent: agent_name,
+      content: "#{agent_name} entered awaiting synthesis — collecting research findings",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{}
+    }
+
+    socket
+    |> stream_insert(:comms_events, event)
+    |> update(:comms_event_count, &(&1 + 1))
+  end
+
+  defp maybe_insert_synthesis_comms_event(
+         socket,
+         agent_name,
+         :working,
+         %{previous_status: :awaiting_synthesis}
+       ) do
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :awaiting_synthesis_complete,
+      agent: agent_name,
+      content: "#{agent_name} synthesis complete — returning to work",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{}
+    }
+
+    socket
+    |> stream_insert(:comms_events, event)
+    |> update(:comms_event_count, &(&1 + 1))
+  end
+
+  defp maybe_insert_synthesis_comms_event(socket, _agent_name, _status, _metadata), do: socket
 end
