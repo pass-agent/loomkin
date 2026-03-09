@@ -199,7 +199,13 @@ Plans:
   3. The leader's question to the human includes a summary of what the research sub-agents found, so the human can answer from an informed position
   4. Cost attribution for the research sub-team is visible in the UI before the leader asks the human — the human can see what the research cost before deciding next steps
   5. The leader role config includes the research orchestration prompts and multi-step protocol definition as code-level configuration (not a runtime UI)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 10-00-PLAN.md — Wave 0: test stubs for LEAD-01 spawn_type, awaiting_synthesis, peer_message routing; LEAD-02 role prompt content
+- [ ] 10-01-PLAN.md — Role config: lead research protocol section and researcher findings format in role.ex (LEAD-02)
+- [ ] 10-02-PLAN.md — Backend: spawn_type auto-approve path, :awaiting_synthesis status casts and Registry routing (LEAD-01)
+- [ ] 10-03-PLAN.md — UI: AgentCardComponent :awaiting_synthesis indigo dot + human visual verification (LEAD-01)
 
 ## Progress
 
@@ -214,7 +220,7 @@ Plans:
 | 7. Confidence Triggers | 4/4 | Complete   | 2026-03-08 |
 | 8. Dynamic Tree Visibility | 4/5 | In Progress|  |
 | 9. Spawn Safety | 4/4 | Complete   | 2026-03-09 |
-| 10. Leader Research Protocol | 0/TBD | Not started | - |
+| 10. Leader Research Protocol | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-03-07*
