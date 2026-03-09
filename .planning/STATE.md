@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 10-leader-research-protocol-01-PLAN.md
-last_updated: "2026-03-09T03:04:23.443Z"
+stopped_at: Completed 10-leader-research-protocol-02-PLAN.md
+last_updated: "2026-03-09T03:12:25.972Z"
 last_activity: 2026-03-08 — Distinct agent card controls with force-pause, dual indicator, steer-only resume, and state transition comms events
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 43
-  completed_plans: 41
+  completed_plans: 42
   percent: 100
 ---
 
@@ -89,6 +89,7 @@ Progress: [██████████] 100%
 | Phase 09-spawn-safety P04 | 15 | 2 tasks | 1 files |
 | Phase 10-leader-research-protocol P00 | 1 | 2 tasks | 2 files |
 | Phase 10-leader-research-protocol P01 | 12 | 1 tasks | 2 files |
+| Phase 10-leader-research-protocol P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,9 @@ Recent decisions affecting current work:
 - [Phase 09-spawn-safety]: spawn gate panel uses identical violet accent and structural layout as checkpoint panel — same card pattern, different content block; format_roles/1 handles atom and string keyed role maps; human visually confirmed end-to-end flow 2026-03-08
 - [Phase 10-leader-research-protocol]: wave 0 stub pattern reused from phases 7/8/9 — @moduletag :skip + @tag :skip per test + flunk placeholder; role_test extended without module-level skip to keep 30 existing tests runnable
 - [Phase 10-leader-research-protocol]: Research Protocol and Findings Delivery sections appended to base system_prompts in role.ex — protocol encoded as LLM config, not GenServer logic
+- [Phase 10-leader-research-protocol]: run_spawn_gate_intercept extracted to run_human_or_auto_spawn_gate/6; research pre-check at top short-circuits to run_research_spawn/6 when spawn_type in [:research, 'research']
+- [Phase 10-leader-research-protocol]: collect_research_findings/3 returns partial findings on timeout — leader proceeds with what arrived rather than erroring
+- [Phase 10-leader-research-protocol]: Registry key {:awaiting_synthesis, team_id, agent_name} mirrors {:spawn_gate, gate_id} pattern from Phase 9
 
 ### Pending Todos
 
@@ -185,6 +189,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09T03:04:23.441Z
-Stopped at: Completed 10-leader-research-protocol-01-PLAN.md
+Last session: 2026-03-09T03:12:25.970Z
+Stopped at: Completed 10-leader-research-protocol-02-PLAN.md
 Resume file: None

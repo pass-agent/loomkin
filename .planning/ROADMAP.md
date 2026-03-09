@@ -220,7 +220,7 @@ Plans:
 | 7. Confidence Triggers | 4/4 | Complete   | 2026-03-08 |
 | 8. Dynamic Tree Visibility | 4/5 | In Progress|  |
 | 9. Spawn Safety | 4/4 | Complete   | 2026-03-09 |
-| 10. Leader Research Protocol | 2/4 | In Progress|  |
+| 10. Leader Research Protocol | 3/4 | In Progress|  |
 
 ---
 *Roadmap created: 2026-03-07*
