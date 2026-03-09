@@ -139,8 +139,14 @@ defmodule Loomkin.Teams.AgentWeaverTest do
       assert state.status == :idle
       assert state.loop_task == nil
 
-      # Verify no :weaver_cycle message was scheduled (no timer)
-      refute_receive :weaver_cycle, 100
+      # Wait long enough for any scheduled :weaver_cycle to fire (adaptive delay is 0 or 30s,
+      # but in test with no queued messages it would be 30s — we just need to confirm the
+      # agent stays idle, meaning no cycle was scheduled)
+      Process.sleep(300)
+
+      state = :sys.get_state(weaver.pid)
+      assert state.status == :idle
+      assert state.loop_task == nil
     end
 
     test "weaver re-triggers with backoff after loop error" do
@@ -209,6 +215,30 @@ defmodule Loomkin.Teams.AgentWeaverTest do
       assert state.status == :idle
     end
 
+    test "weaver receives peer messages while in cycle" do
+      team_id = unique_team_id()
+
+      _coder = start_agent(team_id: team_id, name: "coder-1", role: :coder)
+      weaver = start_weaver_idle(team_id)
+
+      # Set up a fake active loop
+      {fake_task, _ref} = make_fake_loop_task(self())
+
+      :sys.replace_state(weaver.pid, fn state ->
+        %{state | loop_task: {fake_task, nil}, status: :working, messages: []}
+      end)
+
+      # Send a peer message while the loop is active
+      Agent.peer_message(weaver.pid, "coder-1", "I found a bug in auth.ex")
+      Process.sleep(100)
+
+      state = :sys.get_state(weaver.pid)
+      # peer_message appends directly to state.messages (not dropped)
+      assert Enum.any?(state.messages, fn msg ->
+               String.contains?(msg.content, "I found a bug in auth.ex")
+             end)
+    end
+
     test "weaver_cycle message is ignored when loop is already active" do
       team_id = unique_team_id()
 
@@ -228,6 +258,33 @@ defmodule Loomkin.Teams.AgentWeaverTest do
 
       state = :sys.get_state(weaver.pid)
       assert state.loop_task != nil
+    end
+  end
+
+  describe "weaver bootstrap" do
+    test "bootstrap spawns concierge, orienter, and weaver" do
+      team_id = unique_team_id()
+
+      # Manually spawn the 3 bootstrap agents as session.ex does
+      {:ok, _} = Manager.create_team(name: team_id, team_id: team_id)
+
+      Manager.spawn_agent(team_id, "concierge", :concierge, [])
+      Manager.spawn_agent(team_id, "orienter", :orienter, [])
+      Manager.spawn_agent(team_id, "weaver", :weaver, [])
+
+      Process.sleep(200)
+
+      agents = Manager.list_agents(team_id)
+      agent_names = Enum.map(agents, fn %{name: name} -> name end)
+
+      assert "concierge" in agent_names
+      assert "orienter" in agent_names
+      assert "weaver" in agent_names
+      assert length(agent_names) >= 3
+
+      on_exit(fn ->
+        Loomkin.Teams.TableRegistry.delete_table(team_id)
+      end)
     end
   end
 

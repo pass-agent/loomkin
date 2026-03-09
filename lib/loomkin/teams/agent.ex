@@ -322,7 +322,8 @@ defmodule Loomkin.Teams.Agent do
     You are the team's nervous system — stay aware and keep information flowing.
     """
 
-    messages = state.messages ++ [%{role: :user, content: prompt}]
+    # Reset messages each cycle to prevent unbounded context growth
+    messages = [%{role: :user, content: prompt}]
     state = %{state | messages: messages}
 
     loop_opts = build_loop_opts(state)
@@ -1298,7 +1299,20 @@ defmodule Loomkin.Teams.Agent do
           if task_id, do: Loomkin.Teams.Tasks.fail_task(task_id, "crashed: #{inspect(reason)}")
         end
 
-        {:noreply, drain_queues(state)}
+        # Re-trigger weaver cycling after task crash (same backoff as loop_error)
+        if state.role == :weaver and is_nil(from) do
+          failure_count = state.failure_count + 1
+          state = %{state | failure_count: failure_count}
+
+          if failure_count <= 3 and team_still_active?(state) do
+            delay = min(30_000 * failure_count, 120_000)
+            Process.send_after(self(), :weaver_cycle, delay)
+          end
+
+          {:noreply, drain_queues(state)}
+        else
+          {:noreply, drain_queues(state)}
+        end
 
       _ ->
         {:noreply, state}
@@ -1779,8 +1793,9 @@ defmodule Loomkin.Teams.Agent do
     task_id = state.task && state.task[:id]
     if task_id, do: ModelRouter.record_success(state.team_id, state.name, task_id, state.model)
 
-    state = %{state | messages: messages, failure_count: 0}
+    state = %{state | messages: messages, failure_count: 0, loop_task: nil, task: nil}
     state = track_usage(state, metadata)
+    maybe_schedule_weaver_cycle(state)
     state = set_status_and_broadcast(state, :idle)
 
     # If there's an active task, complete it with the response
@@ -1793,7 +1808,8 @@ defmodule Loomkin.Teams.Agent do
 
   @impl true
   def handle_info({:loop_resumed, {:error, _reason, messages}}, state) do
-    state = %{state | messages: messages}
+    state = %{state | messages: messages, loop_task: nil, task: nil}
+    maybe_schedule_weaver_cycle(state)
     state = set_status_and_broadcast(state, :idle)
     {:noreply, drain_queues(state)}
   end
