@@ -52,7 +52,7 @@ defmodule LoomkinWeb.Live.WorkspaceBroadcastTest do
   end
 
   # Build a minimal Phoenix.LiveView.Socket with broadcast-related assigns.
-  defp build_test_socket(opts \\ []) do
+  defp build_test_socket(opts) do
     team_id = Keyword.get(opts, :team_id, nil)
     broadcast_mode = Keyword.get(opts, :broadcast_mode, team_id != nil)
 

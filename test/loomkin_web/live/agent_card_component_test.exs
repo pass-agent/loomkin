@@ -3,7 +3,7 @@ defmodule LoomkinWeb.Live.AgentCardComponentTest do
 
   import Phoenix.LiveViewTest
 
-  defp base_card(overrides \\ %{}) do
+  defp base_card(overrides) do
     defaults = %{
       name: "test-agent",
       status: :idle,
@@ -18,7 +18,7 @@ defmodule LoomkinWeb.Live.AgentCardComponentTest do
     Map.merge(defaults, overrides)
   end
 
-  defp render_card(card_overrides \\ %{}) do
+  defp render_card(card_overrides) do
     card = base_card(card_overrides)
 
     render_component(LoomkinWeb.AgentCardComponent, %{
