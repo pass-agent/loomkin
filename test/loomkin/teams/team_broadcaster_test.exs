@@ -53,10 +53,32 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
       Signals.publish(build_signal("agent.tool.started"))
       Signals.publish(build_signal("context.update"))
 
-      assert_receive {:team_broadcast, batch}, 200
-      assert length(batch.streaming) >= 1
-      assert length(batch.tools) >= 1
-      assert length(batch.activity) >= 1
+      # Collect all batches within the window — on slow CI runners signals
+      # may arrive across multiple flush intervals, producing separate batches.
+      merged =
+        Enum.reduce_while(1..5, %{streaming: [], tools: [], activity: []}, fn _, acc ->
+          receive do
+            {:team_broadcast, batch} when is_map(batch) ->
+              merged = %{
+                streaming: acc.streaming ++ Map.get(batch, :streaming, []),
+                tools: acc.tools ++ Map.get(batch, :tools, []),
+                activity: acc.activity ++ Map.get(batch, :activity, [])
+              }
+
+              if length(merged.streaming) >= 1 and length(merged.tools) >= 1 and
+                   length(merged.activity) >= 1 do
+                {:halt, merged}
+              else
+                {:cont, merged}
+              end
+          after
+            300 -> {:halt, acc}
+          end
+        end)
+
+      assert length(merged.streaming) >= 1
+      assert length(merged.tools) >= 1
+      assert length(merged.activity) >= 1
     end
   end
 

@@ -116,12 +116,20 @@ defmodule Loomkin.Decisions.SupervisionTest do
     end
   end
 
-  # Poll Registry until a new pid (different from old_pid) appears, up to 2s.
-  defp await_registry(key, old_pid, attempts \\ 40) do
+  # Poll Registry until a new pid (different from old_pid) appears, up to 5s.
+  # On CI, the supervisor may take extra time due to concurrent test noise
+  # (other tests' AutoLoggers crashing from DBConnection.OwnershipError).
+  defp await_registry(key, old_pid, attempts \\ 100) do
     case Registry.lookup(Loomkin.Teams.AgentRegistry, key) do
-      [{pid, val}] when pid != old_pid -> {pid, val}
-      _ when attempts > 0 -> Process.sleep(50) && await_registry(key, old_pid, attempts - 1)
-      other -> flunk("Expected new pid for #{inspect(key)}, got: #{inspect(other)}")
+      [{pid, val}] when pid != old_pid and is_pid(pid) ->
+        if Process.alive?(pid), do: {pid, val}, else: await_registry(key, old_pid, attempts - 1)
+
+      _ when attempts > 0 ->
+        Process.sleep(50)
+        await_registry(key, old_pid, attempts - 1)
+
+      other ->
+        flunk("Expected new pid for #{inspect(key)}, got: #{inspect(other)}")
     end
   end
 end
