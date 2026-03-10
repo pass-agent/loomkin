@@ -253,6 +253,8 @@ defmodule LoomkinWeb.AgentCommsComponent do
         id="comms-feed-scroll"
         phx-hook="CommsFeedScroll"
         phx-update="stream"
+        role="log"
+        aria-label="Agent communications feed"
         class="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5"
       >
         <div
@@ -290,7 +292,7 @@ defmodule LoomkinWeb.AgentCommsComponent do
     <details
       id={"comms-event-#{@event.id}"}
       class={[
-        "group flex-col px-2 py-1.5 rounded-md cursor-pointer transition-colors duration-100",
+        "group flex-col px-2 py-1.5 rounded-md cursor-pointer transition-colors duration-100 animate-fade-in",
         "border-l-2"
       ]}
       style={"border-left-color: #{@config.accent_border};"}

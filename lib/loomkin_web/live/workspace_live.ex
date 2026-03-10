@@ -90,7 +90,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         # Broadcast mode: true in team sessions, false in solo
         broadcast_mode: params["team_id"] != nil,
         # Leader approval gate pending (set when lead agent hits approval gate, nil otherwise)
-        leader_approval_pending: nil
+        leader_approval_pending: nil,
+        debug_signals: [],
+        debug_panel_open: false
       )
       |> stream(:comms_events, [], limit: -500)
 
@@ -662,6 +664,14 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_event("toggle_file_drawer", _params, socket) do
     {:noreply, assign(socket, file_drawer_open: !socket.assigns.file_drawer_open)}
+  end
+
+  def handle_event("toggle_debug_panel", _params, socket) do
+    {:noreply, update(socket, :debug_panel_open, &(!&1))}
+  end
+
+  def handle_event("toggle_debug", _params, socket) do
+    {:noreply, update(socket, :debug_panel_open, &(!&1))}
   end
 
   @valid_trust_presets ~w(strict balanced autonomous full_trust)
@@ -2387,6 +2397,11 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info({:team_dissolved, team_id}, socket) do
     if team_id == socket.assigns.team_id do
+      # Clean up broadcaster for the root team
+      if broadcaster = socket.assigns[:broadcaster] do
+        TeamBroadcaster.remove_team(broadcaster, team_id)
+      end
+
       {:noreply,
        assign(socket,
          team_id: nil,
@@ -2396,7 +2411,8 @@ defmodule LoomkinWeb.WorkspaceLive do
          active_tab: :files,
          mode: :solo,
          focused_agent: nil,
-         inspector_mode: :auto_follow
+         inspector_mode: :auto_follow,
+         subscribed_teams: MapSet.new()
        )}
     else
       # Find all descendants and unsubscribe from each
@@ -2406,6 +2422,13 @@ defmodule LoomkinWeb.WorkspaceLive do
       Enum.each(all_to_remove, fn tid ->
         Phoenix.PubSub.unsubscribe(Loomkin.PubSub, Topics.team_pubsub(tid))
       end)
+
+      # Remove dissolved teams from broadcaster filter set
+      if broadcaster = socket.assigns[:broadcaster] do
+        Enum.each(all_to_remove, fn tid ->
+          TeamBroadcaster.remove_team(broadcaster, tid)
+        end)
+      end
 
       updated_tree =
         Enum.reduce(all_to_remove, socket.assigns.team_tree, &remove_from_tree(&2, &1))
@@ -3107,10 +3130,21 @@ defmodule LoomkinWeb.WorkspaceLive do
   # Dispatches a signal inline, returning the updated socket.
   # Used by team_broadcast handlers to avoid extra mailbox hops.
   defp dispatch_signal(%Jido.Signal{} = sig, socket) do
-    case handle_info(sig, socket) do
-      {:noreply, socket} -> socket
-      _ -> socket
-    end
+    socket =
+      case handle_info(sig, socket) do
+        {:noreply, socket} -> socket
+        _ -> socket
+      end
+
+    # Append to debug signal log (capped at 50)
+    entry = %{
+      type: sig.type,
+      at: System.system_time(:millisecond),
+      agent: get_in(sig.data, [:agent_name]) || get_in(sig.data, [:name]) || "system"
+    }
+
+    debug_signals = Enum.take([entry | socket.assigns.debug_signals], 50)
+    assign(socket, :debug_signals, debug_signals)
   end
 
   # --- Render ---
@@ -3478,6 +3512,35 @@ defmodule LoomkinWeb.WorkspaceLive do
         file_content={@file_content}
         diffs={@diffs}
       />
+
+      <%!-- Debug signal log overlay --%>
+      <div
+        :if={@debug_panel_open}
+        id="debug-signal-overlay"
+        class="fixed bottom-0 left-0 right-0 z-[100] max-h-[40vh] overflow-y-auto bg-zinc-950/95 border-t border-zinc-700 backdrop-blur-sm font-mono text-[11px]"
+      >
+        <div class="sticky top-0 flex items-center justify-between px-3 py-1.5 bg-zinc-900/90 border-b border-zinc-800">
+          <span class="text-zinc-400 font-semibold uppercase tracking-wider text-[10px]">
+            Signal Log
+          </span>
+          <button phx-click="toggle_debug_panel" class="text-zinc-500 hover:text-zinc-300 text-xs">
+            Close
+          </button>
+        </div>
+        <div class="px-3 py-1">
+          <div
+            :for={sig <- @debug_signals}
+            class="flex items-center gap-3 py-0.5 border-b border-zinc-800/50"
+          >
+            <span class="text-zinc-600 tabular-nums flex-shrink-0">{format_debug_ts(sig.at)}</span>
+            <span class={debug_signal_color(sig.type)}>{sig.type}</span>
+            <span class="text-zinc-500 truncate">{sig.agent}</span>
+          </div>
+          <div :if={@debug_signals == []} class="py-4 text-center text-zinc-600">
+            No signals captured yet
+          </div>
+        </div>
+      </div>
     </div>
     """
   end
@@ -5171,4 +5234,41 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   defp maybe_insert_synthesis_comms_event(socket, _agent_name, _status, _metadata), do: socket
+
+  defp format_debug_ts(ms) when is_integer(ms) do
+    dt = DateTime.from_unix!(ms, :millisecond)
+    Calendar.strftime(dt, "%H:%M:%S.") <> String.pad_leading(to_string(rem(ms, 1000)), 3, "0")
+  end
+
+  defp format_debug_ts(_), do: "--:--:--"
+
+  defp debug_signal_color(type) when is_binary(type) do
+    cond do
+      String.contains?(type, "error") or String.contains?(type, "crash") ->
+        "text-red-400"
+
+      String.contains?(type, "approval") or String.contains?(type, "permission") ->
+        "text-violet-400"
+
+      String.contains?(type, "ask_user") ->
+        "text-amber-400"
+
+      String.contains?(type, "spawn") ->
+        "text-cyan-400"
+
+      String.contains?(type, "status") ->
+        "text-green-400"
+
+      String.contains?(type, "stream") ->
+        "text-blue-400"
+
+      String.contains?(type, "tool") ->
+        "text-pink-400"
+
+      true ->
+        "text-zinc-400"
+    end
+  end
+
+  defp debug_signal_color(_), do: "text-zinc-400"
 end

@@ -120,6 +120,7 @@ defmodule LoomkinWeb.AgentCardComponent do
           else: "min-h-[140px] cursor-pointer kin-card-idle rounded-lg"
         ),
         card_state_class(@card.content_type, @card.status),
+        !@focused && status_ring_class(@card.status),
         @card[:new] && "agent-card-enter",
         @card[:terminated] && "agent-card-terminated"
       ]}
@@ -158,6 +159,12 @@ defmodule LoomkinWeb.AgentCardComponent do
                 aria-hidden="true"
               />
               <span class="sr-only">{status_label(@card.status)}</span>
+              <span class={[
+                "text-[9px] font-medium px-1.5 py-0.5 rounded-full",
+                status_pill_class(@card.status)
+              ]}>
+                {status_label(@card.status)}
+              </span>
               <span
                 class="text-[13px] font-semibold truncate tracking-tight"
                 style={"color: #{@agent_color};"}
@@ -772,6 +779,31 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_label(:recovering), do: "Recovering"
   defp status_label(:permanently_failed), do: "Failed (max restarts)"
   defp status_label(_), do: "Unknown"
+
+  defp status_pill_class(:working), do: "bg-green-500/20 text-green-400"
+  defp status_pill_class(:idle), do: "bg-zinc-500/20 text-zinc-400"
+  defp status_pill_class(:paused), do: "bg-blue-500/20 text-blue-400"
+  defp status_pill_class(:error), do: "bg-red-500/20 text-red-400"
+  defp status_pill_class(:crashed), do: "bg-red-500/20 text-red-400"
+  defp status_pill_class(:approval_pending), do: "bg-amber-500/20 text-amber-400"
+  defp status_pill_class(:ask_user_pending), do: "bg-amber-500/20 text-amber-400"
+  defp status_pill_class(:awaiting_synthesis), do: "bg-indigo-500/20 text-indigo-400"
+  defp status_pill_class(:waiting_permission), do: "bg-yellow-500/20 text-yellow-400"
+  defp status_pill_class(:recovering), do: "bg-amber-500/20 text-amber-400"
+  defp status_pill_class(:permanently_failed), do: "bg-red-500/20 text-red-400"
+  defp status_pill_class(:complete), do: "bg-emerald-500/20 text-emerald-400"
+  defp status_pill_class(_), do: "bg-zinc-500/20 text-zinc-400"
+
+  defp status_ring_class(:working), do: "ring-1 ring-green-500/40"
+  defp status_ring_class(:error), do: "ring-2 ring-red-500 animate-pulse"
+  defp status_ring_class(:crashed), do: "ring-2 ring-red-500 animate-pulse"
+  defp status_ring_class(:ask_user_pending), do: "ring-2 ring-amber-400 animate-pulse"
+  defp status_ring_class(:approval_pending), do: "ring-2 ring-violet-500/50 animate-pulse"
+  defp status_ring_class(:waiting_permission), do: "ring-1 ring-yellow-500/50"
+  defp status_ring_class(:awaiting_synthesis), do: "ring-1 ring-indigo-400/40"
+  defp status_ring_class(:paused), do: "ring-1 ring-blue-500/30"
+  defp status_ring_class(:permanently_failed), do: "ring-2 ring-red-600 animate-pulse"
+  defp status_ring_class(_), do: nil
 
   # --- Stuck warning helpers ---
 

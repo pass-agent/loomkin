@@ -227,7 +227,25 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
       refute_receive {:team_broadcast, _}, 100
     end
 
-    test "signals with nil team_id are passed through" do
+    test "critical signals with nil team_id are broadcast to all subscribers" do
+      broadcaster = start_broadcaster(team_ids: [@team_id])
+      TeamBroadcaster.subscribe(broadcaster, self())
+
+      signal = %Jido.Signal{
+        id: Jido.Signal.ID.generate(),
+        type: "agent.error",
+        source: "/test",
+        data: %{content: "system error"},
+        datacontenttype: "application/json",
+        specversion: "1.0.1"
+      }
+
+      Signals.publish(signal)
+
+      assert_receive {:team_broadcast, %{critical: [_]}}, 200
+    end
+
+    test "non-critical signals with nil team_id are dropped" do
       broadcaster = start_broadcaster(team_ids: [@team_id])
       TeamBroadcaster.subscribe(broadcaster, self())
 
@@ -242,7 +260,7 @@ defmodule Loomkin.Teams.TeamBroadcasterTest do
 
       Signals.publish(signal)
 
-      assert_receive {:team_broadcast, _}, 200
+      refute_receive {:team_broadcast, _}, 100
     end
   end
 

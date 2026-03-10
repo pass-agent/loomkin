@@ -25,6 +25,8 @@ defmodule Loomkin.Teams.TeamBroadcaster do
 
   use GenServer
 
+  require Logger
+
   alias Loomkin.Signals
   alias Loomkin.Teams.Topics
 
@@ -77,6 +79,11 @@ defmodule Loomkin.Teams.TeamBroadcaster do
     GenServer.call(broadcaster, {:add_team, team_id})
   end
 
+  @doc "Remove a team_id from the filter set."
+  def remove_team(broadcaster, team_id) do
+    GenServer.call(broadcaster, {:remove_team, team_id})
+  end
+
   # -- GenServer callbacks --
 
   @impl true
@@ -117,23 +124,46 @@ defmodule Loomkin.Teams.TeamBroadcaster do
     {:reply, :ok, %{state | team_ids: MapSet.put(state.team_ids, team_id)}}
   end
 
+  def handle_call({:remove_team, team_id}, _from, state) do
+    {:reply, :ok, %{state | team_ids: MapSet.delete(state.team_ids, team_id)}}
+  end
+
   @impl true
   def handle_info({:signal, %Jido.Signal{} = signal}, state) do
     team_id = extract_team_id(signal)
 
-    if team_id == nil or MapSet.member?(state.team_ids, team_id) do
-      if critical?(signal) do
+    cond do
+      team_id != nil and MapSet.member?(state.team_ids, team_id) ->
+        if critical?(signal) do
+          broadcast_immediate(state.subscribers, signal)
+          {:noreply, state}
+        else
+          category = classify_category(signal)
+          buffer = Map.update!(state.buffer, category, &[signal | &1])
+          state = %{state | buffer: buffer}
+          state = ensure_flush_timer(state)
+          {:noreply, state}
+        end
+
+      team_id == nil and critical?(signal) ->
+        # System-level critical signals with no team_id — broadcast to all subscribers
+        Logger.warning(
+          "[TeamBroadcaster] broadcasting critical signal with nil team_id: #{signal.type}"
+        )
+
         broadcast_immediate(state.subscribers, signal)
         {:noreply, state}
-      else
-        category = classify_category(signal)
-        buffer = Map.update!(state.buffer, category, &[signal | &1])
-        state = %{state | buffer: buffer}
-        state = ensure_flush_timer(state)
+
+      team_id == nil ->
+        Logger.debug(
+          "[TeamBroadcaster] dropping non-critical signal with nil team_id: #{signal.type}"
+        )
+
         {:noreply, state}
-      end
-    else
-      {:noreply, state}
+
+      true ->
+        # team_id present but not in our set — ignore
+        {:noreply, state}
     end
   end
 

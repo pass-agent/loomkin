@@ -2458,6 +2458,9 @@ defmodule Loomkin.Teams.Agent do
               question_id = Ecto.UUID.generate()
               tool_task_pid = self()
 
+              # Register in the tool task process so answers route here (self() = task pid)
+              Registry.register(Loomkin.Teams.AgentRegistry, {:ask_user, question_id}, self())
+
               GenServer.cast(
                 agent_pid,
                 {:append_ask_user_question, tool_args, card_id, question_id, tool_task_pid}
@@ -2586,8 +2589,6 @@ defmodule Loomkin.Teams.Agent do
 
         # Exit awaiting_synthesis; agent returns to :working
         GenServer.cast(agent_pid, :exit_awaiting_synthesis)
-
-        # Registry auto-unregisters when process terminates; no explicit call needed
 
         summary =
           findings
