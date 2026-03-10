@@ -1,7 +1,7 @@
 pre-commit:
   commands:
     format:
-      run: mix format --check-formatted
+      run: mise exec -- mix format --check-formatted
       fail_text: "Run `mix format` to fix formatting"
 
 commit-msg:
