@@ -313,6 +313,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         activity_event_count: length(history_events)
       )
 
+    require Logger
+    Logger.metadata(team: active_team_id, view: :workspace)
+
     assign(socket,
       session_id: session_id,
       project_path: project_path,
@@ -2543,14 +2546,14 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
-  def handle_info({:node_added, _node}, socket) do
+  def handle_info({:node_added, _node} = event, socket) do
     refresh_decision_graphs(socket)
-    {:noreply, socket}
+    {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
-  def handle_info({:pivot_created, _result}, socket) do
+  def handle_info({:pivot_created, _result} = event, socket) do
     refresh_decision_graphs(socket)
-    {:noreply, socket}
+    {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
   def handle_info({:context_update, _from_agent, _payload} = event, socket) do
@@ -4180,6 +4183,47 @@ defmodule LoomkinWeb.WorkspaceLive do
       metadata: %{}
     }
   end
+
+  defp activity_event_from({:node_added, data}) when is_map(data) do
+    node = data[:node]
+    agent = if node, do: node.agent_name || "system", else: "system"
+    title = if node, do: node.title, else: "node"
+    node_type = if node, do: node.node_type, else: :unknown
+
+    %{
+      id: Ecto.UUID.generate(),
+      type: :decision,
+      agent: agent,
+      content: "Added #{node_type}: #{title}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{}
+    }
+  end
+
+  defp activity_event_from({:node_added, _}), do: nil
+
+  defp activity_event_from({:pivot_created, data}) when is_map(data) do
+    result = data[:result]
+
+    agent =
+      if result, do: (result.decision && result.decision.agent_name) || "system", else: "system"
+
+    old_title = if result && result.old_node, do: result.old_node.title, else: "approach"
+    new_title = if result && result.decision, do: result.decision.title, else: "new approach"
+
+    %{
+      id: Ecto.UUID.generate(),
+      type: :decision,
+      agent: agent,
+      content: "Pivoted from #{old_title} to #{new_title}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{}
+    }
+  end
+
+  defp activity_event_from({:pivot_created, _}), do: nil
 
   defp activity_event_from({:context_update, agent, payload}) do
     content =

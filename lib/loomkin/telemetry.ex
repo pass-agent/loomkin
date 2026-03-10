@@ -3,67 +3,50 @@ defmodule Loomkin.Telemetry do
   Telemetry event definitions and emission helpers for Loomkin.
 
   Events:
-  - `[:loomkin, :llm, :request, :start]` / `[:loomkin, :llm, :request, :stop]`
-  - `[:loomkin, :tool, :execute, :start]` / `[:loomkin, :tool, :execute, :stop]`
+  - `[:loomkin, :llm, :request, :start]` / `[:loomkin, :llm, :request, :stop]` / `[:loomkin, :llm, :request, :exception]`
+  - `[:loomkin, :tool, :execute, :start]` / `[:loomkin, :tool, :execute, :stop]` / `[:loomkin, :tool, :execute, :exception]`
   - `[:loomkin, :session, :message]`
   - `[:loomkin, :decision, :logged]`
+  - `[:loomkin, :agent, :lifecycle]`
+  - `[:loomkin, :team, :spawn]`
   """
 
-  @doc "Wraps an LLM request, emitting start/stop telemetry events."
+  @doc """
+  Wraps an LLM request, emitting start/stop/exception telemetry events.
+
+  Uses `:telemetry.span/3` for automatic duration tracking and exception handling.
+  """
   def span_llm_request(metadata, fun) do
-    start_time = System.monotonic_time()
+    :telemetry.span([:loomkin, :llm, :request], metadata, fn ->
+      result = fun.()
 
-    :telemetry.execute(
-      [:loomkin, :llm, :request, :start],
-      %{system_time: System.system_time()},
-      metadata
-    )
+      stop_meta =
+        case result do
+          {:ok, response} ->
+            usage = extract_usage(response)
+            Map.merge(metadata, usage)
 
-    result = fun.()
+          {:error, _reason} ->
+            Map.put(metadata, :error, true)
+        end
 
-    duration = System.monotonic_time() - start_time
-
-    stop_meta =
-      case result do
-        {:ok, response} ->
-          usage = extract_usage(response)
-          Map.merge(metadata, usage)
-
-        {:error, _reason} ->
-          Map.put(metadata, :error, true)
-      end
-
-    :telemetry.execute(
-      [:loomkin, :llm, :request, :stop],
-      %{duration: duration},
-      stop_meta
-    )
-
-    result
+      {result, stop_meta}
+    end)
   end
 
-  @doc "Wraps a tool execution, emitting start/stop telemetry events."
+  @doc """
+  Wraps a tool execution, emitting start/stop/exception telemetry events.
+
+  Uses `:telemetry.span/3` for automatic duration tracking and exception handling.
+  """
   def span_tool_execute(metadata, fun) do
-    start_time = System.monotonic_time()
+    :telemetry.span([:loomkin, :tool, :execute], metadata, fn ->
+      result = fun.()
+      success = match?({:ok, _}, result) or is_binary(result)
+      stop_meta = Map.merge(metadata, %{success: success})
 
-    :telemetry.execute(
-      [:loomkin, :tool, :execute, :start],
-      %{system_time: System.system_time()},
-      metadata
-    )
-
-    result = fun.()
-
-    duration = System.monotonic_time() - start_time
-    success = match?({:ok, _}, result) or is_binary(result)
-
-    :telemetry.execute(
-      [:loomkin, :tool, :execute, :stop],
-      %{duration: duration},
-      Map.merge(metadata, %{success: success})
-    )
-
-    result
+      {result, stop_meta}
+    end)
   end
 
   @doc "Emits a session message telemetry event."
@@ -79,6 +62,24 @@ defmodule Loomkin.Telemetry do
   def emit_decision_logged(metadata) do
     :telemetry.execute(
       [:loomkin, :decision, :logged],
+      %{system_time: System.system_time()},
+      metadata
+    )
+  end
+
+  @doc "Emits an agent lifecycle telemetry event."
+  def emit_agent_lifecycle(event, metadata) when event in [:init, :terminate, :state_change] do
+    :telemetry.execute(
+      [:loomkin, :agent, :lifecycle],
+      %{system_time: System.system_time()},
+      Map.put(metadata, :event, event)
+    )
+  end
+
+  @doc "Emits a team spawn telemetry event."
+  def emit_team_spawn(metadata) do
+    :telemetry.execute(
+      [:loomkin, :team, :spawn],
       %{system_time: System.system_time()},
       metadata
     )

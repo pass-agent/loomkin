@@ -13,6 +13,8 @@ defmodule Loomkin.AgentLoop do
   alias Loomkin.Teams.ContextOffload
   alias Loomkin.Telemetry, as: LoomkinTelemetry
 
+  require Logger
+
   @max_rate_limit_retries 3
   @max_iterations 25
 
@@ -72,6 +74,12 @@ defmodule Loomkin.AgentLoop do
       do_loop(messages, config, 0)
     catch
       {:budget_exceeded, scope} ->
+        emit(config, :budget_exceeded, %{
+          scope: scope,
+          agent_name: config.agent_name,
+          team_id: config.team_id
+        })
+
         error_msg = "Budget exceeded (#{scope}). Stopping agent loop."
         {:error, error_msg, messages}
 
@@ -213,7 +221,6 @@ defmodule Loomkin.AgentLoop do
         handle_classified(classified, response, messages, config, iteration)
 
       {:error, reason} ->
-        require Logger
         Logger.error("[Kin:llm] call failed model=#{config.model} reason=#{inspect(reason)}")
         {:error, reason, messages}
     end
@@ -398,6 +405,7 @@ defmodule Loomkin.AgentLoop do
 
             case HookRunner.run_pre_hooks(pre_hooks, tool_name, tool_args) do
               :deny ->
+                Logger.warning("[Kin:hook] pre-hook denied tool=#{tool_name}")
                 result_text = "Error: Tool '#{tool_name}' blocked by pre-tool hook"
 
                 messages =
@@ -406,6 +414,10 @@ defmodule Loomkin.AgentLoop do
                 {:ok, messages}
 
               {:ask, reason} ->
+                Logger.info(
+                  "[Kin:hook] pre-hook asked confirmation tool=#{tool_name} reason=#{reason}"
+                )
+
                 result_text = "Tool '#{tool_name}' requires confirmation: #{reason}"
 
                 messages =
@@ -503,7 +515,9 @@ defmodule Loomkin.AgentLoop do
         try do
           Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
         rescue
-          e -> {:error, Exception.message(e)}
+          e ->
+            Logger.error("[Kin:tool] #{tool_meta.tool_name} raised: #{Exception.message(e)}")
+            {:error, Exception.message(e)}
         end
       end)
 

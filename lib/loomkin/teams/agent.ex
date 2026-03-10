@@ -201,6 +201,7 @@ defmodule Loomkin.Teams.Agent do
     kin_agents = Keyword.get(opts, :kin_agents, [])
 
     Logger.info("[Kin:agent] init name=#{name} role=#{role} team=#{team_id}")
+    Logger.metadata(agent: name, role: role, team: team_id)
 
     case Role.get(role, kin_agents: kin_agents) do
       {:ok, role_config} ->
@@ -307,6 +308,8 @@ defmodule Loomkin.Teams.Agent do
         run_loop_with_escalation(messages, loop_opts, snapshot)
       end)
 
+    Logger.debug("[Kin:loop] spawned agent=#{state.name} ref=#{inspect(task.ref)}")
+
     {:noreply, %{state | loop_task: {task, nil}, messages: messages}}
   end
 
@@ -352,6 +355,8 @@ defmodule Loomkin.Teams.Agent do
       Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
         run_loop_with_escalation(messages, loop_opts, snapshot)
       end)
+
+    Logger.debug("[Kin:loop] spawned agent=#{state.name} ref=#{inspect(task.ref)}")
 
     {:noreply, %{state | loop_task: {task, from}}}
   end
@@ -716,6 +721,8 @@ defmodule Loomkin.Teams.Agent do
       Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
         run_loop_with_escalation(messages, loop_opts, snapshot)
       end)
+
+    Logger.debug("[Kin:loop] spawned agent=#{state.name} ref=#{inspect(task.ref)}")
 
     {:reply, :ok, %{state | loop_task: {task, nil}}}
   end
@@ -1415,27 +1422,50 @@ defmodule Loomkin.Teams.Agent do
     {:noreply, state}
   end
 
+  # UI streaming signals — agents don't need these
   def handle_info(%Jido.Signal{type: "agent.stream." <> _}, state) do
     {:noreply, state}
   end
 
-  def handle_info(%Jido.Signal{type: "agent.tool." <> _}, state) do
+  # Tool lifecycle signals — log starts and errors for visibility
+  def handle_info(%Jido.Signal{type: "agent.tool." <> action} = sig, state) do
+    if action in ["start", "error"] do
+      agent = sig.data[:agent_name] || "unknown"
+      tool = sig.data[:tool_name] || "unknown"
+      Logger.debug("[Kin:signal] tool.#{action} agent=#{agent} tool=#{tool}")
+    end
+
     {:noreply, state}
   end
 
+  # Usage signals — already tracked via telemetry
   def handle_info(%Jido.Signal{type: "agent.usage"}, state) do
     {:noreply, state}
   end
 
+  # Queue bookkeeping — internal only
   def handle_info(%Jido.Signal{type: "agent.queue.updated"}, state) do
     {:noreply, state}
   end
 
-  def handle_info(%Jido.Signal{type: "agent.error"}, state) do
+  # Agent errors — log at warning level for visibility
+  def handle_info(%Jido.Signal{type: "agent.error"} = sig, state) do
+    agent = sig.data[:agent_name] || "unknown"
+    reason = sig.data[:reason] || sig.data[:error] || "unknown"
+
+    Logger.warning(
+      "[Kin:signal] agent.error agent=#{agent} reason=#{inspect(reason, limit: 200)}"
+    )
+
     {:noreply, state}
   end
 
-  def handle_info(%Jido.Signal{type: "agent.escalation"}, state) do
+  # Escalation signals — log model transitions
+  def handle_info(%Jido.Signal{type: "agent.escalation"} = sig, state) do
+    agent = sig.data[:agent_name] || "unknown"
+    from_model = sig.data[:from_model] || "unknown"
+    to_model = sig.data[:to_model] || "unknown"
+    Logger.info("[Kin:signal] escalation agent=#{agent} #{from_model} -> #{to_model}")
     {:noreply, state}
   end
 
@@ -1531,6 +1561,8 @@ defmodule Loomkin.Teams.Agent do
         Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
           run_loop_with_escalation(messages, loop_opts, snapshot)
         end)
+
+      Logger.debug("[Kin:loop] spawned agent=#{state.name} ref=#{inspect(async_task.ref)}")
 
       {:noreply, %{state | loop_task: {async_task, nil}}}
     end
@@ -2155,6 +2187,12 @@ defmodule Loomkin.Teams.Agent do
 
   defp drain_queues(state) do
     had_messages? = state.priority_queue != [] or state.pending_updates != []
+
+    if had_messages? do
+      Logger.debug(
+        "[Kin:queue] draining agent=#{state.name} priority=#{length(state.priority_queue)} normal=#{length(state.pending_updates)}"
+      )
+    end
 
     Enum.each(state.priority_queue, fn qm -> send(self(), QueuedMessage.to_dispatchable(qm)) end)
 
