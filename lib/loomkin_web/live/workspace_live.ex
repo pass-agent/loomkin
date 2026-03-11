@@ -106,9 +106,14 @@ defmodule LoomkinWeb.WorkspaceLive do
           stored_sessions = get_connect_params(socket)["stored_sessions"] || %{}
           stored_id = stored_sessions[project_path]
 
+          stored_session =
+            if stored_id,
+              do: Loomkin.Session.Persistence.get_session(stored_id),
+              else: nil
+
           cond do
-            stored_id && Loomkin.Session.Persistence.get_session(stored_id) ->
-              {:ok, push_navigate(socket, to: ~p"/sessions/#{stored_id}")}
+            stored_session && stored_session.status == :active ->
+              {:ok, push_navigate(socket, to: ~p"/sessions/#{stored_session.id}")}
 
             latest = Loomkin.Session.Persistence.find_latest_active_session(project_path) ->
               {:ok, push_navigate(socket, to: ~p"/sessions/#{latest.id}")}
@@ -124,7 +129,16 @@ defmodule LoomkinWeb.WorkspaceLive do
 
       :show ->
         session_id = params["session_id"]
-        {:ok, start_and_subscribe(socket, session_id)}
+
+        # Read the DB-stored project_path so resumed sessions use the correct
+        # path instead of falling back to File.cwd!()
+        db_project_path =
+          case Loomkin.Session.Persistence.get_session(session_id) do
+            %{project_path: path} when is_binary(path) -> path
+            _ -> nil
+          end
+
+        {:ok, start_and_subscribe(socket, session_id, db_project_path)}
     end
   end
 
@@ -140,7 +154,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     :ok
   end
 
-  defp start_and_subscribe(socket, session_id, project_path \\ nil) do
+  defp start_and_subscribe(socket, session_id, project_path) do
     # Initialize trust policy ETS table for this session (idempotent)
     Loomkin.Permissions.TrustPolicy.init(session_id)
 

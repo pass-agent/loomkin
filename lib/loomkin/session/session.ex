@@ -216,10 +216,22 @@ defmodule Loomkin.Session do
   def handle_continue(:rebuild_team, state) do
     Logger.info("[Kin:session] auto-rebuilding team session=#{state.id} team=#{state.team_id}")
 
-    # Check if team is still alive — if not, the backing team will be
-    # recreated when the LiveView calls Manager.start_session.
-    # Either way, re-spawn bootstrap agents so multi-agent state survives reloads.
-    state = maybe_spawn_bootstrap_agents(%{state | bootstrap_spawned: false})
+    # Re-spawn bootstrap agents so multi-agent state survives reloads.
+    # If the team process is dead (full restart), spawn_agent will fail gracefully —
+    # the backing team will be recreated when the LiveView calls Manager.start_session,
+    # which will send {:team_created, team_id} and trigger bootstrap on next message.
+    state =
+      try do
+        maybe_spawn_bootstrap_agents(%{state | bootstrap_spawned: false})
+      rescue
+        e ->
+          Logger.warning(
+            "[Kin:session] team rebuild failed session=#{state.id} error=#{inspect(e)}"
+          )
+
+          state
+      end
+
     {:noreply, state}
   end
 
