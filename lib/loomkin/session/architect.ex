@@ -44,15 +44,13 @@ defmodule Loomkin.Session.Architect do
 
     # Fast-path: skip planning for trivial messages (greetings, thanks, etc.)
     if trivial_message?(user_text) do
-      # Save user message to conversation
-      {:ok, _} =
-        Persistence.save_message(%{session_id: state.id, role: :user, content: user_text})
-
+      # Add user message to in-memory state and broadcast for UI,
+      # but defer DB save until response is ready (atomic exchange).
       user_msg = %{role: :user, content: user_text}
       state = %{state | messages: state.messages ++ [user_msg]}
       broadcast(state.id, {:new_message, state.id, user_msg})
 
-      conversational_fallback(user_text, state, architect_model)
+      conversational_fallback(user_text, state, architect_model, defer_user_save: true)
     else
       run_planning(user_text, state, architect_model, editor_model, opts)
     end
@@ -332,8 +330,9 @@ defmodule Loomkin.Session.Architect do
     end
   end
 
-  defp conversational_fallback(_user_text, state, model) do
+  defp conversational_fallback(user_text, state, model, opts \\ []) do
     {provider, model_id} = parse_model(model)
+    defer_user_save = Keyword.get(opts, :defer_user_save, false)
 
     system_prompt = """
     You are Loomkin, an AI coding assistant. Respond helpfully to the user's request.
@@ -371,8 +370,13 @@ defmodule Loomkin.Session.Architect do
       {:ok, response} ->
         text = extract_text(response)
 
-        {:ok, _} =
-          Persistence.save_message(%{session_id: state.id, role: :assistant, content: text})
+        # When user save was deferred, save both atomically to prevent orphans
+        if defer_user_save do
+          {:ok, _} = Persistence.save_exchange(state.id, user_text, text)
+        else
+          {:ok, _} =
+            Persistence.save_message(%{session_id: state.id, role: :assistant, content: text})
+        end
 
         assistant_msg = %{role: :assistant, content: text, from: "Architect"}
         state = %{state | messages: state.messages ++ [assistant_msg]}

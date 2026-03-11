@@ -229,6 +229,21 @@ defmodule Loomkin.Session do
             "[Kin:session] team rebuild failed session=#{state.id} error=#{inspect(e)}"
           )
 
+          # Delay so the LiveView has time to subscribe after mount
+          session_id = state.id
+
+          Task.start(fn ->
+            Process.sleep(500)
+
+            signal =
+              Loomkin.Signals.Session.LlmError.new!(%{
+                session_id: session_id,
+                error: "Team agents couldn't auto-recover. Send a message to re-initialize."
+              })
+
+            Loomkin.Signals.publish(signal)
+          end)
+
           state
       end
 

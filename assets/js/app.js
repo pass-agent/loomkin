@@ -692,6 +692,34 @@ Hooks.SortableQueue = {
   }
 }
 
+// WorkspaceState: saves UI layout state to localStorage via data attributes.
+// On updated(), reads current state from data-* attrs and persists.
+// On mounted(), restores saved state by pushing to server.
+Hooks.WorkspaceState = {
+  mounted() {
+    const sessionId = this.el.dataset.sessionId
+    if (!sessionId) return
+
+    const saved = JSON.parse(localStorage.getItem(`loomkin_ui:${sessionId}`) || "null")
+    if (saved) {
+      this.pushEvent("restore_ui_state", saved)
+    }
+  },
+  updated() {
+    const d = this.el.dataset
+    if (!d.sessionId) return
+
+    const state = {
+      mode: d.mode,
+      active_tab: d.activeTab,
+      focused_agent: d.focusedAgent || null,
+      inspector_mode: d.inspectorMode,
+      collapsed_inspector: d.collapsedInspector === "true"
+    }
+    localStorage.setItem(`loomkin_ui:${d.sessionId}`, JSON.stringify(state))
+  }
+}
+
 // SessionMemory: persists the active session per project to localStorage
 // so code reloads snap back to the right session instead of the first one.
 Hooks.SessionMemory = {

@@ -755,6 +755,18 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, assign(socket, mode: new_mode)}
   end
 
+  def handle_event("restore_ui_state", params, socket) do
+    socket =
+      socket
+      |> restore_assign(:mode, params["mode"], ~w(solo mission_control))
+      |> restore_assign(:active_tab, params["active_tab"], @valid_tabs)
+      |> restore_assign(:inspector_mode, params["inspector_mode"], ~w(auto_follow pinned))
+      |> restore_assign_bool(:collapsed_inspector, params["collapsed_inspector"])
+      |> restore_assign_string(:focused_agent, params["focused_agent"])
+
+    {:noreply, socket}
+  end
+
   def handle_event("initiate_switch_project", _params, socket) do
     {:noreply,
      assign(socket,
@@ -3211,6 +3223,19 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def render(assigns) do
     ~H"""
+    <%!-- Workspace state: persists UI layout to localStorage so reloads don't reset --%>
+    <div
+      id="workspace-state"
+      phx-hook="WorkspaceState"
+      data-session-id={@session_id}
+      data-mode={@mode}
+      data-active-tab={@active_tab}
+      data-focused-agent={@focused_agent}
+      data-inspector-mode={@inspector_mode}
+      data-collapsed-inspector={to_string(@collapsed_inspector)}
+      class="hidden"
+    />
+
     <%!-- Session memory: persists active session to localStorage so reloads snap back --%>
     <div
       id="session-memory"
@@ -5473,4 +5498,28 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   defp debug_signal_color(_), do: "text-zinc-400"
+
+  # --- UI state restore helpers (used by restore_ui_state event) ---
+
+  defp restore_assign(socket, key, value, valid_values) when is_binary(value) do
+    if value in valid_values do
+      assign(socket, [{key, String.to_existing_atom(value)}])
+    else
+      socket
+    end
+  end
+
+  defp restore_assign(socket, _key, _value, _valid), do: socket
+
+  defp restore_assign_bool(socket, key, value) when is_boolean(value) do
+    assign(socket, [{key, value}])
+  end
+
+  defp restore_assign_bool(socket, _key, _value), do: socket
+
+  defp restore_assign_string(socket, key, value) when is_binary(value) and value != "" do
+    assign(socket, [{key, value}])
+  end
+
+  defp restore_assign_string(socket, _key, _value), do: socket
 end

@@ -69,6 +69,44 @@ defmodule Loomkin.Session.Persistence do
     end
   end
 
+  @doc """
+  Atomically save a user+assistant message pair in a single transaction.
+  Prevents orphaned messages if a crash occurs between saves.
+  """
+  @spec save_exchange(String.t(), String.t(), String.t()) ::
+          {:ok, %{user: Message.t(), assistant: Message.t()}} | {:error, term()}
+  def save_exchange(session_id, user_content, assistant_content) do
+    Repo.transaction(fn ->
+      {:ok, user_msg} =
+        %Message{}
+        |> Message.changeset(%{session_id: session_id, role: :user, content: user_content})
+        |> Repo.insert()
+
+      {:ok, assistant_msg} =
+        %Message{}
+        |> Message.changeset(%{
+          session_id: session_id,
+          role: :assistant,
+          content: assistant_content
+        })
+        |> Repo.insert()
+
+      Loomkin.Telemetry.emit_session_message(%{
+        session_id: session_id,
+        role: :user,
+        token_count: user_msg.token_count
+      })
+
+      Loomkin.Telemetry.emit_session_message(%{
+        session_id: session_id,
+        role: :assistant,
+        token_count: assistant_msg.token_count
+      })
+
+      %{user: user_msg, assistant: assistant_msg}
+    end)
+  end
+
   @spec load_messages(String.t()) :: [Message.t()]
   def load_messages(session_id) do
     Message
