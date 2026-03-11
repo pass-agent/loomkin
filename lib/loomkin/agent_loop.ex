@@ -521,7 +521,11 @@ defmodule Loomkin.AgentLoop do
           Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
         rescue
           e ->
-            Logger.error("[Kin:tool] #{tool_meta.tool_name} raised: #{Exception.message(e)}")
+            Logger.error(
+              "[Kin:tool] #{tool_meta.tool_name} raised: #{Exception.message(e)}\n" <>
+                Exception.format_stacktrace(__STACKTRACE__)
+            )
+
             {:error, Exception.message(e)}
         end
       end)
