@@ -14,7 +14,7 @@ defmodule Loomkin.Teams.PriorityRouter do
   """
 
   @urgent_types ~w(abort_task budget_exceeded file_conflict)a
-  @high_types ~w(task_assigned tasks_unblocked confidence_warning review_response plan_revision conflict_detected collective_decision_result vote_request task_milestone task_priority_changed task_ready_for_review task_blocked rendezvous_completed rendezvous_timed_out)a
+  @high_types ~w(task_assigned tasks_unblocked confidence_warning review_response plan_revision conflict_detected collective_decision_result vote_request task_milestone task_priority_changed task_ready_for_review task_blocked rendezvous_completed rendezvous_timed_out task_negotiation_offer negotiation_timeout)a
   @ignore_types ~w(agent_status role_changed role_change_request)a
 
   @doc """

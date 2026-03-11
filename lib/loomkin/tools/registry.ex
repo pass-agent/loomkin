@@ -33,7 +33,8 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.PeerResumeTask,
     Loomkin.Tools.PeerStartSpeculative,
     Loomkin.Tools.PeerConfirmTentative,
-    Loomkin.Tools.PeerDiscardTentative
+    Loomkin.Tools.PeerDiscardTentative,
+    Loomkin.Tools.PeerNegotiateTask
   ]
 
   @lead_tools [
