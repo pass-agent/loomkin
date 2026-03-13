@@ -1358,6 +1358,261 @@ defmodule LoomkinWeb.WorkspaceLive do
     {:noreply, socket}
   end
 
+  # --- Conversation signals ---
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.started"} = sig, socket) do
+    %{topic: topic, participants: participants} = sig.data
+    count = length(participants)
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_started,
+      agent: "system",
+      content: "Conversation started: #{topic} (#{count} participants)",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id],
+        topic: topic,
+        participants: participants,
+        strategy: sig.data[:strategy]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.round_started"} = sig, socket) do
+    %{round: round} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_round_started,
+      agent: "system",
+      content: "Round #{round} started",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.turn"} = sig, socket) do
+    %{speaker: speaker, content: content, round: round} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_turn,
+      agent: speaker,
+      content: "#{speaker}: #{content}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id],
+        round: round
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.reaction"} = sig, socket) do
+    %{agent_name: agent_name, reaction_type: reaction_type, brief: brief} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_reaction,
+      agent: agent_name,
+      content: "#{agent_name} reacted: #{reaction_type} — #{brief}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.yield"} = sig, socket) do
+    %{agent_name: agent_name} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_yield,
+      agent: agent_name,
+      content: "#{agent_name} yielded",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(
+        %Jido.Signal{type: "collaboration.conversation.round_complete"} = sig,
+        socket
+      ) do
+    %{round: round} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_round_complete,
+      agent: "system",
+      content: "Round #{round} complete",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.summarizing"} = sig, socket) do
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_summarizing,
+      agent: "system",
+      content: "Conversation transitioning to summarization",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.ended"} = sig, socket) do
+    %{reason: reason, rounds: rounds, tokens_used: tokens_used} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_ended,
+      agent: "system",
+      content: "Conversation ended: #{reason}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id],
+        reason: reason,
+        rounds: rounds,
+        tokens_used: tokens_used
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "collaboration.conversation.terminated"} = sig, socket) do
+    %{reason: reason} = sig.data
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_terminated,
+      agent: "system",
+      content: "Conversation force-terminated: #{reason}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(
+        %Jido.Signal{type: "collaboration.conversation.budget_warning"} = sig,
+        socket
+      ) do
+    %{tokens_used: tokens_used, max_tokens: max_tokens} = sig.data
+    pct = round(tokens_used / max_tokens * 100)
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :conversation_budget_warning,
+      agent: "system",
+      content: "Conversation approaching token limit: #{tokens_used}/#{max_tokens} (#{pct}%)",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        conversation_id: sig.data[:conversation_id],
+        team_id: sig.data[:team_id]
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
   def handle_info(%Jido.Signal{type: "context.offloaded"} = sig, socket) do
     %{agent_name: name, payload: payload} = sig.data
     handle_info({:context_offloaded, name, payload}, socket)

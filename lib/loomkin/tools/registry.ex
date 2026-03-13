@@ -34,7 +34,8 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.PeerStartSpeculative,
     Loomkin.Tools.PeerConfirmTentative,
     Loomkin.Tools.PeerDiscardTentative,
-    Loomkin.Tools.PeerNegotiateTask
+    Loomkin.Tools.PeerNegotiateTask,
+    Loomkin.Tools.SpawnConversation
   ]
 
   @lead_tools [
@@ -135,6 +136,7 @@ defmodule Loomkin.Tools.Registry do
     blocker_task_id assumed_output requeue
     session_id root_cause affected_files suggested_fix files_changed verified
     verification_output
+    personas max_rounds facilitator template
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

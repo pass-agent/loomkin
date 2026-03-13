@@ -62,6 +62,10 @@ defmodule Loomkin.Application do
         # MCP client connections (starts empty, reacts to :config_loaded)
         Loomkin.MCP.ClientSupervisor,
 
+        # Conversation agent orchestration
+        {Registry, keys: :unique, name: Loomkin.Conversations.Registry},
+        {DynamicSupervisor, name: Loomkin.Conversations.Supervisor, strategy: :one_for_one},
+
         # Channel adapters (Telegram, Discord)
         Loomkin.Channels.Supervisor,
 

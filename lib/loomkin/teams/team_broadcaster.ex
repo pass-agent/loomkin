@@ -49,7 +49,10 @@ defmodule Loomkin.Teams.TeamBroadcaster do
                     "agent.spawn.gate.requested",
                     "agent.spawn.gate.resolved",
                     "collaboration.vote.response",
-                    "collaboration.debate.response"
+                    "collaboration.debate.response",
+                    "collaboration.conversation.started",
+                    "collaboration.conversation.ended",
+                    "collaboration.conversation.terminated"
                   ])
 
   defstruct team_ids: MapSet.new(),

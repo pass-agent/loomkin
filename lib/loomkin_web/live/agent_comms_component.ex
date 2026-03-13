@@ -252,6 +252,66 @@ defmodule LoomkinWeb.AgentCommsComponent do
       accent_border: "rgba(239, 68, 68, 0.40)",
       accent_text: "#fca5a5",
       accent_bg: "rgba(239, 68, 68, 0.12)"
+    },
+    conversation_started: %{
+      icon: "💬",
+      accent_border: "rgba(139, 92, 246, 0.35)",
+      accent_text: "#a78bfa",
+      accent_bg: "rgba(139, 92, 246, 0.10)"
+    },
+    conversation_turn: %{
+      icon: "🗣",
+      accent_border: "rgba(148, 163, 184, 0.25)",
+      accent_text: "#cbd5e1",
+      accent_bg: "rgba(148, 163, 184, 0.06)"
+    },
+    conversation_reaction: %{
+      icon: "💡",
+      accent_border: "rgba(148, 163, 184, 0.20)",
+      accent_text: "#94a3b8",
+      accent_bg: "rgba(148, 163, 184, 0.05)"
+    },
+    conversation_yield: %{
+      icon: "⏭",
+      accent_border: "rgba(113, 113, 122, 0.25)",
+      accent_text: "#a1a1aa",
+      accent_bg: "rgba(113, 113, 122, 0.06)"
+    },
+    conversation_round_started: %{
+      icon: "🔄",
+      accent_border: "rgba(139, 92, 246, 0.25)",
+      accent_text: "#a78bfa",
+      accent_bg: "rgba(139, 92, 246, 0.08)"
+    },
+    conversation_round_complete: %{
+      icon: "✔",
+      accent_border: "rgba(139, 92, 246, 0.30)",
+      accent_text: "#a78bfa",
+      accent_bg: "rgba(139, 92, 246, 0.08)"
+    },
+    conversation_ended: %{
+      icon: "✔",
+      accent_border: "rgba(139, 92, 246, 0.40)",
+      accent_text: "#8b5cf6",
+      accent_bg: "rgba(139, 92, 246, 0.12)"
+    },
+    conversation_summarizing: %{
+      icon: "📝",
+      accent_border: "rgba(139, 92, 246, 0.30)",
+      accent_text: "#a78bfa",
+      accent_bg: "rgba(139, 92, 246, 0.08)"
+    },
+    conversation_terminated: %{
+      icon: "⛔",
+      accent_border: "rgba(239, 68, 68, 0.35)",
+      accent_text: "#fca5a5",
+      accent_bg: "rgba(239, 68, 68, 0.10)"
+    },
+    conversation_budget_warning: %{
+      icon: "⚠",
+      accent_border: "rgba(251, 146, 60, 0.35)",
+      accent_text: "#fdba74",
+      accent_bg: "rgba(251, 146, 60, 0.10)"
     }
   }
 
@@ -386,10 +446,16 @@ defmodule LoomkinWeb.AgentCommsComponent do
           metadata={@event.metadata}
           content={@event.content}
         />
+        <.conversation_summary_details
+          :if={@event.type == :conversation_ended}
+          metadata={@event.metadata}
+          content={@event.content}
+        />
         <span
           :if={
             (@event.type != :task_assigned || !@event.metadata[:task_type]) &&
-              (@event.type != :discovery || !@event.metadata[:relevance])
+              (@event.type != :discovery || !@event.metadata[:relevance]) &&
+              @event.type != :conversation_ended
           }
           class="whitespace-pre-wrap"
         >
@@ -463,6 +529,40 @@ defmodule LoomkinWeb.AgentCommsComponent do
         <span :for={{agent, score} <- @skipped} class="inline-flex items-center gap-0.5">
           <span class="font-medium text-zinc-500">{agent}</span>
           <span class="font-mono text-zinc-600">({format_score(score)})</span>
+        </span>
+      </div>
+    </div>
+    """
+  end
+
+  attr :metadata, :map, required: true
+  attr :content, :string, required: true
+
+  defp conversation_summary_details(assigns) do
+    ~H"""
+    <div class="space-y-1.5" data-testid="conversation-summary">
+      <span class="whitespace-pre-wrap">{@content}</span>
+      <div :if={@metadata[:reason]} class="flex items-center gap-2 mt-1">
+        <span class="text-zinc-500">Reason:</span>
+        <span class="text-violet-400">{@metadata[:reason]}</span>
+      </div>
+      <div class="flex items-center gap-3 mt-1">
+        <div :if={@metadata[:rounds]} class="flex items-center gap-1">
+          <span class="text-zinc-500">Rounds:</span>
+          <span class="font-mono text-violet-400">{@metadata[:rounds]}</span>
+        </div>
+        <div :if={@metadata[:tokens_used]} class="flex items-center gap-1">
+          <span class="text-zinc-500">Tokens:</span>
+          <span class="font-mono text-violet-400">{@metadata[:tokens_used]}</span>
+        </div>
+      </div>
+      <div :if={@metadata[:participants]} class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-1">
+        <span class="text-zinc-500">Participants:</span>
+        <span
+          :for={name <- @metadata[:participants]}
+          class="text-xs font-medium text-violet-300"
+        >
+          {name}
         </span>
       </div>
     </div>

@@ -185,7 +185,8 @@ defmodule Loomkin.Teams.Role do
     Loomkin.Tools.ContextRetrieve,
     Loomkin.Tools.SearchKeepers,
     Loomkin.Tools.ContextOffload,
-    Loomkin.Tools.AskUser
+    Loomkin.Tools.AskUser,
+    Loomkin.Tools.SpawnConversation
   ]
 
   @weaver_tools [
@@ -295,6 +296,31 @@ defmodule Loomkin.Teams.Role do
   - **When you find something relevant to a teammate**: Send it immediately via peer_message — don't wait until you're "done."
   - **Voice concerns proactively**: If something seems wrong, redundant, or already solved — say so before proceeding. Push back with reasoning rather than silently complying.
   - **Don't duplicate effort**: If a nearly identical utility, pattern, or finding already exists (in keepers, in the codebase, or from a teammate's discovery), reuse it. Flag the duplication to the team.
+  """
+
+  @conversation_guidance """
+
+  ## Conversation Agents
+
+  You can spawn lightweight conversation agents to deliberate on a topic before committing to an approach.
+  Use `spawn_conversation` when you need collaborative thinking — not artifacts.
+
+  **When to use:**
+  - Facing a design decision with multiple valid approaches — spawn a `design_review`
+  - Need creative ideas before starting work — spawn a `brainstorm`
+  - Want to stress-test a plan for weaknesses — spawn a `red_team`
+  - Want to simulate user reactions to a feature — spawn a `user_panel`
+
+  **How it works:**
+  - Conversations run asynchronously — you keep working while agents deliberate
+  - You receive a structured summary (consensus, disagreements, recommendations) when it completes
+  - Always provide rich `context` (code snippets, requirements, constraints) so participants can reason concretely
+  - Use built-in templates or define custom personas for domain-specific deliberation
+
+  **When NOT to use:**
+  - For simple, clear-cut decisions — just decide
+  - When you already have enough information to proceed
+  - For questions that can be answered by reading the code
   """
 
   @duplicate_prevention_prompt """
@@ -515,6 +541,9 @@ defmodule Loomkin.Teams.Role do
       - Prefer reversible approaches (new commits over amends, soft resets over hard)
       - Confirm with the user before actions visible to others (pushing code, creating PRs)
 
+      ## Conversation Deliberation
+      Before decomposing a complex task, consider spawning a `design_review` conversation to explore approaches. Include relevant code snippets, constraints, and requirements as context so the conversation agents can reason concretely.
+
       ## Research Protocol (First Message Only)
       When you receive the first message in a team session, before doing anything else:
       1. Identify 1–3 distinct research questions needed to answer the task well
@@ -586,6 +615,9 @@ defmodule Loomkin.Teams.Role do
       - Make minimal, focused edits — follow the project's existing code style and patterns
       - Run the compiler and tests after making changes to verify correctness
       - If a task is unclear, ask the lead for clarification rather than guessing
+
+      ## Conversation Deliberation
+      When facing a significant design decision mid-implementation, use `spawn_conversation` to deliberate before committing to an approach. Provide the code you're working on and the trade-offs you see as context.
 
       ## Avoid Over-Engineering
       - Only make changes that are directly requested or clearly necessary
@@ -688,6 +720,9 @@ defmodule Loomkin.Teams.Role do
       - Spawn specialist agents (researcher, coder, reviewer, tester) as needed
       - Synthesize results from specialists into coherent responses
       - Maintain conversational awareness across the session
+
+      ## Conversation Deliberation
+      For open-ended user requests, consider spawning a `brainstorm` conversation to explore possibilities before committing to an approach. For feature proposals, a `user_panel` can simulate user reactions. Always pass the user's request and any relevant codebase context as the `context` parameter.
 
       ## Context Awareness
       - Use decision_query (type: "pulse") to scan for active goals and coverage gaps
@@ -849,6 +884,7 @@ defmodule Loomkin.Teams.Role do
     base_prompt <>
       @shared_behavioral_guidance <>
       @duplicate_prevention_prompt <>
+      @conversation_guidance <>
       @peer_communication_prompt <>
       "\n### Peer Communication for Your Role\n" <>
       peer_guidance <>
