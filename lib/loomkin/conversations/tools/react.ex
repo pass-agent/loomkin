@@ -19,8 +19,6 @@ defmodule Loomkin.Conversations.Tools.React do
 
   alias Loomkin.Conversations.Server
 
-  @valid_types ~w[agree disagree question laugh think]
-
   @impl true
   def run(params, context) do
     conversation_id = param!(context, :conversation_id)
@@ -28,16 +26,23 @@ defmodule Loomkin.Conversations.Tools.React do
     type_str = param!(params, :type)
     brief = param!(params, :brief)
 
-    if type_str in @valid_types do
-      type = String.to_existing_atom(type_str)
+    case reaction_type(type_str) do
+      {:ok, type} ->
+        case Server.react(conversation_id, agent_name, type, brief) do
+          :ok -> {:ok, %{result: "Reacted with #{type_str}."}}
+          {:error, err} -> {:error, "Failed to react: #{inspect(err)}"}
+        end
 
-      case Server.react(conversation_id, agent_name, type, brief) do
-        :ok -> {:ok, %{result: "Reacted with #{type_str}."}}
-        {:error, reason} -> {:error, "Failed to react: #{inspect(reason)}"}
-      end
-    else
-      {:error,
-       "Invalid reaction type: #{type_str}. Must be one of: #{Enum.join(@valid_types, ", ")}"}
+      :error ->
+        {:error,
+         "Invalid reaction type: #{type_str}. Must be one of: agree, disagree, question, laugh, think"}
     end
   end
+
+  defp reaction_type("agree"), do: {:ok, :agree}
+  defp reaction_type("disagree"), do: {:ok, :disagree}
+  defp reaction_type("question"), do: {:ok, :question}
+  defp reaction_type("laugh"), do: {:ok, :laugh}
+  defp reaction_type("think"), do: {:ok, :think}
+  defp reaction_type(_), do: :error
 end

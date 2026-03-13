@@ -22,16 +22,6 @@ defmodule Loomkin.Conversations.IntegrationTest do
     # Subscribe before server starts so we don't miss the first turn notification
     Phoenix.PubSub.subscribe(Loomkin.PubSub, "conversation:#{conv_id}")
 
-    on_exit(fn ->
-      case Registry.lookup(Loomkin.Conversations.Registry, conv_id) do
-        [{pid, _}] ->
-          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
-
-        [] ->
-          :ok
-      end
-    end)
-
     %{conv_id: conv_id, team_id: team_id}
   end
 
@@ -41,23 +31,25 @@ defmodule Loomkin.Conversations.IntegrationTest do
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "conversation:#{ctx.conv_id}:summary")
 
       # Start conversation server with max 1 round
-      {:ok, _server} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Architecture decision",
-           participants: @participants,
-           max_rounds: 1}
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Architecture decision",
+         participants: @participants,
+         max_rounds: 1},
+        id: :lifecycle_server
+      )
 
       # Start the weaver
-      {:ok, weaver_pid} =
-        Weaver.start_link(
-          conversation_id: ctx.conv_id,
-          team_id: ctx.team_id,
-          model: "anthropic:claude-haiku-4-5-20251001",
-          spawned_by: "task-agent"
+      weaver_pid =
+        start_supervised!(
+          {Weaver,
+           conversation_id: ctx.conv_id,
+           team_id: ctx.team_id,
+           model: "anthropic:claude-haiku-4-5-20251001",
+           spawned_by: "task-agent"},
+          id: :lifecycle_weaver
         )
 
       weaver_ref = Process.monitor(weaver_pid)
@@ -89,24 +81,20 @@ defmodule Loomkin.Conversations.IntegrationTest do
       assert is_list(summary.open_questions)
       assert is_list(summary.recommended_actions)
 
-      # Server should be completed with summary attached
-      {:ok, state} = Server.get_state(ctx.conv_id)
-      assert state.status == :completed
-      assert state.summary != nil
-      assert state.summary.topic == "Architecture decision"
+      # Server stops after summary is attached — verify it's no longer active
+      assert {:error, :conversation_not_found} = Server.get_state(ctx.conv_id)
     end
 
     test "force terminate ends conversation and triggers summarization", ctx do
-      # Start conversation server
-      {:ok, _server} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Force terminate test",
-           participants: @participants,
-           max_rounds: 10}
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Force terminate test",
+         participants: @participants,
+         max_rounds: 10},
+        id: :force_term_server
+      )
 
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 
@@ -140,27 +128,25 @@ defmodule Loomkin.Conversations.IntegrationTest do
       ]
 
       # Start two conversations
-      {:ok, _server_1} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Topic A",
-           participants: @participants,
-           max_rounds: 2},
-          id: :conv_1
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Topic A",
+         participants: @participants,
+         max_rounds: 2},
+        id: :conv_1
+      )
 
-      {:ok, _server_2} =
-        start_supervised(
-          {Server,
-           id: conv_id_2,
-           team_id: team_id_2,
-           topic: "Topic B",
-           participants: participants_2,
-           max_rounds: 2},
-          id: :conv_2
-        )
+      start_supervised!(
+        {Server,
+         id: conv_id_2,
+         team_id: team_id_2,
+         topic: "Topic B",
+         participants: participants_2,
+         max_rounds: 2},
+        id: :conv_2
+      )
 
       # Verify both are independently active
       {:ok, ctx_1} = Server.get_context(ctx.conv_id)
@@ -188,25 +174,21 @@ defmodule Loomkin.Conversations.IntegrationTest do
 
       assert length(state_2.history) == 1
       assert hd(state_2.history).content == "Hello from Topic B"
-
-      # Clean up conversation 2
-      [{pid_2, _}] = Registry.lookup(Loomkin.Conversations.Registry, conv_id_2)
-      GenServer.stop(pid_2, :normal, 5_000)
     end
   end
 
   describe "budget tracking" do
     test "token usage accumulates correctly across agents", ctx do
-      {:ok, _server} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Budget test",
-           participants: @participants,
-           max_rounds: 5,
-           max_tokens: 1000}
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Budget test",
+         participants: @participants,
+         max_rounds: 5,
+         max_tokens: 1000},
+        id: :budget_server
+      )
 
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 
@@ -233,15 +215,15 @@ defmodule Loomkin.Conversations.IntegrationTest do
     end
 
     test "token estimation works for content without explicit tokens", ctx do
-      {:ok, _server} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Estimation test",
-           participants: @participants,
-           max_rounds: 5}
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Estimation test",
+         participants: @participants,
+         max_rounds: 5},
+        id: :estimation_server
+      )
 
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 

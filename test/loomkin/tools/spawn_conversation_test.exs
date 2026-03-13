@@ -1,5 +1,5 @@
 defmodule Loomkin.Tools.SpawnConversationTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Loomkin.Tools.SpawnConversation
 
@@ -14,6 +14,18 @@ defmodule Loomkin.Tools.SpawnConversationTest do
     agent_name: "test-agent",
     model: nil
   }
+
+  setup do
+    on_exit(fn ->
+      # Clean up any conversation processes started during tests
+      DynamicSupervisor.which_children(Loomkin.Conversations.Supervisor)
+      |> Enum.each(fn {_, pid, _, _} ->
+        DynamicSupervisor.terminate_child(Loomkin.Conversations.Supervisor, pid)
+      end)
+    end)
+
+    :ok
+  end
 
   describe "persona validation" do
     test "rejects fewer than 2 personas" do
@@ -212,6 +224,14 @@ defmodule Loomkin.Tools.SpawnConversationTest do
 
       assert {:ok, result} = SpawnConversation.run(params, @valid_context)
       assert result.result =~ "facilitator"
+    end
+
+    test "returns error when team_id is missing" do
+      params = %{topic: "Test", personas: @valid_personas}
+      context = %{session_id: "test", agent_name: "agent"}
+
+      assert {:error, msg} = SpawnConversation.run(params, context)
+      assert msg =~ "team_id is required"
     end
   end
 end

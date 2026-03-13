@@ -37,9 +37,6 @@ defmodule Loomkin.Teams.Topics do
   @doc "Matches all collaboration signals (e.g. collaboration.peer.message)."
   def collaboration_all, do: "collaboration.**"
 
-  @doc "Matches all conversation signals."
-  def conversation_all, do: "collaboration.conversation.**"
-
   @doc "Matches all system signals."
   def system_all, do: "system.**"
 

@@ -6,7 +6,7 @@ defmodule Loomkin.Tools.SpawnConversation do
     description:
       "Spawn a group of conversation agents to discuss a topic and return a summary. " <>
         "Useful for brainstorming, design deliberation, perspective gathering, red-teaming. " <>
-        "The conversation runs asynchronously. You'll receive a summary when it completes. " <>
+        "The conversation runs asynchronously. The summary will appear in the team's collaboration feed. " <>
         "Provide either a list of personas or a template name (brainstorm, design_review, red_team, user_panel).",
     schema: [
       topic: [type: :string, required: true, doc: "What the agents should discuss"],
@@ -39,6 +39,8 @@ defmodule Loomkin.Tools.SpawnConversation do
 
   import Loomkin.Tool, only: [param!: 2, param: 2]
 
+  require Logger
+
   alias Loomkin.Conversations.Agent, as: ConversationAgent
   alias Loomkin.Conversations.Persona
   alias Loomkin.Conversations.Server, as: ConversationServer
@@ -66,12 +68,7 @@ defmodule Loomkin.Tools.SpawnConversation do
 
   # When a template is specified, resolve it and use as base config
   defp resolve_config(template, topic, params) when is_binary(template) do
-    context_text = param(params, :context)
-
-    case Templates.get(template, topic, context_text) do
-      {:ok, config} -> {:ok, config}
-      {:error, reason} -> {:error, reason}
-    end
+    Templates.get(template, topic, param(params, :context))
   end
 
   # When no template, build config from params directly
@@ -88,7 +85,7 @@ defmodule Loomkin.Tools.SpawnConversation do
          strategy: strategy_atom(param(params, :strategy) || @default_strategy),
          max_rounds: param(params, :max_rounds) || @default_max_rounds,
          facilitator: param(params, :facilitator),
-         personas: normalize_personas(personas)
+         personas: Enum.map(personas, &Persona.from_map/1)
        }}
     end
   end
@@ -114,19 +111,10 @@ defmodule Loomkin.Tools.SpawnConversation do
   defp strategy_atom("weighted"), do: :weighted
   defp strategy_atom("facilitator"), do: :facilitator
   defp strategy_atom(atom) when is_atom(atom), do: atom
-  defp strategy_atom(other), do: other
 
-  defp normalize_personas(personas) do
-    Enum.map(personas, fn persona ->
-      %{
-        name: Map.get(persona, :name) || Map.get(persona, "name"),
-        perspective: Map.get(persona, :perspective) || Map.get(persona, "perspective"),
-        expertise: Map.get(persona, :expertise) || Map.get(persona, "expertise"),
-        goal: Map.get(persona, :goal) || Map.get(persona, "goal"),
-        personality: Map.get(persona, :personality) || Map.get(persona, "personality"),
-        description: Map.get(persona, :description) || Map.get(persona, "description")
-      }
-    end)
+  defp strategy_atom(other) do
+    Logger.warning("[SpawnConversation] Unknown strategy string: #{inspect(other)}")
+    other
   end
 
   defp validate_config(config) do
@@ -153,7 +141,9 @@ defmodule Loomkin.Tools.SpawnConversation do
           value = Map.get(persona, atom_key) || Map.get(persona, field)
 
           if is_nil(value) or value == "" do
-            ["#{persona[:name] || "unnamed"} missing #{field}"]
+            [
+              "#{Map.get(persona, :name) || Map.get(persona, "name") || "unnamed"} missing #{field}"
+            ]
           else
             []
           end
@@ -172,7 +162,11 @@ defmodule Loomkin.Tools.SpawnConversation do
   end
 
   defp validate_strategy(%{strategy: :facilitator, facilitator: facilitator, personas: personas}) do
-    names = Enum.map(personas, & &1.name)
+    names =
+      Enum.map(personas, fn
+        %Persona{name: name} -> name
+        %{name: name} -> name
+      end)
 
     if facilitator in names do
       :ok
@@ -197,6 +191,15 @@ defmodule Loomkin.Tools.SpawnConversation do
 
   defp start_conversation(config, context) do
     team_id = param(context, :team_id) || param(context, :parent_team_id)
+
+    if is_nil(team_id) do
+      {:error, "team_id is required but not found in context"}
+    else
+      do_start_conversation(config, context, team_id)
+    end
+  end
+
+  defp do_start_conversation(config, context, team_id) do
     session_id = param(context, :session_id)
     spawned_by = param(context, :agent_name) || "unknown"
     model = param(context, :model) || fast_model(session_id)
@@ -206,8 +209,8 @@ defmodule Loomkin.Tools.SpawnConversation do
 
     # Build participant list with proper structure for ConversationServer
     participants =
-      Enum.map(config.personas, fn persona_map ->
-        persona = Persona.from_map(persona_map)
+      Enum.map(config.personas, fn persona ->
+        persona = ensure_persona_struct(persona)
         role = if persona.name == facilitator_name, do: :facilitator, else: :participant
 
         %{name: persona.name, persona: persona, role: role}
@@ -225,23 +228,34 @@ defmodule Loomkin.Tools.SpawnConversation do
     ]
 
     with {:ok, _server_pid} <- start_server(conversation_opts),
-         :ok <- spawn_agents(conversation_id, team_id, config, model),
+         {:ok, _agent_pids} <- spawn_agents(conversation_id, team_id, config, model),
          :ok <- spawn_weaver(conversation_id, team_id, model, spawned_by) do
-      participant_names = Enum.map(config.personas, & &1.name) |> Enum.join(", ")
+      participant_names =
+        config.personas
+        |> Enum.map(fn
+          %Persona{name: name} -> name
+          %{name: name} -> name
+        end)
+        |> Enum.join(", ")
 
       summary =
         "Conversation started (id: #{conversation_id}). " <>
           "Topic: #{config.topic}. " <>
           "Participants: #{participant_names}. " <>
           "Strategy: #{config.strategy}, max #{config.max_rounds} rounds. " <>
-          "You'll receive a summary when it completes."
+          "The summary will appear in the collaboration feed when complete."
 
       {:ok, %{result: summary, conversation_id: conversation_id}}
     else
       {:error, reason} ->
+        # Attempt cleanup of any started processes
+        cleanup_conversation(conversation_id)
         {:error, "Failed to start conversation: #{inspect(reason)}"}
     end
   end
+
+  defp ensure_persona_struct(%Persona{} = p), do: p
+  defp ensure_persona_struct(map) when is_map(map), do: Persona.from_map(map)
 
   defp start_server(opts) do
     DynamicSupervisor.start_child(
@@ -252,8 +266,8 @@ defmodule Loomkin.Tools.SpawnConversation do
 
   defp spawn_agents(conversation_id, team_id, config, model) do
     results =
-      Enum.map(config.personas, fn persona_map ->
-        persona = Persona.from_map(persona_map)
+      Enum.map(config.personas, fn persona ->
+        persona = ensure_persona_struct(persona)
 
         agent_opts = [
           conversation_id: conversation_id,
@@ -270,8 +284,19 @@ defmodule Loomkin.Tools.SpawnConversation do
       end)
 
     case Enum.find(results, &match?({:error, _}, &1)) do
-      nil -> :ok
-      {:error, reason} -> {:error, "Failed to spawn agent: #{inspect(reason)}"}
+      nil ->
+        pids = Enum.map(results, fn {:ok, pid} -> pid end)
+        {:ok, pids}
+
+      {:error, reason} ->
+        # Terminate already-started agents
+        results
+        |> Enum.filter(&match?({:ok, _}, &1))
+        |> Enum.each(fn {:ok, pid} ->
+          DynamicSupervisor.terminate_child(Loomkin.Conversations.Supervisor, pid)
+        end)
+
+        {:error, "Failed to spawn agent: #{inspect(reason)}"}
     end
   end
 
@@ -292,15 +317,14 @@ defmodule Loomkin.Tools.SpawnConversation do
     end
   end
 
-  defp fast_model(_session_id) do
-    if Code.ensure_loaded?(Loomkin.Config) do
-      try do
-        Loomkin.Config.get(:model, :fast) || "zai:glm-4.5"
-      rescue
-        _ -> "zai:glm-4.5"
-      end
-    else
-      "zai:glm-4.5"
+  defp cleanup_conversation(conversation_id) do
+    case Registry.lookup(Loomkin.Conversations.Registry, conversation_id) do
+      [{pid, _}] -> DynamicSupervisor.terminate_child(Loomkin.Conversations.Supervisor, pid)
+      [] -> :ok
     end
+  end
+
+  defp fast_model(_session_id) do
+    Loomkin.Config.get(:model, :fast) || "zai:glm-4.5"
   end
 end

@@ -20,7 +20,7 @@ defmodule Loomkin.Conversations.Tools.Yield do
 
     case Server.yield(conversation_id, agent_name, reason) do
       :ok -> {:ok, %{result: "Yielded turn."}}
-      {:error, reason} -> {:error, "Failed to yield: #{inspect(reason)}"}
+      {:error, err} -> {:error, "Failed to yield: #{inspect(err)}"}
     end
   end
 end

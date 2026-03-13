@@ -114,7 +114,9 @@ defmodule Loomkin.Signals.Collaboration do
         team_id: [type: :string, required: true],
         reason: [type: :string, required: true],
         rounds: [type: :integer, required: true],
-        tokens_used: [type: :integer, required: true]
+        tokens_used: [type: :integer, required: true],
+        participants: [type: {:list, :string}, required: false],
+        summary: [type: :map, required: false]
       ]
   end
 

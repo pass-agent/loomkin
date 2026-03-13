@@ -1,25 +1,23 @@
 defmodule Loomkin.Conversations.Templates do
   @moduledoc "Pre-built persona sets and configurations for common conversation patterns."
 
-  @templates %{
-    "brainstorm" => :brainstorm,
-    "design_review" => :design_review,
-    "red_team" => :red_team,
-    "user_panel" => :user_panel
-  }
+  @template_names ~w[brainstorm design_review red_team user_panel]
 
   @doc "Returns a list of available template names."
   @spec list() :: [String.t()]
-  def list, do: Map.keys(@templates)
+  def list, do: @template_names
 
   @doc "Returns a conversation config for the given template name, or {:error, reason}."
   @spec get(String.t(), String.t(), String.t() | nil) ::
           {:ok, map()} | {:error, String.t()}
-  def get(name, topic, context \\ nil) do
-    case Map.fetch(@templates, name) do
-      {:ok, fun} -> {:ok, apply(__MODULE__, fun, [topic, context])}
-      :error -> {:error, "Unknown template: #{name}. Available: #{Enum.join(list(), ", ")}"}
-    end
+  def get(name, topic, context \\ nil)
+  def get("brainstorm", topic, context), do: {:ok, brainstorm(topic, context)}
+  def get("design_review", topic, context), do: {:ok, design_review(topic, context)}
+  def get("red_team", topic, context), do: {:ok, red_team(topic, context)}
+  def get("user_panel", topic, context), do: {:ok, user_panel(topic, context)}
+
+  def get(name, _topic, _context) do
+    {:error, "Unknown template: #{name}. Available: #{Enum.join(list(), ", ")}"}
   end
 
   @doc "Brainstorm template: Innovator + Pragmatist + Critic, round_robin, 8 rounds."

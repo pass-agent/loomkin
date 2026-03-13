@@ -10,21 +10,9 @@ defmodule Loomkin.Conversations.ServerTest do
   ]
 
   setup do
-    # Subscribe to conversation PubSub to receive turn notifications
     conv_id = Ecto.UUID.generate()
     team_id = Ecto.UUID.generate()
     Phoenix.PubSub.subscribe(Loomkin.PubSub, "conversation:#{conv_id}")
-
-    on_exit(fn ->
-      # Clean up any remaining conversation servers
-      case Registry.lookup(Loomkin.Conversations.Registry, conv_id) do
-        [{pid, _}] ->
-          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
-
-        [] ->
-          :ok
-      end
-    end)
 
     %{conv_id: conv_id, team_id: team_id}
   end
@@ -68,6 +56,7 @@ defmodule Loomkin.Conversations.ServerTest do
 
       {:ok, state} = Server.get_state(ctx.conv_id)
       assert length(state.history) == 1
+      # History is stored in reverse order (most recent first)
       assert hd(state.history).speaker == "Alice"
       assert hd(state.history).content == "Hello everyone!"
     end
@@ -86,14 +75,12 @@ defmodule Loomkin.Conversations.ServerTest do
       start_server(ctx, max_rounds: 1)
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 
-      # Speak for all participants to trigger round advance and termination
       Server.speak(ctx.conv_id, "Alice", "hi")
       assert_receive {:your_turn, _, _, _, _, "Bob"}, 1_000
       Server.speak(ctx.conv_id, "Bob", "hey")
       assert_receive {:your_turn, _, _, _, _, "Carol"}, 1_000
       Server.speak(ctx.conv_id, "Carol", "hello")
 
-      # Conversation should be over (round 1 complete, max_rounds=1 so round 2 > max)
       assert {:error, :conversation_not_active} =
                Server.speak(ctx.conv_id, "Alice", "more stuff")
     end
@@ -110,6 +97,20 @@ defmodule Loomkin.Conversations.ServerTest do
       {:ok, state} = Server.get_state(ctx.conv_id)
       assert length(state.history) == 1
       assert hd(state.history).type == :yield
+    end
+
+    test "returns error when conversation is not active", ctx do
+      start_server(ctx, max_rounds: 1)
+      assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
+
+      Server.speak(ctx.conv_id, "Alice", "hi")
+      assert_receive {:your_turn, _, _, _, _, "Bob"}, 1_000
+      Server.speak(ctx.conv_id, "Bob", "hey")
+      assert_receive {:your_turn, _, _, _, _, "Carol"}, 1_000
+      Server.speak(ctx.conv_id, "Carol", "hello")
+
+      assert {:error, :conversation_not_active} =
+               Server.yield(ctx.conv_id, "Alice")
     end
 
     test "all yields in a round terminates conversation", ctx do
@@ -137,21 +138,44 @@ defmodule Loomkin.Conversations.ServerTest do
       {:ok, state} = Server.get_state(ctx.conv_id)
       assert length(state.history) == 1
       assert hd(state.history).type == {:reaction, :agree}
-      # Current speaker should still be Alice (reactions don't consume turns)
       assert state.current_speaker == "Alice"
+    end
+
+    test "returns error when conversation is not active", ctx do
+      start_server(ctx, max_rounds: 1)
+      assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
+
+      Server.speak(ctx.conv_id, "Alice", "hi")
+      assert_receive {:your_turn, _, _, _, _, "Bob"}, 1_000
+      Server.speak(ctx.conv_id, "Bob", "hey")
+      assert_receive {:your_turn, _, _, _, _, "Carol"}, 1_000
+      Server.speak(ctx.conv_id, "Carol", "hello")
+
+      assert {:error, :conversation_not_active} =
+               Server.react(ctx.conv_id, "Alice", :agree, "late reaction")
     end
   end
 
   describe "get_context/1" do
-    test "returns conversation context", ctx do
+    test "returns conversation context with chronological history", ctx do
       start_server(ctx)
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
+
+      Server.speak(ctx.conv_id, "Alice", "first")
+      assert_receive {:your_turn, _, _, _, _, "Bob"}, 1_000
+
+      Server.speak(ctx.conv_id, "Bob", "second")
+      assert_receive {:your_turn, _, _, _, _, "Carol"}, 1_000
 
       {:ok, context} = Server.get_context(ctx.conv_id)
       assert context.topic == "Test topic"
       assert context.current_round == 1
       assert context.participants == ["Alice", "Bob", "Carol"]
       assert context.status == :active
+
+      # get_context returns chronological order
+      assert hd(context.history).speaker == "Alice"
+      assert List.last(context.history).speaker == "Bob"
     end
   end
 
@@ -196,15 +220,13 @@ defmodule Loomkin.Conversations.ServerTest do
     end
 
     test "inactivity timeout ends conversation", ctx do
-      # Use a very short timeout by testing the message directly
       start_server(ctx)
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 
-      # Simulate inactivity timeout
       [{pid, _}] = Registry.lookup(Loomkin.Conversations.Registry, ctx.conv_id)
       send(pid, :inactivity_timeout)
 
-      # Wait for the GenServer to process the message
+      # Synchronize by calling get_state (which forces the GenServer to process all prior messages)
       _ = Server.get_state(ctx.conv_id)
 
       {:ok, state} = Server.get_state(ctx.conv_id)
@@ -213,7 +235,7 @@ defmodule Loomkin.Conversations.ServerTest do
   end
 
   describe "attach_summary/2" do
-    test "attaches summary and completes conversation", ctx do
+    test "attaches summary, completes, and stops server", ctx do
       start_server(ctx)
       assert_receive {:your_turn, _, _, _, _, "Alice"}, 1_000
 
@@ -228,9 +250,8 @@ defmodule Loomkin.Conversations.ServerTest do
 
       assert :ok = Server.attach_summary(ctx.conv_id, summary)
 
-      {:ok, state} = Server.get_state(ctx.conv_id)
-      assert state.status == :completed
-      assert state.summary == summary
+      # Server stops after attach_summary
+      assert {:error, :conversation_not_found} = Server.get_state(ctx.conv_id)
     end
   end
 

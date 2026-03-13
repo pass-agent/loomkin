@@ -44,56 +44,48 @@ defmodule Loomkin.Conversations.WeaverTest do
     conv_id = Ecto.UUID.generate()
     team_id = Ecto.UUID.generate()
 
-    on_exit(fn ->
-      case Registry.lookup(Loomkin.Conversations.Registry, conv_id) do
-        [{pid, _}] ->
-          if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5_000)
-
-        [] ->
-          :ok
-      end
-    end)
-
     %{conv_id: conv_id, team_id: team_id}
   end
 
   describe "start_link/1" do
     test "starts weaver and subscribes to conversation topic", ctx do
-      {:ok, pid} =
-        Weaver.start_link(
-          conversation_id: ctx.conv_id,
-          team_id: ctx.team_id,
-          model: "anthropic:claude-haiku-4-5-20251001"
+      pid =
+        start_supervised!(
+          {Weaver,
+           conversation_id: ctx.conv_id,
+           team_id: ctx.team_id,
+           model: "anthropic:claude-haiku-4-5-20251001"}
         )
 
       assert Process.alive?(pid)
-      GenServer.stop(pid)
     end
   end
 
   describe "summarization" do
     test "generates fallback summary when llm unavailable and attaches to server", ctx do
       # Start the conversation server
-      {:ok, _server} =
-        start_supervised(
-          {Server,
-           id: ctx.conv_id,
-           team_id: ctx.team_id,
-           topic: "Cache architecture",
-           participants: @participants,
-           max_rounds: 5}
-        )
+      start_supervised!(
+        {Server,
+         id: ctx.conv_id,
+         team_id: ctx.team_id,
+         topic: "Cache architecture",
+         participants: @participants,
+         max_rounds: 5},
+        id: :summary_server
+      )
 
       # Subscribe to summary notifications
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "conversation:#{ctx.conv_id}:summary")
 
       # Start the weaver
-      {:ok, weaver_pid} =
-        Weaver.start_link(
-          conversation_id: ctx.conv_id,
-          team_id: ctx.team_id,
-          model: "anthropic:claude-haiku-4-5-20251001",
-          spawned_by: "task-agent"
+      weaver_pid =
+        start_supervised!(
+          {Weaver,
+           conversation_id: ctx.conv_id,
+           team_id: ctx.team_id,
+           model: "anthropic:claude-haiku-4-5-20251001",
+           spawned_by: "task-agent"},
+          id: :summary_weaver
         )
 
       ref = Process.monitor(weaver_pid)
@@ -121,18 +113,29 @@ defmodule Loomkin.Conversations.WeaverTest do
       assert is_list(summary.open_questions)
       assert is_list(summary.recommended_actions)
 
-      # Server should have the summary attached
-      {:ok, state} = Server.get_state(ctx.conv_id)
-      assert state.status == :completed
-      assert state.summary != nil
+      # Server stops after attach_summary — wait for Registry cleanup
+      Enum.reduce_while(1..20, nil, fn _, _ ->
+        case Registry.lookup(Loomkin.Conversations.Registry, ctx.conv_id) do
+          [] ->
+            {:halt, :ok}
+
+          _ ->
+            Process.sleep(10)
+            {:cont, nil}
+        end
+      end)
+
+      assert Registry.lookup(Loomkin.Conversations.Registry, ctx.conv_id) == []
     end
 
     test "weaver ignores your_turn messages", ctx do
-      {:ok, pid} =
-        Weaver.start_link(
-          conversation_id: ctx.conv_id,
-          team_id: ctx.team_id,
-          model: "anthropic:claude-haiku-4-5-20251001"
+      pid =
+        start_supervised!(
+          {Weaver,
+           conversation_id: ctx.conv_id,
+           team_id: ctx.team_id,
+           model: "anthropic:claude-haiku-4-5-20251001"},
+          id: :ignore_turn_weaver
         )
 
       # Send a turn notification — should be ignored
@@ -142,17 +145,19 @@ defmodule Loomkin.Conversations.WeaverTest do
         {:your_turn, ctx.conv_id, [], "topic", nil, "Weaver"}
       )
 
-      Process.sleep(100)
+      # Synchronize via :sys.get_state instead of sleeping
+      _ = :sys.get_state(pid)
       assert Process.alive?(pid)
-      GenServer.stop(pid)
     end
 
     test "weaver ignores summarize for different conversation", ctx do
-      {:ok, pid} =
-        Weaver.start_link(
-          conversation_id: ctx.conv_id,
-          team_id: ctx.team_id,
-          model: "anthropic:claude-haiku-4-5-20251001"
+      pid =
+        start_supervised!(
+          {Weaver,
+           conversation_id: ctx.conv_id,
+           team_id: ctx.team_id,
+           model: "anthropic:claude-haiku-4-5-20251001"},
+          id: :diff_conv_weaver
         )
 
       # Send summarize for a different conversation
@@ -162,9 +167,9 @@ defmodule Loomkin.Conversations.WeaverTest do
         {:summarize, "different-id", @history, "Other topic", @participants}
       )
 
-      Process.sleep(100)
+      # Synchronize via :sys.get_state instead of sleeping
+      _ = :sys.get_state(pid)
       assert Process.alive?(pid)
-      GenServer.stop(pid)
     end
   end
 end

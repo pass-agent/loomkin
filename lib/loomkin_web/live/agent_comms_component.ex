@@ -487,7 +487,7 @@ defmodule LoomkinWeb.AgentCommsComponent do
         <span class="text-zinc-500">Reason:</span>
         <span class="text-zinc-300">{@metadata[:reason]}</span>
       </div>
-      <div :if={@metadata[:alternatives] != []} class="mt-1">
+      <div :if={@metadata[:alternatives] not in [nil, []]} class="mt-1">
         <span class="text-zinc-500">Alternatives:</span>
         <div :for={alt <- @metadata[:alternatives]} class="ml-2 flex items-center gap-2 text-zinc-400">
           <span class="font-medium">{alt.agent}</span>

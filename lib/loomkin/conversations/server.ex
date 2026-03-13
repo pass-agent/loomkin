@@ -14,6 +14,7 @@ defmodule Loomkin.Conversations.Server do
   alias Loomkin.Signals
 
   @inactivity_timeout_ms 60_000
+  @budget_warning_pct 0.8
 
   defstruct [
     :id,
@@ -35,7 +36,8 @@ defmodule Loomkin.Conversations.Server do
     tokens_used: 0,
     status: :active,
     yields_this_round: MapSet.new(),
-    inactivity_timer: nil
+    inactivity_timer: nil,
+    budget_warned: false
   ]
 
   # --- Public API ---
@@ -79,15 +81,23 @@ defmodule Loomkin.Conversations.Server do
     call(conversation_id, {:terminate, reason})
   end
 
-  @doc "Attach a summary (called by the weaver)."
+  @doc "Attach a summary (called by the weaver). Caller must include agent_name in context."
   def attach_summary(conversation_id, summary) do
     call(conversation_id, {:attach_summary, summary})
   end
 
   defp call(conversation_id, message) do
     case Registry.lookup(Loomkin.Conversations.Registry, conversation_id) do
-      [{pid, _}] -> GenServer.call(pid, message, 30_000)
-      [] -> {:error, :conversation_not_found}
+      [{pid, _}] ->
+        try do
+          GenServer.call(pid, message, 30_000)
+        catch
+          :exit, {:noproc, _} -> {:error, :conversation_not_found}
+          :exit, {:normal, _} -> {:error, :conversation_not_found}
+        end
+
+      [] ->
+        {:error, :conversation_not_found}
     end
   end
 
@@ -139,96 +149,102 @@ defmodule Loomkin.Conversations.Server do
     {:noreply, state}
   end
 
+  # --- Speak ---
+
   @impl true
+  def handle_call({:speak, _, _, _}, _from, %{status: status} = state) when status != :active do
+    {:reply, {:error, :conversation_not_active}, state}
+  end
+
   def handle_call({:speak, agent_name, content, opts}, _from, state) do
-    if state.status != :active do
-      {:reply, {:error, :conversation_not_active}, state}
+    tokens = Keyword.get(opts, :tokens, estimate_tokens(content))
+
+    entry = %{
+      speaker: agent_name,
+      content: content,
+      round: state.current_round,
+      type: :speech,
+      timestamp: DateTime.utc_now()
+    }
+
+    state =
+      state
+      |> append_entry(entry)
+      |> add_tokens(tokens)
+
+    emit_turn(state, entry)
+
+    state = advance_and_check(state)
+
+    if state.status == :active do
+      {:reply, :ok, state, {:continue, :advance_turn}}
     else
-      tokens = Keyword.get(opts, :tokens, estimate_tokens(content))
-
-      entry = %{
-        speaker: agent_name,
-        content: content,
-        round: state.current_round,
-        type: :speech,
-        timestamp: DateTime.utc_now()
-      }
-
-      state =
-        state
-        |> append_entry(entry)
-        |> add_tokens(tokens)
-
-      emit_turn(state, entry)
-
-      state = maybe_advance_round(state)
-      state = check_termination(state)
-
-      if state.status == :active do
-        {:reply, :ok, state, {:continue, :advance_turn}}
-      else
-        {:reply, :ok, state}
-      end
-    end
-  end
-
-  def handle_call({:yield, agent_name, reason}, _from, state) do
-    if state.status != :active do
-      {:reply, {:error, :conversation_not_active}, state}
-    else
-      entry = %{
-        speaker: agent_name,
-        content: reason || "yielded",
-        round: state.current_round,
-        type: :yield,
-        timestamp: DateTime.utc_now()
-      }
-
-      state =
-        state
-        |> append_entry(entry)
-        |> Map.update!(:yields_this_round, &MapSet.put(&1, agent_name))
-
-      emit_yield(state, agent_name, reason)
-
-      # Check all-yield termination before advancing the round,
-      # because round advance clears yields_this_round.
-      state = check_termination(state)
-      state = if state.status == :active, do: maybe_advance_round(state), else: state
-      state = check_termination(state)
-
-      if state.status == :active do
-        {:reply, :ok, state, {:continue, :advance_turn}}
-      else
-        {:reply, :ok, state}
-      end
-    end
-  end
-
-  def handle_call({:react, agent_name, type, brief}, _from, state) do
-    if state.status != :active do
-      {:reply, {:error, :conversation_not_active}, state}
-    else
-      entry = %{
-        speaker: agent_name,
-        content: brief,
-        round: state.current_round,
-        type: {:reaction, type},
-        timestamp: DateTime.utc_now()
-      }
-
-      state = append_entry(state, entry)
-      emit_turn(state, entry)
-
       {:reply, :ok, state}
     end
   end
+
+  # --- Yield ---
+
+  def handle_call({:yield, _, _}, _from, %{status: status} = state) when status != :active do
+    {:reply, {:error, :conversation_not_active}, state}
+  end
+
+  def handle_call({:yield, agent_name, reason}, _from, state) do
+    entry = %{
+      speaker: agent_name,
+      content: reason || "yielded",
+      round: state.current_round,
+      type: :yield,
+      timestamp: DateTime.utc_now()
+    }
+
+    state =
+      state
+      |> append_entry(entry)
+      |> Map.update!(:yields_this_round, &MapSet.put(&1, agent_name))
+
+    emit_yield(state, agent_name, reason)
+
+    # Check all-yield termination before advancing the round,
+    # because round advance clears yields_this_round.
+    # Then advance and check again (for max_rounds).
+    state = advance_and_check(state)
+
+    if state.status == :active do
+      {:reply, :ok, state, {:continue, :advance_turn}}
+    else
+      {:reply, :ok, state}
+    end
+  end
+
+  # --- React ---
+
+  def handle_call({:react, _, _, _}, _from, %{status: status} = state) when status != :active do
+    {:reply, {:error, :conversation_not_active}, state}
+  end
+
+  def handle_call({:react, agent_name, type, brief}, _from, state) do
+    entry = %{
+      speaker: agent_name,
+      content: brief,
+      round: state.current_round,
+      type: {:reaction, type},
+      timestamp: DateTime.utc_now()
+    }
+
+    state = append_entry(state, entry)
+    emit_reaction(state, agent_name, type, brief)
+
+    {:reply, :ok, state}
+  end
+
+  # --- Query ---
 
   def handle_call(:get_context, _from, state) do
     context = %{
       id: state.id,
       topic: state.topic,
-      history: state.history,
+      history: Enum.reverse(state.history),
       current_round: state.current_round,
       current_speaker: state.current_speaker,
       participants: Enum.map(state.participants, & &1.name),
@@ -245,25 +261,30 @@ defmodule Loomkin.Conversations.Server do
     {:reply, {:ok, state}, state}
   end
 
+  # --- Terminate ---
+
   def handle_call({:terminate, reason}, _from, state) do
     state = end_conversation(state, reason)
     {:reply, :ok, state}
   end
 
+  # --- Attach Summary ---
+
   def handle_call({:attach_summary, summary}, _from, state) do
     state = %{state | summary: summary, status: :completed}
-    emit_ended(state, :summary_complete)
-    {:reply, :ok, state}
+    emit_ended(state)
+
+    # Server's work is done — reply and stop
+    {:stop, :normal, :ok, state}
   end
 
   @impl true
+  def handle_info(:inactivity_timeout, %{status: :active} = state) do
+    {:noreply, end_conversation(state, :inactivity_timeout)}
+  end
+
   def handle_info(:inactivity_timeout, state) do
-    if state.status == :active do
-      state = end_conversation(state, :inactivity_timeout)
-      {:noreply, state}
-    else
-      {:noreply, state}
-    end
+    {:noreply, state}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
@@ -271,16 +292,35 @@ defmodule Loomkin.Conversations.Server do
   # --- Private Helpers ---
 
   defp append_entry(state, entry) do
-    %{state | history: state.history ++ [entry]}
+    %{state | history: [entry | state.history]}
   end
 
   defp add_tokens(state, tokens) do
-    %{state | tokens_used: state.tokens_used + tokens}
+    state = %{state | tokens_used: state.tokens_used + tokens}
+    maybe_emit_budget_warning(state)
   end
 
   defp estimate_tokens(content) when is_binary(content) do
     # Rough estimate: 1 token ~ 4 characters
     div(byte_size(content), 4) + 1
+  end
+
+  defp maybe_emit_budget_warning(%{budget_warned: true} = state), do: state
+  defp maybe_emit_budget_warning(%{max_tokens: nil} = state), do: state
+
+  defp maybe_emit_budget_warning(state) do
+    if state.tokens_used >= state.max_tokens * @budget_warning_pct do
+      emit_budget_warning(state)
+      %{state | budget_warned: true}
+    else
+      state
+    end
+  end
+
+  defp advance_and_check(state) do
+    state = check_termination(state)
+    state = if state.status == :active, do: maybe_advance_round(state), else: state
+    if state.status == :active, do: check_termination(state), else: state
   end
 
   defp maybe_advance_round(state) do
@@ -290,12 +330,16 @@ defmodule Loomkin.Conversations.Server do
          state.current_round
        ) do
       emit_round_complete(state)
+      new_round = state.current_round + 1
+      emit_round_started(state, new_round)
 
-      %{state | current_round: state.current_round + 1, yields_this_round: MapSet.new()}
+      %{state | current_round: new_round, yields_this_round: MapSet.new()}
     else
       state
     end
   end
+
+  defp check_termination(%{status: status} = state) when status != :active, do: state
 
   defp check_termination(state) do
     cond do
@@ -318,16 +362,17 @@ defmodule Loomkin.Conversations.Server do
     MapSet.equal?(state.yields_this_round, participant_names)
   end
 
-  defp end_conversation(state, reason) do
+  defp end_conversation(state, _reason) do
     cancel_inactivity_timer(state)
 
     state = %{
       state
       | status: :summarizing,
-        ended_at: DateTime.utc_now()
+        ended_at: DateTime.utc_now(),
+        inactivity_timer: nil
     }
 
-    emit_ended(state, reason)
+    emit_summarizing(state)
 
     # Notify weaver (via PubSub) that summarization should begin
     notify_summarize(state)
@@ -370,6 +415,18 @@ defmodule Loomkin.Conversations.Server do
     )
   end
 
+  defp emit_reaction(state, agent_name, type, brief) do
+    Signals.publish(
+      Loomkin.Signals.Collaboration.ConversationReaction.new!(%{
+        conversation_id: state.id,
+        team_id: state.team_id,
+        agent_name: agent_name,
+        reaction_type: to_string(type),
+        brief: brief
+      })
+    )
+  end
+
   defp emit_yield(state, agent_name, reason) do
     Signals.publish(
       Loomkin.Signals.Collaboration.ConversationYield.new!(%{
@@ -391,14 +448,48 @@ defmodule Loomkin.Conversations.Server do
     )
   end
 
-  defp emit_ended(state, reason) do
+  defp emit_round_started(state, round) do
+    Signals.publish(
+      Loomkin.Signals.Collaboration.ConversationRoundStarted.new!(%{
+        conversation_id: state.id,
+        team_id: state.team_id,
+        round: round
+      })
+    )
+  end
+
+  defp emit_summarizing(state) do
+    Signals.publish(
+      Loomkin.Signals.Collaboration.ConversationSummarizing.new!(%{
+        conversation_id: state.id,
+        team_id: state.team_id
+      })
+    )
+  end
+
+  defp emit_ended(state) do
+    participant_names = Enum.map(state.participants, & &1.name)
+
     Signals.publish(
       Loomkin.Signals.Collaboration.ConversationEnded.new!(%{
         conversation_id: state.id,
         team_id: state.team_id,
-        reason: to_string(reason),
+        reason: "summary_complete",
         rounds: state.current_round,
-        tokens_used: state.tokens_used
+        tokens_used: state.tokens_used,
+        participants: participant_names,
+        summary: state.summary
+      })
+    )
+  end
+
+  defp emit_budget_warning(state) do
+    Signals.publish(
+      Loomkin.Signals.Collaboration.ConversationBudgetWarning.new!(%{
+        conversation_id: state.id,
+        team_id: state.team_id,
+        tokens_used: state.tokens_used,
+        max_tokens: state.max_tokens
       })
     )
   end
@@ -407,7 +498,7 @@ defmodule Loomkin.Conversations.Server do
     Phoenix.PubSub.broadcast(
       Loomkin.PubSub,
       "conversation:#{state.id}",
-      {:your_turn, state.id, state.history, state.topic, state.context, agent_name}
+      {:your_turn, state.id, Enum.reverse(state.history), state.topic, state.context, agent_name}
     )
   end
 
@@ -415,7 +506,7 @@ defmodule Loomkin.Conversations.Server do
     Phoenix.PubSub.broadcast(
       Loomkin.PubSub,
       "conversation:#{state.id}",
-      {:summarize, state.id, state.history, state.topic, state.participants}
+      {:summarize, state.id, Enum.reverse(state.history), state.topic, state.participants}
     )
   end
 end

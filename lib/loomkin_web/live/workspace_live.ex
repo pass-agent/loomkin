@@ -1361,7 +1361,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   # --- Conversation signals ---
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.started"} = sig, socket) do
-    %{topic: topic, participants: participants} = sig.data
+    %{topic: topic, participants: participants, strategy: strategy} = sig.data
     count = length(participants)
 
     event = %{
@@ -1376,7 +1376,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         team_id: sig.data[:team_id],
         topic: topic,
         participants: participants,
-        strategy: sig.data[:strategy]
+        strategy: strategy
       }
     }
 
@@ -1463,17 +1463,26 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.yield"} = sig, socket) do
     %{agent_name: agent_name} = sig.data
+    reason = sig.data[:reason]
+
+    content =
+      if reason && reason != "" do
+        "#{agent_name} yielded: #{reason}"
+      else
+        "#{agent_name} yielded"
+      end
 
     event = %{
       id: Ecto.UUID.generate(),
       type: :conversation_yield,
       agent: agent_name,
-      content: "#{agent_name} yielded",
+      content: content,
       timestamp: DateTime.utc_now(),
       expanded: false,
       metadata: %{
         conversation_id: sig.data[:conversation_id],
-        team_id: sig.data[:team_id]
+        team_id: sig.data[:team_id],
+        reason: reason
       }
     }
 
@@ -1513,6 +1522,8 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.summarizing"} = sig, socket) do
+    %{conversation_id: conversation_id, team_id: team_id} = sig.data
+
     event = %{
       id: Ecto.UUID.generate(),
       type: :conversation_summarizing,
@@ -1521,8 +1532,8 @@ defmodule LoomkinWeb.WorkspaceLive do
       timestamp: DateTime.utc_now(),
       expanded: false,
       metadata: %{
-        conversation_id: sig.data[:conversation_id],
-        team_id: sig.data[:team_id]
+        conversation_id: conversation_id,
+        team_id: team_id
       }
     }
 
@@ -1549,7 +1560,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         team_id: sig.data[:team_id],
         reason: reason,
         rounds: rounds,
-        tokens_used: tokens_used
+        tokens_used: tokens_used,
+        participants: sig.data[:participants],
+        summary: sig.data[:summary]
       }
     }
 
@@ -1590,7 +1603,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         socket
       ) do
     %{tokens_used: tokens_used, max_tokens: max_tokens} = sig.data
-    pct = round(tokens_used / max_tokens * 100)
+    pct = if max_tokens > 0, do: round(tokens_used / max_tokens * 100), else: 0
 
     event = %{
       id: Ecto.UUID.generate(),

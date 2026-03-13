@@ -17,11 +17,12 @@ defmodule Loomkin.Conversations.Tools.EndConversation do
   @impl true
   def run(params, context) do
     conversation_id = param!(context, :conversation_id)
+    agent_name = param!(context, :agent_name)
     reason = param!(params, :reason)
 
-    case Server.terminate_conversation(conversation_id, reason) do
+    case Server.terminate_conversation(conversation_id, {:requested_by, agent_name, reason}) do
       :ok -> {:ok, %{result: "Conversation ended."}}
-      {:error, reason} -> {:error, "Failed to end conversation: #{inspect(reason)}"}
+      {:error, err} -> {:error, "Failed to end conversation: #{inspect(err)}"}
     end
   end
 end

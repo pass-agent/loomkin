@@ -9,6 +9,8 @@ defmodule Loomkin.Conversations.Agent do
 
   use GenServer
 
+  require Logger
+
   alias Loomkin.Conversations.Persona
   alias Loomkin.Conversations.Tools.EndConversation
   alias Loomkin.Conversations.Tools.React
@@ -24,6 +26,7 @@ defmodule Loomkin.Conversations.Agent do
     :persona,
     :model,
     :topic,
+    :task_ref,
     tokens_used: 0
   ]
 
@@ -63,68 +66,88 @@ defmodule Loomkin.Conversations.Agent do
 
   @impl true
   def handle_info({:your_turn, conversation_id, history, topic, context, agent_name}, state) do
-    if agent_name == state.name and conversation_id == state.conversation_id do
-      handle_turn(history, topic, context, state)
-    else
-      {:noreply, state}
-    end
-  end
+    if agent_name == state.name and conversation_id == state.conversation_id and
+         is_nil(state.task_ref) do
+      # Dispatch LLM call to a Task to avoid blocking the mailbox
+      task =
+        Task.Supervisor.async_nolink(Loomkin.Healing.TaskSupervisor, fn ->
+          run_turn(history, topic, context, state)
+        end)
 
-  # Backward-compatible clause for messages without context
-  def handle_info({:your_turn, conversation_id, history, topic, agent_name}, state)
-      when is_binary(agent_name) do
-    if agent_name == state.name and conversation_id == state.conversation_id do
-      handle_turn(history, topic, nil, state)
+      {:noreply, %{state | task_ref: task.ref}}
     else
       {:noreply, state}
     end
   end
 
   def handle_info({:summarize, _, _, _, _}, state) do
-    # Conversation ended, agent can stop
+    # Conversation ended, cancel in-flight task and stop
+    cancel_task(state)
     {:stop, :normal, state}
+  end
+
+  # Task completed successfully
+  def handle_info({ref, {:ok, tokens}}, %{task_ref: ref} = state) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, %{state | task_ref: nil, tokens_used: state.tokens_used + tokens}}
+  end
+
+  # Task failed
+  def handle_info({ref, {:error, _reason}}, %{task_ref: ref} = state) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, %{state | task_ref: nil}}
+  end
+
+  # Task crashed
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{task_ref: ref} = state) do
+    Logger.warning("[ConversationAgent] LLM task crashed for #{state.name}: #{inspect(reason)}")
+
+    # Yield so the conversation can continue
+    Loomkin.Conversations.Server.yield(
+      state.conversation_id,
+      state.name,
+      "error generating response"
+    )
+
+    {:noreply, %{state | task_ref: nil}}
   end
 
   def handle_info(_msg, state), do: {:noreply, state}
 
+  @impl true
+  def terminate(_reason, state) do
+    cancel_task(state)
+    :ok
+  end
+
   # --- Private ---
 
-  defp handle_turn(history, topic, context, state) do
+  defp run_turn(history, topic, context, state) do
     messages = build_messages(history, topic, context, state)
     tool_defs = Jido.AI.ToolAdapter.from_actions(@conversation_tools)
 
-    context = %{
+    exec_context = %{
       conversation_id: state.conversation_id,
       agent_name: state.name,
       team_id: state.team_id
     }
 
-    try do
-      case Loomkin.LLM.generate_text(state.model, messages, tools: tool_defs) do
-        {:ok, response} ->
-          tokens = extract_token_count(response)
-          state = %{state | tokens_used: state.tokens_used + tokens}
-          execute_tool_calls(response, context)
-          {:noreply, state}
+    case Loomkin.LLM.generate_text(state.model, messages, tools: tool_defs) do
+      {:ok, response} ->
+        tokens = extract_token_count(response)
+        execute_tool_calls(response, exec_context)
+        {:ok, tokens}
 
-        {:error, _reason} ->
-          Loomkin.Conversations.Server.yield(
-            state.conversation_id,
-            state.name,
-            "error generating response"
-          )
+      {:error, reason} ->
+        Logger.warning("[ConversationAgent] LLM error for #{state.name}: #{inspect(reason)}")
 
-          {:noreply, state}
-      end
-    rescue
-      _error ->
         Loomkin.Conversations.Server.yield(
           state.conversation_id,
           state.name,
           "error generating response"
         )
 
-        {:noreply, state}
+        {:error, reason}
     end
   end
 
@@ -145,16 +168,22 @@ defmodule Loomkin.Conversations.Agent do
     [%{role: "system", content: system} | conversation_msgs]
   end
 
-  defp execute_tool_calls(response, context) do
+  defp execute_tool_calls(response, exec_context) do
     tool_calls = extract_tool_calls(response)
 
     Enum.each(tool_calls, fn {tool_name, tool_args} ->
       case Jido.AI.ToolAdapter.lookup_action(tool_name, @conversation_tools) do
         {:ok, tool_module} ->
-          Jido.Exec.run(tool_module, tool_args, context, timeout: 10_000)
+          case Jido.Exec.run(tool_module, tool_args, exec_context, timeout: 10_000) do
+            {:ok, _} ->
+              :ok
+
+            {:error, err} ->
+              Logger.warning("[ConversationAgent] Tool #{tool_name} failed: #{inspect(err)}")
+          end
 
         {:error, :not_found} ->
-          :ok
+          Logger.warning("[ConversationAgent] Unknown tool: #{tool_name}")
       end
     end)
   end
@@ -188,4 +217,11 @@ defmodule Loomkin.Conversations.Agent do
   end
 
   defp extract_token_count(_), do: 0
+
+  defp cancel_task(%{task_ref: nil}), do: :ok
+
+  defp cancel_task(%{task_ref: ref}) do
+    Process.demonitor(ref, [:flush])
+    :ok
+  end
 end
