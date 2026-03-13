@@ -153,4 +153,25 @@ defmodule Loomkin.Signals.Agent do
         rendezvous_id: [type: :string, required: false]
       ]
   end
+
+  defmodule HealingRequested do
+    use Jido.Signal,
+      type: "agent.healing.requested",
+      schema: [
+        agent_name: [type: :string, required: true],
+        team_id: [type: :string, required: true],
+        classification: [type: :map, required: true],
+        error_context: [type: :map, required: false]
+      ]
+  end
+
+  defmodule HealingComplete do
+    use Jido.Signal,
+      type: "agent.healing.complete",
+      schema: [
+        agent_name: [type: :string, required: true],
+        team_id: [type: :string, required: true],
+        healing_summary: [type: :map, required: true]
+      ]
+  end
 end

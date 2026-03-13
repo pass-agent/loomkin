@@ -46,9 +46,14 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.PeerResolveNegotiation
   ]
 
+  @healing_tools [
+    Loomkin.Tools.DiagnosisReport,
+    Loomkin.Tools.FixConfirmation
+  ]
+
   @team_tools @peer_tools ++ @lead_tools
 
-  @all_tools @solo_tools ++ @team_tools
+  @all_tools @solo_tools ++ @team_tools ++ @healing_tools
 
   @doc "Returns solo-safe tool modules (no team context required)."
   @spec all() :: [module()]
@@ -65,6 +70,10 @@ defmodule Loomkin.Tools.Registry do
   @doc "Returns lead-only tools (team_spawn, team_assign, team_progress, team_dissolve)."
   @spec lead_tools() :: [module()]
   def lead_tools, do: @lead_tools
+
+  @doc "Returns healing-specific tools (diagnosis_report, fix_confirmation)."
+  @spec healing_tools() :: [module()]
+  def healing_tools, do: @healing_tools
 
   @doc "Returns the full tool set for a lead agent (solo + all team tools)."
   @spec for_lead() :: [module()]
@@ -124,6 +133,8 @@ defmodule Loomkin.Tools.Registry do
     new_status reason ready_for rendezvous_id required_agents on_complete_message timeout_minutes
     response counter_proposal resolution
     blocker_task_id assumed_output requeue
+    session_id root_cause affected_files suggested_fix files_changed verified
+    verification_output
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

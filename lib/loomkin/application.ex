@@ -63,7 +63,13 @@ defmodule Loomkin.Application do
         Loomkin.MCP.ClientSupervisor,
 
         # Channel adapters (Telegram, Discord)
-        Loomkin.Channels.Supervisor
+        Loomkin.Channels.Supervisor,
+
+        # Self-healing: dedicated task supervisor for ephemeral agents (isolated from agent loops)
+        {Task.Supervisor, name: Loomkin.Healing.TaskSupervisor},
+
+        # Self-healing orchestrator (manages heal-diagnose-fix-resume lifecycle)
+        {Loomkin.Healing.Orchestrator, shutdown: 15_000}
       ] ++
         maybe_start_mcp_server() ++
         maybe_start_endpoint()

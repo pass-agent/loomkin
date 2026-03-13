@@ -8,6 +8,7 @@ defmodule Loomkin.AgentLoop do
   """
 
   alias Loomkin.AgentLoop.Checkpoint
+  alias Loomkin.Healing.ErrorClassifier
   alias Loomkin.Permissions.HookRunner
   alias Loomkin.Session.ContextWindow
   alias Loomkin.Teams.ContextOffload
@@ -594,6 +595,14 @@ defmodule Loomkin.AgentLoop do
 
     if String.starts_with?(result_text, "Error:") do
       emit(config, :tool_error, %{tool_name: tool_name, error: result_text})
+
+      classification =
+        ErrorClassifier.classify(result_text, %{tool_name: tool_name})
+
+      emit(config, :tool_error_classified, %{
+        tool_name: tool_name,
+        classification: classification
+      })
     end
 
     tool_msg = %{role: :tool, content: result_text, tool_call_id: tool_call_id}

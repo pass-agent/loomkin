@@ -48,6 +48,8 @@ defmodule Loomkin.Teams.Agent do
     pause_requested: false,
     pause_queued: false,
     paused_state: nil,
+    frozen_state: nil,
+    healing_queue: [],
     subscription_ids: [],
     last_asked_at: nil,
     pending_ask_user: nil,
@@ -195,6 +197,11 @@ defmodule Loomkin.Teams.Agent do
     else
       GenServer.call(pid, {:change_role, new_role, opts}, :infinity)
     end
+  end
+
+  @doc "Wake an agent from :suspended_healing status with a healing summary."
+  def wake_from_healing(pid, healing_summary) when is_pid(pid) do
+    GenServer.cast(pid, {:wake_from_healing, healing_summary})
   end
 
   # --- Callbacks ---
@@ -384,6 +391,19 @@ defmodule Loomkin.Teams.Agent do
     user_message = %{role: :user, content: text}
     updated_ps = %{ps | messages: ps.messages ++ [user_message]}
     {:reply, :ok, %{state | paused_state: updated_ps}}
+  end
+
+  # Suspended healing agents queue broadcasts into frozen state
+  @impl true
+  def handle_call(
+        {:inject_broadcast, text},
+        _from,
+        %{status: :suspended_healing, frozen_state: fs} = state
+      )
+      when fs != nil do
+    user_message = %{role: :user, content: text}
+    updated_fs = %{fs | messages: fs.messages ++ [user_message]}
+    {:reply, :ok, %{state | frozen_state: updated_fs}}
   end
 
   # Completed or errored agents ignore broadcasts
@@ -962,6 +982,17 @@ defmodule Loomkin.Teams.Agent do
     {:noreply, %{state | pending_ask_user: new_pending}}
   end
 
+  # Queue task assignments while agent is suspended for healing
+  @impl true
+  def handle_cast({:assign_task, task}, %{status: :suspended_healing} = state) do
+    Logger.info(
+      "[Kin:agent] #{state.name} queuing task during healing suspension task=#{inspect(task[:id])}"
+    )
+
+    qm = QueuedMessage.new({:assign_task, task}, priority: :high, source: :system)
+    {:noreply, %{state | healing_queue: state.healing_queue ++ [qm]}}
+  end
+
   @impl true
   def handle_cast({:assign_task, task}, state) do
     # Only override model if the task has an explicit model_hint;
@@ -991,6 +1022,58 @@ defmodule Loomkin.Teams.Agent do
   @impl true
   def handle_cast({:update_model, new_model}, state) do
     {:noreply, %{state | model: new_model}}
+  end
+
+  # --- Healing wake handler ---
+
+  @impl true
+  def handle_cast({:wake_from_healing, healing_summary}, %{status: :suspended_healing} = state) do
+    Logger.info("[Kin:agent] #{state.name} waking from healing team=#{state.team_id}")
+
+    summary_msg = %{
+      role: :system,
+      content: """
+      [Healing complete] #{healing_summary[:description] || "Error resolved"}
+      Root cause: #{healing_summary[:root_cause] || "Unknown"}
+      Fix applied: #{healing_summary[:fix_description] || "Applied automatically"}
+      Continue your previous task.
+      """
+    }
+
+    restored_messages = state.frozen_state.messages ++ [summary_msg]
+
+    state = %{
+      state
+      | messages: restored_messages,
+        frozen_state: nil,
+        failure_count: 0
+    }
+
+    state = set_status_and_broadcast(state, :idle)
+
+    # Publish healing complete signal
+    try do
+      Loomkin.Signals.Agent.HealingComplete.new!(%{
+        agent_name: to_string(state.name),
+        team_id: state.team_id,
+        healing_summary: healing_summary
+      })
+      |> Loomkin.Signals.publish()
+    rescue
+      _ -> :ok
+    end
+
+    # Drain any messages queued during healing, then re-run the agent loop
+    state = drain_healing_queue(state)
+    state = maybe_rerun_after_healing(state)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:wake_from_healing, _healing_summary}, state) do
+    # Not suspended — no-op
+    {:noreply, state}
   end
 
   @impl true
@@ -1167,6 +1250,73 @@ defmodule Loomkin.Teams.Agent do
     end
 
     {:noreply, drain_queues(maybe_apply_queued_pause(state, msgs))}
+  end
+
+  # --- Healing suspension handler ---
+
+  @impl true
+  def handle_info(
+        {ref, {:loop_healing_needed, classification, msgs}},
+        %{loop_task: {%Task{ref: task_ref}, _from}} = state
+      )
+      when ref == task_ref do
+    Process.demonitor(ref, [:flush])
+    {%Task{}, from} = state.loop_task
+
+    Logger.info(
+      "[Kin:agent] #{state.name} suspending for healing category=#{classification.category} team=#{state.team_id}"
+    )
+
+    frozen_state = %{
+      messages: msgs,
+      task: state.task
+    }
+
+    state = %{
+      state
+      | messages: msgs,
+        loop_task: nil,
+        frozen_state: frozen_state
+    }
+
+    state = set_status_and_broadcast(state, :suspended_healing)
+
+    # Reply to caller if this was a synchronous send_message
+    if from, do: GenServer.reply(from, {:ok, :suspended_healing})
+
+    # Publish healing requested signal for UI
+    try do
+      Loomkin.Signals.Agent.HealingRequested.new!(%{
+        agent_name: to_string(state.name),
+        team_id: state.team_id,
+        classification: classification,
+        error_context: classification[:error_context] || %{}
+      })
+      |> Loomkin.Signals.publish()
+    rescue
+      _ -> :ok
+    end
+
+    # Trigger the orchestrator to start healing (S1 fix)
+    healing_policy = state.role_config.healing_policy
+
+    healing_context = %{
+      classification: classification,
+      error_context: classification[:error_context] || %{},
+      budget_usd: healing_policy[:budget_usd] || 0.50,
+      timeout_ms: healing_policy[:timeout_ms] || :timer.minutes(5),
+      max_attempts: healing_policy[:max_attempts] || 2
+    }
+
+    case Loomkin.Healing.Orchestrator.request_healing(state.team_id, state.name, healing_context) do
+      {:ok, session_id} ->
+        Logger.info("[Kin:agent] #{state.name} healing session started id=#{session_id}")
+
+      {:error, reason} ->
+        Logger.warning("[Kin:agent] #{state.name} failed to start healing: #{inspect(reason)}")
+    end
+
+    {:noreply, state}
   end
 
   @impl true
@@ -2351,8 +2501,32 @@ defmodule Loomkin.Teams.Agent do
            snapshot.failure_count < 1 do
         do_escalate_in_task(reason, messages, loop_opts, snapshot)
       else
-        {:loop_error, reason, messages}
+        maybe_trigger_healing(reason, messages, snapshot)
       end
+    else
+      maybe_trigger_healing(reason, messages, snapshot)
+    end
+  end
+
+  defp maybe_trigger_healing(reason, messages, snapshot) do
+    alias Loomkin.Healing.ErrorClassifier
+
+    error_text = if is_binary(reason), do: reason, else: inspect(reason)
+    classification = ErrorClassifier.classify(error_text)
+
+    healing_policy = snapshot.healing_policy || %{}
+
+    agent_state = %{
+      failure_count: snapshot.failure_count,
+      role: snapshot.role,
+      healing_enabled: Map.get(healing_policy, :enabled, true),
+      healing_categories: Map.get(healing_policy, :categories, []),
+      failure_threshold: Map.get(healing_policy, :failure_threshold),
+      healing_budget_remaining: Map.get(healing_policy, :budget_usd, 0.50)
+    }
+
+    if ErrorClassifier.should_heal?(classification, agent_state) do
+      {:loop_healing_needed, classification, messages}
     else
       {:loop_error, reason, messages}
     end
@@ -2426,7 +2600,8 @@ defmodule Loomkin.Teams.Agent do
       model: state.model,
       task: state.task,
       failure_count: state.failure_count,
-      role: state.role
+      role: state.role,
+      healing_policy: state.role_config && state.role_config.healing_policy
     }
   end
 
@@ -2448,6 +2623,32 @@ defmodule Loomkin.Teams.Agent do
     state = %{state | priority_queue: [], pending_updates: []}
     if had_messages?, do: broadcast_queue_update(state)
     state
+  end
+
+  defp drain_healing_queue(state) do
+    Enum.each(state.healing_queue, fn qm ->
+      send(self(), QueuedMessage.to_dispatchable(qm))
+    end)
+
+    %{state | healing_queue: []}
+  end
+
+  defp maybe_rerun_after_healing(state) do
+    if state.task do
+      # Agent had an active task before suspension — re-run the loop to continue
+      loop_opts = build_loop_opts(state)
+      snapshot = build_snapshot(state)
+
+      task =
+        Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+          run_loop_with_escalation(state.messages, loop_opts, snapshot)
+        end)
+
+      state = set_status_and_broadcast(state, :working)
+      %{state | loop_task: {task, nil}}
+    else
+      state
+    end
   end
 
   defp list_full_queue(state) do
