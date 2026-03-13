@@ -16,10 +16,21 @@ defmodule Loomkin.Teams.Role do
     :tools,
     :system_prompt,
     :budget_limit,
-    reasoning_strategy: :react
+    reasoning_strategy: :react,
+    healing_policy: %{}
   ]
 
   @type reasoning_strategy :: :react | :cot | :cod | :tot | :adaptive
+
+  @type healing_policy :: %{
+          enabled: boolean(),
+          categories: [atom()],
+          min_severity: :low | :medium | :high | :critical,
+          failure_threshold: pos_integer(),
+          budget_usd: float(),
+          max_attempts: pos_integer(),
+          timeout_ms: pos_integer()
+        }
 
   @type t :: %__MODULE__{
           name: atom() | String.t(),
@@ -27,11 +38,98 @@ defmodule Loomkin.Teams.Role do
           tools: [module()],
           system_prompt: String.t(),
           budget_limit: float() | nil,
-          reasoning_strategy: reasoning_strategy()
+          reasoning_strategy: reasoning_strategy(),
+          healing_policy: healing_policy()
         }
 
   @max_role_name_length 64
   @valid_reasoning_strategies [:react, :cot, :cod, :tot, :adaptive]
+
+  @valid_severities [:low, :medium, :high, :critical]
+
+  @healable_categories [
+    :compile_error,
+    :lint_error,
+    :command_failure,
+    :test_failure,
+    :tool_error
+  ]
+
+  @healing_policies %{
+    coder: %{
+      enabled: true,
+      categories: [:compile_error, :lint_error, :command_failure, :test_failure, :tool_error],
+      min_severity: :medium,
+      failure_threshold: 1,
+      budget_usd: 0.50,
+      max_attempts: 2,
+      timeout_ms: :timer.minutes(5)
+    },
+    tester: %{
+      enabled: true,
+      categories: [:compile_error, :command_failure, :test_failure],
+      min_severity: :medium,
+      failure_threshold: 1,
+      budget_usd: 0.50,
+      max_attempts: 2,
+      timeout_ms: :timer.minutes(5)
+    },
+    researcher: %{
+      enabled: true,
+      categories: [:command_failure, :tool_error],
+      min_severity: :medium,
+      failure_threshold: 2,
+      budget_usd: 0.50,
+      max_attempts: 2,
+      timeout_ms: :timer.minutes(5)
+    },
+    reviewer: %{
+      enabled: false,
+      categories: [],
+      min_severity: :critical,
+      failure_threshold: 3,
+      budget_usd: 0.0,
+      max_attempts: 0,
+      timeout_ms: 0
+    },
+    lead: %{
+      enabled: false,
+      categories: [],
+      min_severity: :critical,
+      failure_threshold: 3,
+      budget_usd: 0.0,
+      max_attempts: 0,
+      timeout_ms: 0
+    },
+    weaver: %{
+      enabled: false,
+      categories: [],
+      min_severity: :critical,
+      failure_threshold: 3,
+      budget_usd: 0.0,
+      max_attempts: 0,
+      timeout_ms: 0
+    },
+    concierge: %{
+      enabled: false,
+      categories: [],
+      min_severity: :critical,
+      failure_threshold: 3,
+      budget_usd: 0.0,
+      max_attempts: 0,
+      timeout_ms: 0
+    }
+  }
+
+  @default_custom_healing_policy %{
+    enabled: true,
+    categories: [:compile_error, :lint_error, :command_failure],
+    min_severity: :medium,
+    failure_threshold: 2,
+    budget_usd: 0.50,
+    max_attempts: 2,
+    timeout_ms: :timer.minutes(5)
+  }
 
   # Legacy tier map — kept only for backward-compatible `model_for_tier/1` calls
   # and legacy config parsing. New code should use `ModelRouter.default_model/0`.
@@ -717,7 +815,10 @@ defmodule Loomkin.Teams.Role do
         # Replace {team_manifest} — initially empty, agents get briefed via peer_message
         data = Map.update!(data, :system_prompt, &String.replace(&1, "{team_manifest}", ""))
 
-        {:ok, struct!(__MODULE__, Map.put(data, :name, name))}
+        healing = Map.get(@healing_policies, name, @default_custom_healing_policy)
+
+        {:ok,
+         struct!(__MODULE__, data |> Map.put(:name, name) |> Map.put(:healing_policy, healing))}
 
       :error ->
         {:error, :unknown_role}
@@ -1024,7 +1125,8 @@ defmodule Loomkin.Teams.Role do
       model_tier: :default,
       tools: all_tool_modules,
       system_prompt: full_prompt,
-      budget_limit: nil
+      budget_limit: nil,
+      healing_policy: @default_custom_healing_policy
     }
 
     Logger.info(
@@ -1050,14 +1152,62 @@ defmodule Loomkin.Teams.Role do
         do: raw_strategy,
         else: :adaptive
 
+    base_healing = Map.get(@healing_policies, name, @default_custom_healing_policy)
+    healing_override = get_config_value(config, :healing_policy, %{})
+    healing = merge_healing_policy(base_healing, healing_override)
+
     %__MODULE__{
       name: name,
       model_tier: get_config_value(config, :model_tier, base.model_tier),
       tools: resolve_tools(config, base.tools),
       system_prompt: get_config_value(config, :system_prompt, base.system_prompt),
       budget_limit: get_config_value(config, :budget_limit, base.budget_limit),
-      reasoning_strategy: strategy
+      reasoning_strategy: strategy,
+      healing_policy: healing
     }
+  end
+
+  # -- Healing policy API --
+
+  @doc "Get the default healing policy for a built-in role name."
+  @spec healing_policy(atom()) :: healing_policy()
+  def healing_policy(role_name) when is_atom(role_name) do
+    Map.get(@healing_policies, role_name, @default_custom_healing_policy)
+  end
+
+  @doc "Get the default healing policy used for custom/generated roles."
+  @spec default_custom_healing_policy() :: healing_policy()
+  def default_custom_healing_policy, do: @default_custom_healing_policy
+
+  @doc "List all error categories eligible for healing."
+  @spec healable_categories() :: [atom()]
+  def healable_categories, do: @healable_categories
+
+  @doc "List valid severity levels in ascending order."
+  @spec valid_severities() :: [atom()]
+  def valid_severities, do: @valid_severities
+
+  defp merge_healing_policy(base, overrides) when is_map(overrides) do
+    base
+    |> Map.merge(normalize_healing_keys(overrides))
+    |> validate_healing_policy()
+  end
+
+  defp normalize_healing_keys(map) do
+    Map.new(map, fn
+      {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+      {k, v} when is_atom(k) -> {k, v}
+    end)
+  end
+
+  defp validate_healing_policy(policy) do
+    policy
+    |> Map.update(:categories, [], fn cats ->
+      Enum.filter(cats, &(&1 in @healable_categories))
+    end)
+    |> Map.update(:min_severity, :medium, fn sev ->
+      if sev in @valid_severities, do: sev, else: :medium
+    end)
   end
 
   # -- Kin roster formatting --

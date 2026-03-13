@@ -63,7 +63,10 @@ defmodule Loomkin.Application do
         Loomkin.MCP.ClientSupervisor,
 
         # Channel adapters (Telegram, Discord)
-        Loomkin.Channels.Supervisor
+        Loomkin.Channels.Supervisor,
+
+        # Self-healing orchestrator (manages heal-diagnose-fix-resume lifecycle)
+        Loomkin.Healing.Orchestrator
       ] ++
         maybe_start_mcp_server() ++
         maybe_start_endpoint()

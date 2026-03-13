@@ -1209,6 +1209,140 @@ defmodule LoomkinWeb.WorkspaceLive do
     handle_info({:agent_error, name, payload}, socket)
   end
 
+  # --- Healing signals ---
+
+  def handle_info(%Jido.Signal{type: "healing.session.started"} = sig, socket) do
+    %{agent_name: agent_name, classification: classification} = sig.data
+
+    category =
+      case classification do
+        %{category: cat} -> to_string(cat)
+        _ -> "unknown"
+      end
+
+    socket =
+      socket
+      |> update_agent_card(agent_name, %{
+        status: :suspended_healing,
+        healing_phase: :diagnosing,
+        healing_error_category: category
+      })
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :healing_started,
+      agent: agent_name,
+      content: "#{agent_name} suspended for healing: #{category}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{session_id: sig.data[:session_id], team_id: sig.data[:team_id]}
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "healing.diagnosis.complete"} = sig, socket) do
+    %{agent_name: agent_name, root_cause: root_cause, confidence: confidence} = sig.data
+
+    socket = update_agent_card(socket, agent_name, %{healing_phase: :fixing})
+
+    confidence_pct = round(confidence * 100)
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :healing_diagnosis,
+      agent: agent_name,
+      content: "Diagnosis: #{root_cause} (confidence: #{confidence_pct}%)",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{session_id: sig.data[:session_id], team_id: sig.data[:team_id]}
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "healing.fix.applied"} = sig, socket) do
+    %{agent_name: agent_name, files_changed: files_changed} = sig.data
+
+    socket = update_agent_card(socket, agent_name, %{healing_phase: :confirming})
+
+    file_count = length(files_changed)
+    files_display = Enum.join(files_changed, ", ")
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: :healing_fix_applied,
+      agent: agent_name,
+      content: "Fix applied to #{file_count} file(s): #{files_display}",
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{session_id: sig.data[:session_id], team_id: sig.data[:team_id]}
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "healing.session.complete"} = sig, socket) do
+    %{agent_name: agent_name, outcome: outcome, duration_ms: duration_ms} = sig.data
+
+    socket =
+      update_agent_card(socket, agent_name, %{
+        healing_phase: nil,
+        healing_error_category: nil
+      })
+
+    {event_type, content} =
+      case outcome do
+        :healed ->
+          {:healing_complete,
+           "Healing complete: #{agent_name} resumed (#{format_duration(duration_ms)})"}
+
+        :escalated ->
+          {:healing_failed,
+           "Healing failed: #{agent_name} escalated (#{format_duration(duration_ms)})"}
+
+        :timed_out ->
+          {:healing_failed,
+           "Healing timed out: #{agent_name} escalated (#{format_duration(duration_ms)})"}
+      end
+
+    event = %{
+      id: Ecto.UUID.generate(),
+      type: event_type,
+      agent: agent_name,
+      content: content,
+      timestamp: DateTime.utc_now(),
+      expanded: false,
+      metadata: %{
+        session_id: sig.data[:session_id],
+        team_id: sig.data[:team_id],
+        outcome: outcome
+      }
+    }
+
+    socket =
+      socket
+      |> stream_insert(:comms_events, event)
+      |> update(:comms_event_count, &(&1 + 1))
+
+    {:noreply, socket}
+  end
+
   def handle_info(%Jido.Signal{type: "context.offloaded"} = sig, socket) do
     %{agent_name: name, payload: payload} = sig.data
     handle_info({:context_offloaded, name, payload}, socket)
@@ -4711,7 +4845,12 @@ defmodule LoomkinWeb.WorkspaceLive do
     :rebalance_escalation,
     :conflict,
     :vote_response,
-    :debate_response
+    :debate_response,
+    :healing_started,
+    :healing_diagnosis,
+    :healing_fix_applied,
+    :healing_complete,
+    :healing_failed
   ]
 
   defp forward_to_cards_and_comms(socket, pubsub_event) do
@@ -5468,6 +5607,20 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   defp maybe_insert_synthesis_comms_event(socket, _agent_name, _status, _metadata), do: socket
+
+  defp format_duration(ms) when is_integer(ms) and ms < 1000, do: "#{ms}ms"
+
+  defp format_duration(ms) when is_integer(ms) do
+    seconds = div(ms, 1000)
+
+    if seconds < 60 do
+      "#{seconds}s"
+    else
+      "#{div(seconds, 60)}m #{rem(seconds, 60)}s"
+    end
+  end
+
+  defp format_duration(_), do: "unknown"
 
   defp format_debug_ts(ms) when is_integer(ms) do
     dt = DateTime.from_unix!(ms, :millisecond)

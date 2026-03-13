@@ -222,6 +222,36 @@ defmodule LoomkinWeb.AgentCommsComponent do
       accent_border: "rgba(244, 114, 182, 0.35)",
       accent_text: "#f9a8d4",
       accent_bg: "rgba(244, 114, 182, 0.10)"
+    },
+    healing_started: %{
+      icon: "🔧",
+      accent_border: "rgba(245, 158, 11, 0.40)",
+      accent_text: "#fbbf24",
+      accent_bg: "rgba(245, 158, 11, 0.12)"
+    },
+    healing_diagnosis: %{
+      icon: "🔍",
+      accent_border: "rgba(96, 165, 250, 0.35)",
+      accent_text: "#93bbfd",
+      accent_bg: "rgba(96, 165, 250, 0.10)"
+    },
+    healing_fix_applied: %{
+      icon: "✔",
+      accent_border: "rgba(74, 222, 128, 0.35)",
+      accent_text: "#86efac",
+      accent_bg: "rgba(74, 222, 128, 0.10)"
+    },
+    healing_complete: %{
+      icon: "✨",
+      accent_border: "rgba(74, 222, 128, 0.40)",
+      accent_text: "#86efac",
+      accent_bg: "rgba(74, 222, 128, 0.12)"
+    },
+    healing_failed: %{
+      icon: "⚠",
+      accent_border: "rgba(239, 68, 68, 0.40)",
+      accent_text: "#fca5a5",
+      accent_bg: "rgba(239, 68, 68, 0.12)"
     }
   }
 

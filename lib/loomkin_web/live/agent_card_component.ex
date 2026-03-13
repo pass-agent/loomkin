@@ -714,6 +714,25 @@ defmodule LoomkinWeb.AgentCardComponent do
           Let the team decide
         </button>
       </div>
+
+      <%!-- Healing indicator panel — visible when status is :suspended_healing --%>
+      <div
+        :if={@card.status == :suspended_healing}
+        class="border-t border-amber-500/30 bg-amber-950/20 px-4 py-3 flex flex-col gap-1.5"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-semibold text-amber-400">Self-healing</span>
+          <span class="text-[9px] font-mono text-amber-300/60">
+            {healing_phase_label(@card[:healing_phase])}
+          </span>
+        </div>
+        <div
+          :if={@card[:healing_error_category]}
+          class="text-[10px] text-amber-300/70"
+        >
+          {@card[:healing_error_category]}
+        </div>
+      </div>
     </div>
     """
   end
@@ -728,6 +747,7 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp card_state_class(_content_type, :approval_pending), do: "agent-card-approval"
   defp card_state_class(_content_type, :ask_user_pending), do: "agent-card-asking"
   defp card_state_class(_content_type, :awaiting_synthesis), do: "agent-card-awaiting-synthesis"
+  defp card_state_class(_content_type, :suspended_healing), do: "agent-card-healing"
   defp card_state_class(_content_type, :error), do: "card-error"
   defp card_state_class(_content_type, :crashed), do: "card-error"
   defp card_state_class(_content_type, :recovering), do: "card-error"
@@ -759,6 +779,7 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_dot_class(:approval_pending), do: "bg-violet-500 animate-pulse"
   defp status_dot_class(:ask_user_pending), do: "bg-cyan-500 animate-pulse"
   defp status_dot_class(:awaiting_synthesis), do: "bg-indigo-500 animate-pulse"
+  defp status_dot_class(:suspended_healing), do: "bg-amber-400 animate-pulse"
   defp status_dot_class(:complete), do: "bg-emerald-400"
   defp status_dot_class(:crashed), do: "bg-red-500 animate-pulse"
   defp status_dot_class(:recovering), do: "bg-amber-400 animate-pulse"
@@ -774,6 +795,7 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_label(:approval_pending), do: "Awaiting approval"
   defp status_label(:ask_user_pending), do: "Waiting for you"
   defp status_label(:awaiting_synthesis), do: "Awaiting synthesis"
+  defp status_label(:suspended_healing), do: "Healing..."
   defp status_label(:complete), do: "Complete"
   defp status_label(:crashed), do: "Crashed"
   defp status_label(:recovering), do: "Recovering"
@@ -791,6 +813,7 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_pill_class(:waiting_permission), do: "bg-yellow-500/20 text-yellow-400"
   defp status_pill_class(:recovering), do: "bg-amber-500/20 text-amber-400"
   defp status_pill_class(:permanently_failed), do: "bg-red-500/20 text-red-400"
+  defp status_pill_class(:suspended_healing), do: "bg-amber-500/20 text-amber-400"
   defp status_pill_class(:complete), do: "bg-emerald-500/20 text-emerald-400"
   defp status_pill_class(_), do: "bg-zinc-500/20 text-zinc-400"
 
@@ -803,7 +826,15 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp status_ring_class(:awaiting_synthesis), do: "ring-1 ring-indigo-400/40"
   defp status_ring_class(:paused), do: "ring-1 ring-blue-500/30"
   defp status_ring_class(:permanently_failed), do: "ring-2 ring-red-600 animate-pulse"
+  defp status_ring_class(:suspended_healing), do: "ring-2 ring-amber-400/50 animate-pulse"
   defp status_ring_class(_), do: nil
+
+  # --- Healing phase helpers ---
+
+  defp healing_phase_label(:diagnosing), do: "Diagnosing..."
+  defp healing_phase_label(:fixing), do: "Applying fix..."
+  defp healing_phase_label(:confirming), do: "Verifying..."
+  defp healing_phase_label(_), do: "Diagnosing..."
 
   # --- Stuck warning helpers ---
 
