@@ -30,7 +30,7 @@ defmodule Loomkin.Conversations.IntegrationTest do
       # Subscribe to summary notifications
       Phoenix.PubSub.subscribe(Loomkin.PubSub, "conversation:#{ctx.conv_id}:summary")
 
-      # Start conversation server with max 1 round
+      # Start conversation server with max 1 round (temporary so it won't restart after :stop)
       start_supervised!(
         {Server,
          id: ctx.conv_id,
@@ -38,7 +38,8 @@ defmodule Loomkin.Conversations.IntegrationTest do
          topic: "Architecture decision",
          participants: @participants,
          max_rounds: 1},
-        id: :lifecycle_server
+        id: :lifecycle_server,
+        restart: :temporary
       )
 
       # Start the weaver

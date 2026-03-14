@@ -63,7 +63,7 @@ defmodule Loomkin.Conversations.WeaverTest do
 
   describe "summarization" do
     test "generates fallback summary when llm unavailable and attaches to server", ctx do
-      # Start the conversation server
+      # Start the conversation server (temporary so it won't restart after :stop)
       start_supervised!(
         {Server,
          id: ctx.conv_id,
@@ -71,7 +71,8 @@ defmodule Loomkin.Conversations.WeaverTest do
          topic: "Cache architecture",
          participants: @participants,
          max_rounds: 5},
-        id: :summary_server
+        id: :summary_server,
+        restart: :temporary
       )
 
       # Subscribe to summary notifications
@@ -113,8 +114,8 @@ defmodule Loomkin.Conversations.WeaverTest do
       assert is_list(summary.open_questions)
       assert is_list(summary.recommended_actions)
 
-      # Server stops after attach_summary — wait for Registry cleanup
-      Enum.reduce_while(1..20, nil, fn _, _ ->
+      # Server stops after attach_summary — wait for process exit and Registry cleanup
+      Enum.reduce_while(1..50, nil, fn _, _ ->
         case Registry.lookup(Loomkin.Conversations.Registry, ctx.conv_id) do
           [] ->
             {:halt, :ok}

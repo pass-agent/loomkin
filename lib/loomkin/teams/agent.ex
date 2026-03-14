@@ -2195,14 +2195,12 @@ defmodule Loomkin.Teams.Agent do
       |> Enum.map(fn {task_id, outputs} ->
         output_lines =
           outputs
-          |> Enum.map(fn %{title: title, result: result} ->
-            "  - #{title}: #{result}"
-          end)
-          |> Enum.join("\n")
+          |> Enum.map(&format_predecessor_output/1)
+          |> Enum.join("\n\n")
 
-        "Task #{task_id} has predecessor outputs:\n#{output_lines}"
+        "Task #{task_id} predecessor work:\n#{output_lines}"
       end)
-      |> Enum.join("\n")
+      |> Enum.join("\n\n")
 
     base_content =
       "[System] Tasks now available: #{Enum.join(task_ids, ", ")}. Use team_progress to see details."
@@ -2211,7 +2209,7 @@ defmodule Loomkin.Teams.Agent do
       if output_context == "" do
         base_content
       else
-        base_content <> "\n\nPredecessor outputs:\n" <> output_context
+        base_content <> "\n\nPredecessor work summary:\n" <> output_context
       end
 
     msg = %{role: :system, content: content}
@@ -2788,13 +2786,16 @@ defmodule Loomkin.Teams.Agent do
     permission_callback = build_permission_callback(state)
     checkpoint_callback = build_checkpoint_callback()
 
+    # Orchestrator mode: Lead agents with specialists lose tactical tools.
+    {tools, system_prompt} = maybe_apply_orchestrator_mode(state, system_prompt)
+
     # A resolver fn allows AgentLoop to read the latest project_path from
     # team ETS at every tool call, even when the Task captured stale opts.
     project_path_resolver = fn -> resolve_project_path(team_id, state.project_path) end
 
     [
       model: state.model,
-      tools: state.tools,
+      tools: tools,
       system_prompt: system_prompt,
       project_path: state.project_path,
       project_path_resolver: project_path_resolver,
@@ -2893,6 +2894,53 @@ defmodule Loomkin.Teams.Agent do
         end
       end
     ]
+  end
+
+  # -- Structured predecessor handoff formatting --
+
+  defp format_predecessor_output(output) do
+    lines = ["### #{output.title}", "Result: #{output[:result]}"]
+
+    lines =
+      lines
+      |> maybe_append_list("Files changed", output[:files_changed])
+      |> maybe_append_list("Decisions", output[:decisions_made])
+      |> maybe_append_list("Discoveries", output[:discoveries])
+      |> maybe_append_list("Open questions", output[:open_questions])
+      |> maybe_append_list("Actions taken", output[:actions_taken])
+
+    Enum.join(lines, "\n")
+  end
+
+  defp maybe_append_list(lines, _label, nil), do: lines
+  defp maybe_append_list(lines, _label, []), do: lines
+
+  defp maybe_append_list(lines, label, items),
+    do: lines ++ ["#{label}: #{Enum.join(items, "; ")}"]
+
+  # -- Orchestrator mode helpers --
+
+  defp maybe_apply_orchestrator_mode(state, system_prompt) do
+    orchestrator_enabled? =
+      case Loomkin.Config.get(:teams, :orchestrator_mode) do
+        false -> false
+        _ -> true
+      end
+
+    if state.role == :lead and orchestrator_enabled? and
+         has_specialists?(state.team_id, state.name) do
+      {Role.orchestrator_tools(), system_prompt <> "\n\n" <> Role.orchestrator_prompt_addition()}
+    else
+      {state.tools, system_prompt}
+    end
+  end
+
+  defp has_specialists?(team_id, my_name) do
+    Manager.list_agents(team_id)
+    |> Enum.any?(fn agent ->
+      to_string(agent.name) != to_string(my_name) and
+        agent.role not in [:lead, :concierge, "lead", "concierge"]
+    end)
   end
 
   # -- Spawn gate intercept helpers --

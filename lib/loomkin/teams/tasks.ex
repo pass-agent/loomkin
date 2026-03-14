@@ -67,14 +67,29 @@ defmodule Loomkin.Teams.Tasks do
     end)
   end
 
-  def complete_task(task_id, result) do
+  def complete_task(task_id, result) when is_binary(result) do
+    complete_task(task_id, %{result: result})
+  end
+
+  def complete_task(task_id, attrs) when is_map(attrs) do
     task = get_task!(task_id)
+    result = get_flexible(attrs, :result, "result") || ""
 
     if task.status in [:completed, :failed] do
       {:ok, task}
     else
+      changeset_attrs = %{
+        status: :completed,
+        result: result,
+        actions_taken: get_flexible(attrs, :actions_taken, "actions_taken") || [],
+        discoveries: get_flexible(attrs, :discoveries, "discoveries") || [],
+        files_changed: get_flexible(attrs, :files_changed, "files_changed") || [],
+        decisions_made: get_flexible(attrs, :decisions_made, "decisions_made") || [],
+        open_questions: get_flexible(attrs, :open_questions, "open_questions") || []
+      }
+
       task
-      |> TeamTask.changeset(%{status: :completed, result: result})
+      |> TeamTask.changeset(changeset_attrs)
       |> Repo.update()
       |> tap_ok(fn task ->
         # Persist accumulated cost/tokens from CostTracker for the owning agent
@@ -300,9 +315,9 @@ defmodule Loomkin.Teams.Tasks do
   @doc """
   Returns predecessor output data for completed or partially complete `:requires_output` dependencies.
 
-  Returns `[%{task_id: id, title: title, result: result, partial: boolean}]`.
-  Completed tasks return their full result. Partially complete tasks return
-  their partial results with `partial: true`.
+  Returns a list of maps with task_id, title, result, structured fields, and partial flag.
+  Completed tasks return their full result and structured details. Partially complete tasks
+  return their partial results with `partial: true`.
   """
   def get_predecessor_outputs(task_id) do
     completed =
@@ -312,7 +327,16 @@ defmodule Loomkin.Teams.Tasks do
           on: d.depends_on_id == dep.id,
           where:
             d.task_id == ^task_id and d.dep_type == :requires_output and dep.status == :completed,
-          select: %{task_id: dep.id, title: dep.title, result: dep.result}
+          select: %{
+            task_id: dep.id,
+            title: dep.title,
+            result: dep.result,
+            actions_taken: dep.actions_taken,
+            discoveries: dep.discoveries,
+            files_changed: dep.files_changed,
+            decisions_made: dep.decisions_made,
+            open_questions: dep.open_questions
+          }
       )
       |> Enum.map(&Map.put(&1, :partial, false))
 

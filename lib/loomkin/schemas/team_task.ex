@@ -39,11 +39,16 @@ defmodule Loomkin.Schemas.TeamTask do
     field :speculative, :boolean, default: false
     field :based_on_tentative, :binary_id
     field :confidence, :decimal, default: Decimal.new("1.0")
+    field :actions_taken, {:array, :string}, default: []
+    field :discoveries, {:array, :string}, default: []
+    field :files_changed, {:array, :string}, default: []
+    field :decisions_made, {:array, :string}, default: []
+    field :open_questions, {:array, :string}, default: []
     timestamps(type: :utc_datetime)
   end
 
   @required_fields ~w(team_id title status)a
-  @optional_fields ~w(description owner priority model_hint result cost_usd tokens_used milestones_emitted milestones_required completed_items total_items partial_results speculative based_on_tentative confidence)a
+  @optional_fields ~w(description owner priority model_hint result cost_usd tokens_used milestones_emitted milestones_required completed_items total_items partial_results speculative based_on_tentative confidence actions_taken discoveries files_changed decisions_made open_questions)a
 
   def changeset(task, attrs) do
     task

@@ -1,303 +1,146 @@
-# Epic 15: Thread Weaving — Episode-Based Context Architecture
+# Epic 15: Orchestrator Mode & Structured Task Handoffs
 
 ## Problem Statement
 
-Loomkin agents communicate via PubSub message passing and store task results as plain strings (`task.result`). When Agent B depends on Agent A's work, it receives either a flat string result or must manually query context keepers with keyword/semantic search. This creates three compounding problems:
+Loomkin agents communicate via PubSub message passing and store task results as plain strings (`task.result`). This creates two problems:
 
-1. **Lossy handoffs**: Task results are unstructured strings. The consuming agent has no structured understanding of what was done, what was learned, or what changed — only the final output.
-2. **No composable context**: An agent starting dependent work can't inherit a predecessor's compressed work history. It either gets too little context (just the result) or too much (the full keeper transcript via retrieval).
-3. **Orchestrators get pulled into tactics**: Lead agents have the full tool set (`@all_tools` — file operations, shell, git, LSP). Nothing architecturally prevents a Lead from writing code instead of delegating, which defeats the purpose of team decomposition.
+1. **Lossy handoffs**: Task results are unstructured strings. When Agent B depends on Agent A's work via `:requires_output`, it receives `"  - #{title}: #{result}"` — no structured understanding of what was done, what was learned, what files changed, or what remains open.
+2. **Orchestrators get pulled into tactics**: Lead agents have the full tool set (`@all_tools` — file operations, shell, git, LSP). Nothing architecturally prevents a Lead from writing code instead of delegating, which defeats the purpose of team decomposition.
 
-Random Labs' [Slate architecture](https://randomlabs.ai/blog/slate) solves analogous problems with a primitive they call **Thread Weaving**: bounded worker threads that return compressed **episodes** to an orchestrator, where episodes are composable across threads. This epic adapts that insight to Loomkin's OTP-native multi-agent architecture.
+### What this epic does NOT do
 
-## Core Concepts
+This epic was originally inspired by Random Labs' [Slate architecture](https://randomlabs.ai/blog/slate) and its "Thread Weaving" pattern — where compressed "episodes" are injected into dependent agents' context windows. After analysis, **we rejected the episode injection approach** because it competes with Loomkin's core architectural advantage: distributed, pull-based context.
 
-### Episodes
+Loomkin agents avoid context compaction by keeping knowledge distributed across context keepers, the decision graph, ETS tables, and the query router. Agents pull what they need, when they need it. Injecting compressed episodes into the system prompt is push-based context compaction — exactly what the competition does, just better structured. Our existing tools (`context_retrieve`, `search_keepers`, `cross_team_query`) already solve the "how do I learn about prior work" problem without polluting the context window.
 
-An **episode** is a structured, compressed representation of an agent's work on a bounded task. Unlike a plain result string, an episode captures:
-- What the agent did (actions taken)
-- What it learned (discoveries, decisions)
-- What changed (files modified, state mutations)
-- What remains (open questions, unresolved issues)
-
-Episodes are generated via LLM compression when an agent completes (or partially completes) a task. They replace the current `task.result` string as the primary output artifact.
-
-### Composable Context
-
-Episodes from predecessor tasks can be **injected** into a dependent agent's context window as a first-class enrichment layer — alongside the existing system prompt, decision context, and repo map layers. This eliminates the need for agents to manually query context keepers to understand prior work.
-
-### Orchestrator Mode
-
-When a Lead agent is managing a team with specialists, it operates in a **restricted tool mode** — dispatching, coordinating, and strategizing without access to tactical tools (file edit, shell, git). This enforces the strategy/tactics separation that Slate achieves through its orchestrator/thread split.
-
-## Architecture
-
-```
-Lead Agent (orchestrator mode)
-  |
-  +-- dispatches task with context →  Specialist Agent
-  |                                     |
-  |                                     +-- executes bounded work
-  |                                     +-- generates Episode on completion
-  |                                     |
-  +-- receives Episode ←────────────────+
-  |
-  +-- composes episodes → next dispatch
-  |
-  +-- dependent Specialist Agent ←── predecessor Episode injected into context
-```
-
-### How This Differs from Slate
-
-| Aspect | Slate | Loomkin (this epic) |
-|---|---|---|
-| Threads | Ephemeral, one action, pause/resume | Persistent agents, bounded tasks |
-| Episodes | Thread-scoped, returned to orchestrator | Task-scoped, stored in DB, composable |
-| Orchestrator | Single central thread | Lead agent in orchestrator mode |
-| Decomposition | Implicit (orchestrator dispatches) | Explicit tasks with dependency graph |
-| Parallelism | Thread-level | Agent-level (already exists) |
-| Persistence | In-memory episodes | PostgreSQL-backed episodes |
-| Speculation | None | Existing speculative execution (6.5) |
-
-Loomkin's advantage is that episodes integrate with the existing task dependency graph, speculative execution, and partial results systems — making them strictly more powerful than Slate's flat episode model.
+Instead, this epic:
+- **Enriches task results** with structured fields so handoff messages carry more signal
+- **Enforces orchestrator mode** so Leads delegate instead of doing tactical work
+- Preserves the pull-based context model by making structured results available via existing retrieval patterns
 
 ## Dependencies
 
 **No new deps required.** This builds entirely on existing infrastructure:
 - Ecto schemas (task system)
-- Context window enrichment layers (`context_window.ex`)
-- Context offload compression patterns (`context_offload.ex`)
 - Role tool configuration (`role.ex`)
-- Signal bus (episode lifecycle events)
+- Agent task completion flow (`agent.ex`, `tasks.ex`)
 
 ---
 
-## 15.1: Episode Schema & Generation
+## 15.1: Structured Task Results
 
-**Complexity**: Large
+**Complexity**: Medium
 **Dependencies**: None
-**Description**: Define the episode data structure, Ecto schema for persistence, and LLM-based generation from an agent's message history at task completion boundaries.
+**Description**: Add structured fields to `TeamTask` so completed tasks carry richer context than a flat result string. No separate schema, no LLM compression calls — agents populate these fields directly when completing tasks.
 
-**Files to create**:
-- `lib/loomkin/episodes/episode.ex` — Episode struct and generation logic
-- `lib/loomkin/schemas/episode.ex` — Ecto schema for PostgreSQL persistence
+**Files to modify**:
+- `lib/loomkin/schemas/team_task.ex` — Add structured result fields
+- `lib/loomkin/teams/tasks.ex` — Accept structured fields in completion functions
+- `lib/loomkin/tools/peer_complete_task.ex` — Accept structured fields in tool params
 
-**Episode schema**:
+**New fields on `team_tasks`**:
 ```elixir
-defmodule Loomkin.Schemas.Episode do
-  use Ecto.Schema
-  import Ecto.Changeset
-
-  @primary_key {:id, :binary_id, autogenerate: true}
-
-  schema "episodes" do
-    field :team_id, :string
-    field :task_id, :binary_id
-    field :agent_name, :string
-    field :model_used, :string
-
-    # Structured content
-    field :summary, :string           # 2-3 sentence overview
-    field :actions_taken, {:array, :string}    # what was done
-    field :discoveries, {:array, :string}      # what was learned
-    field :files_changed, {:array, :string}    # paths modified
-    field :decisions_made, {:array, :string}   # choices and rationale
-    field :open_questions, {:array, :string}   # unresolved issues
-    field :key_context, :string        # critical context for successors
-
-    # Metadata
-    field :token_count, :integer       # compressed episode size
-    field :source_tokens, :integer     # original message history size
-    field :compression_ratio, :float   # source_tokens / token_count
-    field :iteration_count, :integer   # how many loop iterations
-
-    timestamps(type: :utc_datetime)
-  end
-end
+field :actions_taken, {:array, :string}, default: []
+field :discoveries, {:array, :string}, default: []
+field :files_changed, {:array, :string}, default: []
+field :decisions_made, {:array, :string}, default: []
+field :open_questions, {:array, :string}, default: []
 ```
 
-**Generation logic** (`Loomkin.Episodes.Episode`):
-```elixir
-def generate(agent_state, task) do
-  # 1. Collect the agent's message history for this task
-  # 2. Single LLM call with structured extraction prompt
-  # 3. Parse response into episode fields
-  # 4. Persist to PostgreSQL
-  # 5. Attach episode_id to the task record
-end
-```
-
-**Generation prompt template**:
-```
-You are compressing an agent's work session into a structured episode.
-The agent was working on: {task.title}
-Task description: {task.description}
-
-Analyze the conversation history and extract:
-1. SUMMARY: 2-3 sentence overview of what happened
-2. ACTIONS_TAKEN: List of concrete actions (file edits, commands run, etc.)
-3. DISCOVERIES: Things learned that weren't known before starting
-4. FILES_CHANGED: File paths that were created or modified
-5. DECISIONS_MADE: Choices made and why (brief rationale)
-6. OPEN_QUESTIONS: Anything unresolved or uncertain
-7. KEY_CONTEXT: Critical context a successor agent would need to continue this work
-
-Respond in JSON format with these exact keys.
-```
-
-**Integration point**: Hook into `agent.ex` task completion flow. When an agent marks a task as `:completed` or `:partially_complete`, generate an episode from the current message history before clearing/archiving messages.
+These complement the existing `result` (summary) and `partial_results` fields. Agents populate them at completion time — no extra LLM call needed since the agent already knows what it did.
 
 **Migration**:
 ```elixir
-create table(:episodes, primary_key: false) do
-  add :id, :binary_id, primary_key: true
-  add :team_id, :string, null: false
-  add :task_id, references(:team_tasks, type: :binary_id, on_delete: :nilify_all)
-  add :agent_name, :string, null: false
-  add :model_used, :string
-  add :summary, :text, null: false
+alter table(:team_tasks) do
   add :actions_taken, {:array, :text}, default: []
   add :discoveries, {:array, :text}, default: []
   add :files_changed, {:array, :text}, default: []
   add :decisions_made, {:array, :text}, default: []
   add :open_questions, {:array, :text}, default: []
-  add :key_context, :text
-  add :token_count, :integer
-  add :source_tokens, :integer
-  add :compression_ratio, :float
-  add :iteration_count, :integer
-  timestamps(type: :utc_datetime)
 end
+```
 
-create index(:episodes, [:team_id])
-create index(:episodes, [:task_id])
-
-# Add episode_id to team_tasks
-alter table(:team_tasks) do
-  add :episode_id, references(:episodes, type: :binary_id, on_delete: :nilify_all)
+**`peer_complete_task` tool changes**:
+Add optional structured params so agents can report what they did:
+```elixir
+params do
+  param :task_id, [type: :string, required: true]
+  param :result, [type: :string, required: true, doc: "Summary of what was accomplished"]
+  param :actions_taken, [type: {:array, :string}, doc: "Concrete actions taken"]
+  param :discoveries, [type: {:array, :string}, doc: "Things learned during the task"]
+  param :files_changed, [type: {:array, :string}, doc: "File paths created or modified"]
+  param :decisions_made, [type: {:array, :string}, doc: "Choices made and brief rationale"]
+  param :open_questions, [type: {:array, :string}, doc: "Unresolved issues for successor tasks"]
 end
 ```
 
 **Acceptance Criteria**:
-- [ ] Episode schema created with all structured fields
-- [ ] `generate/2` produces episode from agent message history via single LLM call
-- [ ] Episode persisted to PostgreSQL on task completion
-- [ ] Episode attached to task record via `episode_id` foreign key
-- [ ] Compression ratio tracked (episode tokens vs source tokens)
-- [ ] Generation failures are non-fatal — task still completes, episode is `nil`
-- [ ] Works with both `:completed` and `:partially_complete` task statuses
+- [ ] Structured fields added to `TeamTask` schema
+- [ ] `peer_complete_task` accepts optional structured fields
+- [ ] `mark_complete/3` persists structured fields alongside `result`
+- [ ] Existing tests pass without modification (all new fields have defaults)
+- [ ] Agents can still complete tasks with just `result` (backward compatible)
 
 ---
 
-## 15.2: Episode-Aware Task Results
+## 15.2: Enriched Predecessor Handoffs
 
 **Complexity**: Medium
 **Dependencies**: 15.1
-**Description**: Replace the current flat `task.result` string with episode-backed results. Existing code that reads `task.result` continues to work (the summary field fills that role), but consumers can now access the full structured episode.
+**Description**: Enrich the predecessor output messages that dependent agents receive when tasks unblock. Currently `agent.ex:2192-2219` formats predecessor outputs as `"  - #{title}: #{result}"`. With structured fields available, handoff messages carry actionable detail.
 
 **Files to modify**:
-- `lib/loomkin/teams/tasks.ex` — Update completion functions to generate episodes
-- `lib/loomkin/teams/agent.ex` — Wire episode generation into task completion flow
-- `lib/loomkin/tools/peer_complete_task.ex` — Include episode generation in tool execution
+- `lib/loomkin/teams/tasks.ex` — `get_predecessor_outputs/1` returns structured fields
+- `lib/loomkin/teams/agent.ex` — Format richer handoff messages in `:tasks_unblocked` handler
 
-**Key changes**:
-
-1. **`Tasks.mark_complete/3`** — After setting status to `:completed`, call `Episode.generate/2` and attach the resulting episode to the task. Set `task.result` to the episode summary for backward compatibility.
-
-2. **`Tasks.mark_partially_complete/2`** — Generate a partial episode. Partial episodes have the same structure but may have more `open_questions` and fewer `decisions_made`. The `key_context` field is especially important here — it tells the next agent what to pick up.
-
-3. **`Tasks.get_predecessor_outputs/1`** — Currently returns `task.result` strings. Update to return episodes (with fallback to `task.result` when no episode exists, for backward compatibility with pre-episode tasks).
-
-**Signals**:
-- `episode.generated` — team_id, task_id, episode_id, compression_ratio
-- `episode.generation_failed` — team_id, task_id, reason
-
-**Acceptance Criteria**:
-- [ ] Task completion auto-generates episode
-- [ ] `task.result` still populated (episode summary) for backward compatibility
-- [ ] `get_predecessor_outputs/1` returns episodes when available
-- [ ] Partial completion generates partial episodes
-- [ ] Existing tests pass without modification (backward compat)
-- [ ] Episode generation signal emitted for observability
-
----
-
-## 15.3: Composable Context Injection
-
-**Complexity**: Large
-**Dependencies**: 15.1, 15.2
-**Description**: Add an "episode context" enrichment layer to the context window. When an agent starts work on a task with `:requires_output` dependencies, predecessor episodes are automatically injected into the agent's system prompt — giving it structured understanding of prior work without manual context retrieval.
-
-**Files to modify**:
-- `lib/loomkin/session/context_window.ex` — Add episode injection layer
-- `lib/loomkin/teams/agent.ex` — Pass task dependency info to context window builder
-
-**New zone in context budget**:
+**Updated `get_predecessor_outputs/1`**:
 ```elixir
-@zone_defaults %{
-  system_prompt: 2048,
-  decision_context: 1024,
-  episode_context: 4096,    # NEW — predecessor episodes
-  repo_map: 2048,
-  tool_definitions: 2048,
-  reserved_output: 4096
-}
-```
-
-**Episode injection logic** (`context_window.ex`):
-```elixir
-def inject_episode_context(system_parts, task, opts \\ []) do
-  max_tokens = Keyword.get(opts, :max_episode_tokens, 4096)
-
-  predecessor_episodes = Episodes.Episode.for_task_predecessors(task.id)
-
-  case predecessor_episodes do
-    [] ->
-      system_parts
-
-    episodes ->
-      formatted = format_episodes(episodes, max_tokens)
-      system_parts ++ [formatted]
-  end
+def get_predecessor_outputs(task_id) do
+  # Existing query, but select structured fields too
+  from d in TeamTaskDep,
+    join: dep in TeamTask, on: d.depends_on_id == dep.id,
+    where: d.task_id == ^task_id and d.dep_type == :requires_output and dep.status == :completed,
+    select: %{
+      task_id: dep.id,
+      title: dep.title,
+      result: dep.result,
+      actions_taken: dep.actions_taken,
+      discoveries: dep.discoveries,
+      files_changed: dep.files_changed,
+      decisions_made: dep.decisions_made,
+      open_questions: dep.open_questions
+    }
 end
 ```
 
-**Episode formatting** (injected into system prompt):
+**Updated handoff message format** (in `handle_info({:tasks_unblocked, ...})`):
 ```
-## Prior Work Context
+[System] Tasks now available: task_abc123. Use team_progress to see details.
 
-The following episodes summarize work completed by other agents that your current task depends on.
-
-### Episode: {task_title} (by {agent_name})
-**Summary**: {summary}
-**Key Context**: {key_context}
-**Decisions Made**: {decisions_made as bullet list}
-**Open Questions**: {open_questions as bullet list}
-**Files Changed**: {files_changed as bullet list}
+Predecessor work summary:
+### Task: "implement user auth" (by coder-1)
+Result: Implemented JWT-based auth with refresh tokens
+Files changed: lib/auth.ex, lib/auth/token.ex, lib/auth/plug.ex
+Decisions: Used JWT over session tokens for statelessness
+Discoveries: Phoenix 1.8 has built-in token verification
+Open questions: Refresh token rotation strategy TBD
 ```
 
-**Token budgeting**: If multiple predecessor episodes exceed the 4096 token budget, prioritize by:
-1. Direct dependencies (`:requires_output`) first
-2. Most recent episodes first
-3. Truncate `actions_taken` before truncating `key_context` or `decisions_made`
-
-**Composability**: When Agent C depends on both Agent A and Agent B's work, both episodes are injected. The agent sees a unified view of all predecessor work — this is the "composable context" that Slate achieves through thread-to-thread episode passing.
+This gives the dependent agent structured context about prior work **in the handoff message itself** — no system prompt injection, no context window zone, no extra LLM calls. The agent can then use `context_retrieve` or `search_keepers` if it needs deeper detail, preserving the pull-based model.
 
 **Acceptance Criteria**:
-- [ ] Episode context layer added to context window budget allocation
-- [ ] Predecessor episodes auto-injected into dependent agent's system prompt
-- [ ] Token budgeting respects the 4096 default cap
-- [ ] Multiple predecessor episodes compose correctly
-- [ ] Priority ordering: direct deps first, recent first
-- [ ] Graceful degradation: missing episodes → no injection (not an error)
-- [ ] Agent doesn't need to manually call `context_retrieve` for predecessor work
+- [ ] `get_predecessor_outputs/1` returns structured fields when available
+- [ ] Handoff messages include structured sections (files, decisions, discoveries, open questions)
+- [ ] Empty structured fields are omitted from the message (no noise)
+- [ ] Falls back gracefully for tasks completed before migration (fields are `[]`)
+- [ ] Existing `:tasks_unblocked` handler tests updated
 
 ---
 
-## 15.4: Orchestrator Mode for Lead Agents
+## 15.3: Orchestrator Mode for Lead Agents
 
 **Complexity**: Medium
-**Dependencies**: None (can be implemented in parallel with 15.1-15.3)
+**Dependencies**: None (can be implemented in parallel with 15.1-15.2)
 **Description**: When a Lead agent is managing a team with specialists, restrict its tool set to coordination-only tools. This enforces the strategy/tactics separation — the Lead dispatches and coordinates, specialists execute.
 
 **Files to modify**:
@@ -326,6 +169,8 @@ The following episodes summarize work completed by other agents that your curren
   Loomkin.Tools.ListTeams,
   Loomkin.Tools.CrossTeamQuery,
   Loomkin.Tools.CollectiveDecision,
+  # Conversations
+  Loomkin.Tools.SpawnConversation,
   # Read-only observation (can look, can't touch)
   Loomkin.Tools.FileRead,
   Loomkin.Tools.FileSearch,
@@ -380,109 +225,57 @@ Delegate all implementation work to your team members.
 
 ---
 
-## 15.5: Episode Signals & Observability
-
-**Complexity**: Small
-**Dependencies**: 15.1, 15.2
-**Description**: Wire episode lifecycle events into the signal bus and workspace UI so users can see episode generation, compression ratios, and context flow between agents.
-
-**Files to modify**:
-- `lib/loomkin/signals/` — New episode signal types
-- `lib/loomkin_web/live/workspace_live.ex` — Handle episode signals
-- `lib/loomkin_web/live/agent_comms_component.ex` — Render episode events in comms feed
-
-**Signal types**:
-```elixir
-"episode.generated"         # task_id, agent_name, compression_ratio, token_count
-"episode.injected"          # target_agent, source_episodes (list), total_tokens
-"episode.generation_failed" # task_id, agent_name, reason
-```
-
-**Comms feed rendering**:
-
-| Event | Display |
-|---|---|
-| `episode.generated` | "{agent} compressed work into episode ({ratio}x compression, {tokens} tokens)" |
-| `episode.injected` | "{agent} received context from {n} predecessor episodes ({tokens} tokens)" |
-| `episode.generation_failed` | "Episode generation failed for {agent}'s task (falling back to plain result)" |
-
-**Acceptance Criteria**:
-- [ ] Episode signals emitted on generation and injection
-- [ ] Comms feed renders episode events
-- [ ] Compression ratio visible to users (helps tune episode quality)
-- [ ] Episode injection visible (users see context flowing between agents)
-
----
-
-## 15.6: Testing
+## 15.4: Testing
 
 **Complexity**: Medium
-**Dependencies**: 15.1-15.5
-**Description**: Test suite for the thread weaving system.
+**Dependencies**: 15.1-15.3
+**Description**: Test suite for structured task results and orchestrator mode.
 
 **Files to create**:
-- `test/loomkin/episodes/episode_test.exs`
-- `test/loomkin/episodes/context_injection_test.exs`
+- `test/loomkin/teams/structured_results_test.exs`
 - `test/loomkin/teams/orchestrator_mode_test.exs`
 
 **Testing strategy**:
 
-- **Episode generation**: Mock LLM response. Verify structured fields are extracted correctly. Verify persistence to PostgreSQL. Verify attachment to task record. Test with both complete and partial task statuses.
-- **Backward compatibility**: Verify existing task completion flow still works. Verify `get_predecessor_outputs/1` returns episode when available, falls back to `task.result` when not. Run existing task tests unchanged.
-- **Context injection**: Create tasks with `:requires_output` dependencies. Complete predecessor tasks (generating episodes). Start dependent agent and verify episodes appear in system prompt. Test token budgeting with multiple large episodes. Test priority ordering.
+- **Structured task results**: Complete tasks with structured fields via `peer_complete_task`. Verify fields persisted to database. Verify backward compatibility (tasks without structured fields still work).
+- **Enriched handoffs**: Create tasks with `:requires_output` dependencies. Complete predecessor with structured fields. Verify dependent agent's `:tasks_unblocked` message includes structured sections. Verify empty fields are omitted.
 - **Orchestrator mode**: Verify Lead with specialists gets restricted tool set. Verify solo Lead gets full tool set. Verify dynamic tool update when specialists join/leave. Verify `.loomkin.toml` override works.
-- **Episode composability**: Chain A → B → C where each depends on the previous. Verify C's context includes both A and B episodes. Verify token budget handles composition gracefully.
-- **Failure resilience**: Verify episode generation failure doesn't block task completion. Verify missing episodes don't crash context injection.
+- **Failure resilience**: Verify tasks without structured fields produce clean handoff messages. Verify orchestrator mode doesn't break when team state changes mid-task.
 
 **Acceptance Criteria**:
-- [ ] Episode generation tested with mocked LLM
+- [ ] Structured result fields tested end-to-end
 - [ ] Backward compatibility verified (existing tests still pass)
-- [ ] Context injection tested with single and multiple predecessors
-- [ ] Token budgeting tested with oversized episodes
+- [ ] Enriched handoff formatting tested with single and multiple predecessors
 - [ ] Orchestrator mode tool restriction tested
-- [ ] Failure paths tested (generation failure, missing episodes)
-- [ ] Integration test: full task chain with episode flow
+- [ ] `.loomkin.toml` override tested
 
 ---
 
 ## Implementation Order
 
 ```
-15.1 Episode Schema ──────> 15.2 Task Integration ──────> 15.3 Context Injection
-                                      |                           |
-                                      v                           v
-                                15.5 Signals & UI          15.6 Testing
-                                                                  ^
-15.4 Orchestrator Mode ───────────────────────────────────────────┘
+15.1 Structured Results ──────> 15.2 Enriched Handoffs
+                                        |
+                                        v
+15.3 Orchestrator Mode ──────> 15.4 Testing
      (parallel track)
 ```
 
 **Recommended order**:
-1. **15.4** Orchestrator Mode (independent, quick win — can ship immediately)
-2. **15.1** Episode Schema & Generation (foundation)
-3. **15.2** Episode-Aware Task Results (wires episodes into existing flow)
-4. **15.3** Composable Context Injection (the payoff — automatic context flow)
-5. **15.5** Signals & Observability (makes it visible)
-6. **15.6** Testing (throughout, final coverage pass here)
-
-**Phase gate**: After 15.2, episodes exist and are attached to tasks. After 15.3, dependent agents automatically receive predecessor context. These two together are the core deliverable.
+1. **15.3** Orchestrator Mode (independent, quick win — can ship immediately)
+2. **15.1** Structured Task Results (schema + tool changes)
+3. **15.2** Enriched Predecessor Handoffs (the payoff — richer context flow)
+4. **15.4** Testing (throughout, final coverage pass here)
 
 ## Risks & Open Questions
 
-1. **Episode quality vs cost.** Each episode generation is one LLM call. For teams running many small tasks, this could add meaningful cost. Consider: should episode generation be opt-in per task priority? Skip episodes for trivial tasks (single-iteration completions)?
+1. **Orchestrator mode escape hatch.** A Lead in orchestrator mode that needs to make a quick fix is stuck delegating. The `.loomkin.toml` override helps, but consider: should there be a `request_tactical_mode` tool that temporarily grants full tools with user approval?
 
-2. **Episode staleness.** A partial episode becomes stale as the task continues. Should partial episodes be regenerated when significant new work occurs? Or is the "latest partial episode" sufficient?
+2. **Structured field adoption.** Agents need prompt guidance to populate structured fields at completion time. The `peer_complete_task` tool params help, but Leads should also encourage specialists to report structured results.
 
-3. **Orchestrator mode escape hatch.** A Lead in orchestrator mode that needs to make a quick fix is stuck delegating. The `.loomkin.toml` override helps, but consider: should there be a `request_tactical_mode` tool that temporarily grants full tools with user approval?
-
-4. **Episode token budget.** The 4096 default for episode context may be too small for complex multi-predecessor chains or too large for simple single-dependency tasks. Consider making this proportional to the number of predecessors.
-
-5. **Interaction with speculative execution.** When a speculative task generates an episode based on assumed inputs, and the assumption is later violated, the episode should be invalidated alongside the task. The `discarded_tentative` status should cascade to the episode.
-
-6. **Interaction with context keepers.** Episodes and context keepers serve overlapping purposes. Long-term, episodes may replace the need for manual `context_retrieve` in most cases. Consider deprecation path.
+3. **Interaction with speculative execution.** When a speculative task completes with structured fields and the assumption is later violated, the structured data should be discarded alongside the task via `discarded_tentative` status cascade.
 
 ## References
 
-- [Random Labs — Slate: Moving Beyond ReAct and RLM](https://randomlabs.ai/blog/slate) — Thread Weaving architecture, episodes, orchestrator/thread split
-- [Karpathy — LLM OS framing](https://x.com/karpathy) — Context window as RAM, processes as tool calls
-- [Hong, Troynikov & Huber — Context Rot](https://research.trychroma.com/context-rot) — Non-uniform attention degradation across context window
+- [Random Labs — Slate: Moving Beyond ReAct and RLM](https://randomlabs.ai/blog/slate) — Original inspiration; we adopted orchestrator mode but rejected episode injection in favor of our pull-based context architecture
+- [Hong, Troynikov & Huber — Context Rot](https://research.trychroma.com/context-rot) — Non-uniform attention degradation across context window (validates our decision to avoid push-based context injection)

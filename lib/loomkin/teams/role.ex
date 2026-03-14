@@ -243,6 +243,34 @@ defmodule Loomkin.Teams.Role do
                Loomkin.Tools.LspDiagnostics
              ] ++ @lead_tools ++ @peer_tools ++ @cross_team_tools
 
+  # Orchestrator mode: Lead agents with specialists get this restricted set.
+  # Read-only observation + coordination + delegation. No write/shell/git.
+  @orchestrator_tools @read_only_tools ++
+                        @lead_tools ++
+                        @peer_tools ++
+                        @cross_team_tools ++
+                        @decision_tools ++
+                        [
+                          Loomkin.Tools.CollectiveDecision,
+                          Loomkin.Tools.MergeGraph
+                        ]
+
+  @orchestrator_prompt_addition """
+  You are operating in orchestrator mode. Your team has specialists who handle implementation.
+  Your job is to:
+  - Break work into bounded tasks and assign them to the right specialist
+  - Monitor progress via team_progress and peer messages
+  - Make strategic decisions about approach and priorities
+  - Compose results from completed work into next steps
+  - Escalate to the user when decisions require human judgment
+
+  You can READ files to understand the codebase, but you cannot EDIT files, run commands, or make direct changes.
+  Delegate all implementation work to your team members.
+  """
+
+  def orchestrator_tools, do: @orchestrator_tools
+  def orchestrator_prompt_addition, do: @orchestrator_prompt_addition
+
   @tool_name_to_module %{
     "file_read" => Loomkin.Tools.FileRead,
     "file_write" => Loomkin.Tools.FileWrite,

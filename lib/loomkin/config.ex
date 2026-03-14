@@ -40,6 +40,7 @@ defmodule Loomkin.Config do
         ~w(mix elixir iex git cat head tail ls find grep rg sed awk echo mkdir cp mv touch node npm npx yarn bun cargo rustc go python python3 pip ruby gem)
     },
     teams: %{
+      orchestrator_mode: true,
       consensus: %{
         quorum: "majority",
         max_rounds: 3,
@@ -223,7 +224,7 @@ defmodule Loomkin.Config do
     teams budget max_per_team_usd max_per_agent_usd max_per_agent_tokens provider_limits
     models grunt standard expert architect escalation
     templates agents role count
-    consensus quorum max_rounds scope on_deadlock
+    orchestrator_mode consensus quorum max_rounds scope on_deadlock
     anthropic google openai client_id client_secret authorize_url token_url scopes mode api_surface callback_base_url gcp_project_id
     telegram discord bot_token webhook_url webhook_path secret_token chat_id allowed_chat_ids allow_user_ids guild_ids)a
 
