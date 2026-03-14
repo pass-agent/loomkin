@@ -45,11 +45,19 @@ defmodule Loomkin.Tools.Shell do
     {~r/\b:(){ :\|:& };:/, "fork bomb (alternate)"}
   ]
 
+  defp default_timeout do
+    Loomkin.Config.get(:agents, :shell_timeout_ms) || @default_timeout
+  end
+
+  defp max_output_chars do
+    Loomkin.Config.get(:agents, :shell_max_output_chars) || @max_output_chars
+  end
+
   @impl true
   def run(params, context) do
     project_path = param!(context, :project_path)
     command = param!(params, :command)
-    timeout = param(params, :timeout, @default_timeout)
+    timeout = param(params, :timeout, default_timeout())
 
     with :ok <- check_blocklist(command),
          :ok <- check_allowlist(command),
@@ -189,11 +197,15 @@ defmodule Loomkin.Tools.Shell do
     end
   end
 
-  defp truncate(output) when byte_size(output) > @max_output_chars do
-    truncated = String.slice(output, 0, @max_output_chars)
-    remaining = byte_size(output) - @max_output_chars
-    truncated <> "\n... (#{remaining} characters truncated)"
-  end
+  defp truncate(output) do
+    max_chars = max_output_chars()
 
-  defp truncate(output), do: output
+    if byte_size(output) > max_chars do
+      truncated = String.slice(output, 0, max_chars)
+      remaining = byte_size(output) - max_chars
+      truncated <> "\n... (#{remaining} characters truncated)"
+    else
+      output
+    end
+  end
 end

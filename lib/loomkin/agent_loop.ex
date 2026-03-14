@@ -16,8 +16,8 @@ defmodule Loomkin.AgentLoop do
 
   require Logger
 
-  @max_rate_limit_retries 3
-  @max_iterations 25
+  @default_max_rate_limit_retries 3
+  @default_max_iterations 25
 
   @type on_event :: (atom(), map() -> :ok)
 
@@ -57,6 +57,8 @@ defmodule Loomkin.AgentLoop do
     config = build_config(opts)
     # Initialize read-file tracker for read-before-write enforcement
     Process.put(:loomkin_read_files, MapSet.new())
+    # Initialize cycle detection tracker (previous tool-call signature)
+    Process.put(:loomkin_prev_tool_signature, nil)
 
     case config.reasoning_strategy do
       :react ->
@@ -85,7 +87,7 @@ defmodule Loomkin.AgentLoop do
         {:error, error_msg, messages}
 
       {:rate_limited, provider} ->
-        if attempt < @max_rate_limit_retries do
+        if attempt < max_rate_limit_retries() do
           backoff_ms = Integer.pow(2, attempt) * 1_000
 
           config.on_event.(:rate_limited, %{
@@ -115,13 +117,21 @@ defmodule Loomkin.AgentLoop do
       agent_name: Keyword.get(opts, :agent_name),
       team_id: Keyword.get(opts, :team_id),
       reasoning_strategy: Keyword.get(opts, :reasoning_strategy, :react),
-      max_iterations: Keyword.get(opts, :max_iterations, @max_iterations),
+      max_iterations: Keyword.get(opts, :max_iterations, max_iterations()),
       on_event: Keyword.get(opts, :on_event, fn _name, _payload -> :ok end),
       on_tool_execute: Keyword.get(opts, :on_tool_execute),
       check_permission: Keyword.get(opts, :check_permission),
       checkpoint: Keyword.get(opts, :checkpoint),
       rate_limiter: Keyword.get(opts, :rate_limiter)
     }
+  end
+
+  defp max_iterations do
+    Loomkin.Config.get(:agents, :max_iterations) || @default_max_iterations
+  end
+
+  defp max_rate_limit_retries do
+    Loomkin.Config.get(:agents, :max_rate_limit_retries) || @default_max_rate_limit_retries
   end
 
   @doc """
@@ -267,6 +277,7 @@ defmodule Loomkin.AgentLoop do
         case execute_tool_calls(classified.tool_calls, messages, config, iteration) do
           {:ok, messages} ->
             emit_usage(config, response)
+            messages = maybe_inject_cycle_warning(classified.tool_calls, messages, config)
             do_loop(messages, config, iteration + 1)
 
           {:paused, reason, messages} ->
@@ -694,6 +705,39 @@ defmodule Loomkin.AgentLoop do
   end
 
   defp maybe_track_read_file(_tool_name, _tool_args, _project_path, _result_text), do: :ok
+
+  # -- Cycle detection ---------------------------------------------------------
+
+  @cycle_warning "You already called the same tool(s) with identical arguments " <>
+                   "in the previous iteration and got the same results. Do NOT repeat " <>
+                   "the same calls. Either use the results you already have to form a " <>
+                   "final answer, or try a different approach."
+
+  defp maybe_inject_cycle_warning(tool_calls, messages, config) do
+    prev_sig = Process.get(:loomkin_prev_tool_signature)
+    current_sig = tool_call_signature(tool_calls)
+    Process.put(:loomkin_prev_tool_signature, current_sig)
+
+    if prev_sig == current_sig and prev_sig != nil do
+      warning_msg = %{role: :user, content: @cycle_warning}
+      emit(config, :cycle_detected, %{signature: current_sig})
+      emit(config, :new_message, warning_msg)
+      messages ++ [warning_msg]
+    else
+      messages
+    end
+  end
+
+  defp tool_call_signature(tool_calls) when is_list(tool_calls) do
+    tool_calls
+    |> Enum.map(fn tc ->
+      name = tc[:name] || tc["name"] || ""
+      args = tc[:arguments] || tc["arguments"] || %{}
+      "#{name}:#{inspect(args)}"
+    end)
+    |> Enum.sort()
+    |> Enum.join("|")
+  end
 
   # -- Helpers -----------------------------------------------------------------
 

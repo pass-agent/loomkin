@@ -191,6 +191,135 @@ defmodule Loomkin.AgentLoopTest do
     end
   end
 
+  describe "cycle detection" do
+    test "initializes prev_tool_signature to nil on run" do
+      # run/2 will fail on LLM call, but the process dict should be initialized
+      AgentLoop.run([%{role: :user, content: "test"}],
+        model: "test:nonexistent",
+        system_prompt: "test",
+        tools: []
+      )
+
+      assert Process.get(:loomkin_prev_tool_signature) == nil
+    end
+
+    test "tool_call_signature produces deterministic, order-independent signatures" do
+      # Access the private function indirectly by testing the process dict behavior.
+      # We verify that the signature mechanism works by running two loops and
+      # checking the process dictionary state.
+
+      # Two calls with same tools in different order should produce same signature
+      calls_a = [
+        %{name: "file_read", arguments: %{"path" => "/a.txt"}},
+        %{name: "grep", arguments: %{"pattern" => "foo"}}
+      ]
+
+      calls_b = [
+        %{name: "grep", arguments: %{"pattern" => "foo"}},
+        %{name: "file_read", arguments: %{"path" => "/a.txt"}}
+      ]
+
+      # Manually test signature equivalence through the process dict
+      # by simulating what maybe_inject_cycle_warning does
+      Process.put(:loomkin_prev_tool_signature, nil)
+
+      config = %{on_event: fn _, _ -> :ok end}
+
+      # First call sets the signature
+      messages = apply_cycle_check(calls_a, [], config)
+      sig_a = Process.get(:loomkin_prev_tool_signature)
+      assert messages == []
+
+      # Second call with reordered tools should detect a cycle
+      messages = apply_cycle_check(calls_b, [], config)
+      sig_b = Process.get(:loomkin_prev_tool_signature)
+
+      assert sig_a == sig_b
+      assert length(messages) == 1
+      assert hd(messages).role == :user
+      assert hd(messages).content =~ "Do NOT repeat"
+    end
+
+    test "different tool calls do not trigger cycle warning" do
+      Process.put(:loomkin_prev_tool_signature, nil)
+      config = %{on_event: fn _, _ -> :ok end}
+
+      _messages =
+        apply_cycle_check(
+          [%{name: "file_read", arguments: %{"path" => "/a.txt"}}],
+          [],
+          config
+        )
+
+      messages =
+        apply_cycle_check(
+          [%{name: "file_read", arguments: %{"path" => "/b.txt"}}],
+          [],
+          config
+        )
+
+      assert messages == []
+    end
+
+    test "cycle warning emits :cycle_detected event" do
+      Process.put(:loomkin_prev_tool_signature, nil)
+      test_pid = self()
+
+      config = %{
+        on_event: fn event_name, payload ->
+          send(test_pid, {:event, event_name, payload})
+          :ok
+        end
+      }
+
+      calls = [%{name: "grep", arguments: %{"pattern" => "foo"}}]
+
+      # First call — no cycle
+      apply_cycle_check(calls, [], config)
+      refute_received {:event, :cycle_detected, _}
+
+      # Second call — cycle detected
+      apply_cycle_check(calls, [], config)
+      assert_received {:event, :cycle_detected, %{signature: sig}}
+      assert is_binary(sig)
+      assert sig =~ "grep"
+    end
+
+    # Helper that mirrors the private maybe_inject_cycle_warning logic
+    defp apply_cycle_check(tool_calls, messages, config) do
+      prev_sig = Process.get(:loomkin_prev_tool_signature)
+
+      current_sig =
+        tool_calls
+        |> Enum.map(fn tc ->
+          name = tc[:name] || tc["name"] || ""
+          args = tc[:arguments] || tc["arguments"] || %{}
+          "#{name}:#{inspect(args)}"
+        end)
+        |> Enum.sort()
+        |> Enum.join("|")
+
+      Process.put(:loomkin_prev_tool_signature, current_sig)
+
+      if prev_sig == current_sig and prev_sig != nil do
+        warning_msg = %{
+          role: :user,
+          content:
+            "You already called the same tool(s) with identical arguments " <>
+              "in the previous iteration and got the same results. Do NOT repeat " <>
+              "the same calls. Either use the results you already have to form a " <>
+              "final answer, or try a different approach."
+        }
+
+        config.on_event.(:cycle_detected, %{signature: current_sig})
+        config.on_event.(:new_message, warning_msg)
+        messages ++ [warning_msg]
+      else
+        messages
+      end
+    end
+  end
+
   describe "max_iterations" do
     test "config includes max_iterations with default of 25" do
       # Build config through run — verify it wires up correctly

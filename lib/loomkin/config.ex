@@ -39,6 +39,32 @@ defmodule Loomkin.Config do
       allowlist:
         ~w(mix elixir iex git cat head tail ls find grep rg sed awk echo mkdir cp mv touch node npm npx yarn bun cargo rustc go python python3 pip ruby gem)
     },
+    agents: %{
+      max_iterations: 25,
+      max_rate_limit_retries: 3,
+      llm_max_retries: 3,
+      llm_base_backoff_ms: 1_000,
+      shell_timeout_ms: 30_000,
+      shell_max_output_chars: 10_000,
+      complexity_check_interval_ms: 60_000,
+      complexity_threshold: 60,
+      spawn_cooldown_ms: 300_000
+    },
+    healing: %{
+      budget_usd: 0.50,
+      max_iterations: 15,
+      max_attempts: 2,
+      timeout_ms: 300_000,
+      rebalancer_check_interval_ms: 60_000,
+      stuck_threshold_ms: 300_000,
+      max_nudges: 2
+    },
+    conversations: %{
+      inactivity_timeout_ms: 60_000,
+      max_personas: 6,
+      default_max_rounds: 8,
+      default_strategy: "round_robin"
+    },
     teams: %{
       orchestrator_mode: true,
       consensus: %{
@@ -129,6 +155,35 @@ defmodule Loomkin.Config do
     GenServer.call(__MODULE__, {:put, key, value})
   end
 
+  @doc """
+  Update a nested config key path in ETS.
+
+  Example: `put_nested([:teams, :consensus, :quorum], "unanimous")`
+  """
+  def put_nested(key_path, value) when is_list(key_path) and length(key_path) >= 2 do
+    GenServer.call(__MODULE__, {:put_nested, key_path, value})
+  end
+
+  @doc """
+  Serialize current ETS config to `.loomkin.toml` at the given project path.
+
+  Strips internal-only keys (`:project_path`) and sensitive keys (`:auth`,
+  `:channels`) before writing. Publishes a `system.config.loaded` signal so
+  running agents pick up changes.
+  """
+  @spec save_to_file(String.t()) :: :ok | {:error, term()}
+  def save_to_file(project_path) do
+    GenServer.call(__MODULE__, {:save_to_file, project_path})
+  end
+
+  @doc """
+  Reset a key path to its default value from `@defaults`.
+  """
+  def reset_key(key_path) when is_list(key_path) do
+    default_value = get_in(@defaults, key_path)
+    put_nested(key_path, default_value)
+  end
+
   @doc "Return the full config map."
   def all do
     @table
@@ -207,6 +262,39 @@ defmodule Loomkin.Config do
     {:reply, :ok, state}
   end
 
+  def handle_call({:put_nested, [top | rest], value}, _from, state) do
+    current =
+      case :ets.lookup(@table, top) do
+        [{^top, v}] -> v
+        [] -> %{}
+      end
+
+    updated = put_in_path(current, rest, value)
+    :ets.insert(@table, {top, updated})
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:save_to_file, project_path}, _from, state) do
+    config =
+      @table
+      |> :ets.tab2list()
+      |> Map.new()
+      |> Map.drop([:project_path, :auth, :channels])
+
+    toml_path = Path.join(project_path, ".loomkin.toml")
+    content = Loomkin.Config.TomlWriter.encode(config)
+
+    case File.write(toml_path, content) do
+      :ok ->
+        signal = Loomkin.Signals.System.ConfigLoaded.new!(%{}, subject: project_path)
+        Loomkin.Signals.publish(signal)
+        {:reply, :ok, state}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
+    end
+  end
+
   # --- Helpers ---
 
   defp store_config(config) do
@@ -226,7 +314,17 @@ defmodule Loomkin.Config do
     templates agents role count
     orchestrator_mode consensus quorum max_rounds scope on_deadlock
     anthropic google openai client_id client_secret authorize_url token_url scopes mode api_surface callback_base_url gcp_project_id
-    telegram discord bot_token webhook_url webhook_path secret_token chat_id allowed_chat_ids allow_user_ids guild_ids)a
+    telegram discord bot_token webhook_url webhook_path secret_token chat_id allowed_chat_ids allow_user_ids guild_ids
+    max_iterations max_rate_limit_retries llm_max_retries llm_base_backoff_ms
+    shell_timeout_ms shell_max_output_chars
+    healing budget_usd max_attempts timeout_ms
+    rebalancer_check_interval_ms stuck_threshold_ms max_nudges
+    complexity_check_interval_ms complexity_threshold spawn_cooldown_ms
+    debate round_timeout_ms
+    max_nesting_depth
+    conversations inactivity_timeout_ms max_personas default_max_rounds default_strategy
+    cascade_threshold pulse_stale_days pulse_confidence_threshold
+    anthropic_tokens_per_min openai_tokens_per_min google_tokens_per_min)a
 
   # Pre-compute a string→atom lookup map so atomize_keys never raises
   @known_key_map Map.new(@known_keys, fn atom -> {Atom.to_string(atom), atom} end)
@@ -258,6 +356,23 @@ defmodule Loomkin.Config do
   end
 
   defp resolve_env_vars(value), do: value
+
+  defp put_in_path(map, [key], value) when is_map(map) do
+    Map.put(map, key, value)
+  end
+
+  defp put_in_path(map, [key | rest], value) when is_map(map) do
+    child = Map.get(map, key, %{})
+    Map.put(map, key, put_in_path(child, rest, value))
+  end
+
+  defp put_in_path(_not_map, [key], value) do
+    %{key => value}
+  end
+
+  defp put_in_path(_not_map, [key | rest], value) do
+    %{key => put_in_path(%{}, rest, value)}
+  end
 
   defp deep_merge(base, override) when is_map(base) and is_map(override) do
     Map.merge(base, override, fn

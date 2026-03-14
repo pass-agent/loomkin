@@ -13,7 +13,7 @@ defmodule Loomkin.Conversations.Server do
   alias Loomkin.Conversations.TurnStrategy
   alias Loomkin.Signals
 
-  @inactivity_timeout_ms 60_000
+  @default_inactivity_timeout_ms 60_000
   @budget_warning_pct 0.8
 
   defstruct [
@@ -404,7 +404,7 @@ defmodule Loomkin.Conversations.Server do
 
   defp reset_inactivity_timer(state) do
     cancel_inactivity_timer(state)
-    timer = Process.send_after(self(), :inactivity_timeout, @inactivity_timeout_ms)
+    timer = Process.send_after(self(), :inactivity_timeout, inactivity_timeout_ms())
     %{state | inactivity_timer: timer}
   end
 
@@ -543,5 +543,9 @@ defmodule Loomkin.Conversations.Server do
       "conversation:#{state.id}",
       {:summarize, state.id, Enum.reverse(state.history), state.topic, state.participants}
     )
+  end
+
+  defp inactivity_timeout_ms do
+    Loomkin.Config.get(:conversations, :inactivity_timeout_ms) || @default_inactivity_timeout_ms
   end
 end

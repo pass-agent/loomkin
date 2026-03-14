@@ -88,11 +88,7 @@ defmodule Loomkin.Application do
   end
 
   defp maybe_start_endpoint do
-    if Application.get_env(:loomkin, LoomkinWeb.Endpoint)[:server] != false do
-      [LoomkinWeb.Endpoint]
-    else
-      []
-    end
+    [LoomkinWeb.Endpoint]
   end
 
   defp maybe_start_mcp_server do

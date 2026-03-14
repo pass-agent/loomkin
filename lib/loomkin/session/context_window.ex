@@ -3,15 +3,9 @@ defmodule Loomkin.Session.ContextWindow do
 
   @default_context_limit 128_000
   @default_reserved_output 4096
+  @default_repo_map_tokens 2048
+  @default_decision_context_tokens 1024
   @chars_per_token 4
-
-  @zone_defaults %{
-    system_prompt: 2048,
-    decision_context: 1024,
-    repo_map: 2048,
-    tool_definitions: 2048,
-    reserved_output: 4096
-  }
 
   @doc """
   Allocate the token budget across zones for a given model.
@@ -29,11 +23,11 @@ defmodule Loomkin.Session.ContextWindow do
     total = model_limit(model)
 
     zones = %{
-      system_prompt: @zone_defaults.system_prompt,
-      decision_context: Keyword.get(opts, :max_decision_tokens, @zone_defaults.decision_context),
-      repo_map: Keyword.get(opts, :max_repo_map_tokens, @zone_defaults.repo_map),
-      tool_definitions: @zone_defaults.tool_definitions,
-      reserved_output: Keyword.get(opts, :reserved_output, @zone_defaults.reserved_output)
+      system_prompt: 2048,
+      decision_context: Keyword.get(opts, :max_decision_tokens, config_decision_context_tokens()),
+      repo_map: Keyword.get(opts, :max_repo_map_tokens, config_repo_map_tokens()),
+      tool_definitions: 2048,
+      reserved_output: Keyword.get(opts, :reserved_output, config_reserved_output_tokens())
     }
 
     zone_sum =
@@ -183,7 +177,7 @@ defmodule Loomkin.Session.ContextWindow do
 
     # Use explicit max_tokens if provided, otherwise compute from budget
     max_tokens = Keyword.get(opts, :max_tokens)
-    reserved_output = Keyword.get(opts, :reserved_output, @default_reserved_output)
+    reserved_output = Keyword.get(opts, :reserved_output, config_reserved_output_tokens())
 
     # Subtract the system prompt size from available budget so total stays within limits
     system_tokens = estimate_tokens(enriched_system)
@@ -399,5 +393,17 @@ defmodule Loomkin.Session.ContextWindow do
     else
       "zai:glm-4.5"
     end
+  end
+
+  defp config_repo_map_tokens do
+    Loomkin.Config.get(:context, :max_repo_map_tokens) || @default_repo_map_tokens
+  end
+
+  defp config_decision_context_tokens do
+    Loomkin.Config.get(:context, :max_decision_context_tokens) || @default_decision_context_tokens
+  end
+
+  defp config_reserved_output_tokens do
+    Loomkin.Config.get(:context, :reserved_output_tokens) || @default_reserved_output
   end
 end

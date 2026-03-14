@@ -86,9 +86,11 @@ defmodule Loomkin.Healing.Orchestrator do
 
   @impl true
   def handle_call({:request_healing, team_id, agent_name, healing_context}, _from, state) do
-    budget = healing_context[:budget_usd] || @default_budget_usd
-    timeout = healing_context[:timeout_ms] || @default_timeout_ms
-    max_attempts = healing_context[:max_attempts] || @default_max_attempts
+    budget = healing_context[:budget_usd] || config_healing(:budget_usd, @default_budget_usd)
+    timeout = healing_context[:timeout_ms] || config_healing(:timeout_ms, @default_timeout_ms)
+
+    max_attempts =
+      healing_context[:max_attempts] || config_healing(:max_attempts, @default_max_attempts)
 
     session = %Session{
       id: Ecto.UUID.generate(),
@@ -99,7 +101,7 @@ defmodule Loomkin.Healing.Orchestrator do
       status: :diagnosing,
       started_at: DateTime.utc_now(),
       budget_remaining_usd: budget,
-      max_iterations: @default_max_iterations,
+      max_iterations: config_healing(:max_iterations, @default_max_iterations),
       attempts: 0,
       max_attempts: max_attempts
     }
@@ -287,7 +289,8 @@ defmodule Loomkin.Healing.Orchestrator do
 
         session = %{session | status: :timed_out}
         escalate(session, :timeout)
-        wake_with_failure(session, "Healing timed out after #{@default_timeout_ms}ms")
+        timeout_ms = config_healing(:timeout_ms, @default_timeout_ms)
+        wake_with_failure(session, "Healing timed out after #{timeout_ms}ms")
         publish_session_complete(session, :timed_out)
         cleanup_healing_agents(session)
 
@@ -546,6 +549,10 @@ defmodule Loomkin.Healing.Orchestrator do
         is_pid(pid) and Process.alive?(pid) do
       Process.exit(pid, :shutdown)
     end
+  end
+
+  defp config_healing(key, default) do
+    Loomkin.Config.get(:healing, key) || default
   end
 
   # --- Signal publishing (S3 fix) ---

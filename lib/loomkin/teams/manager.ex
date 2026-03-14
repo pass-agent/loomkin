@@ -66,7 +66,7 @@ defmodule Loomkin.Teams.Manager do
   """
   def create_sub_team(parent_team_id, spawning_agent, opts) do
     name = opts[:name] || raise ArgumentError, ":name is required"
-    max_depth = opts[:max_depth] || @default_max_nesting_depth
+    max_depth = opts[:max_depth] || config_max_nesting_depth()
 
     case get_team_meta(parent_team_id) do
       {:ok, parent_meta} ->
@@ -543,5 +543,9 @@ defmodule Loomkin.Teams.Manager do
       _ ->
         :ok
     end
+  end
+
+  defp config_max_nesting_depth do
+    Loomkin.Config.get(:teams, :max_nesting_depth) || @default_max_nesting_depth
   end
 end

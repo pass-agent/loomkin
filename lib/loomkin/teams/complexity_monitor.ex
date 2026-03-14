@@ -69,9 +69,10 @@ defmodule Loomkin.Teams.ComplexityMonitor do
   @impl true
   def init(opts) do
     team_id = Keyword.fetch!(opts, :team_id)
-    check_interval = Keyword.get(opts, :check_interval, @default_check_interval_ms)
-    threshold = Keyword.get(opts, :threshold, @default_threshold)
-    spawn_cooldown = Keyword.get(opts, :spawn_cooldown, @default_spawn_cooldown_ms)
+    # Allow test overrides; nil means "read from config at runtime"
+    check_interval_override = Keyword.get(opts, :check_interval)
+    threshold_override = Keyword.get(opts, :threshold)
+    spawn_cooldown_override = Keyword.get(opts, :spawn_cooldown)
 
     # Signal types are global (e.g. "team.conflict.detected", "team.task.assigned").
     # Publishers don't include team_id in the path, so we subscribe globally and
@@ -81,14 +82,15 @@ defmodule Loomkin.Teams.ComplexityMonitor do
     Signals.subscribe("decision.*")
 
     now = System.monotonic_time(:millisecond)
+    cooldown = spawn_cooldown_override || config_spawn_cooldown()
 
     state = %{
       team_id: team_id,
-      check_interval: check_interval,
+      check_interval_override: check_interval_override,
+      threshold_override: threshold_override,
+      spawn_cooldown_override: spawn_cooldown_override,
       scores: [],
-      threshold: threshold,
-      spawn_cooldown: spawn_cooldown,
-      last_spawn_suggested_at: now - spawn_cooldown - 1,
+      last_spawn_suggested_at: now - cooldown - 1,
       pending_events: %{
         conflicts: 0,
         debates: 0,
@@ -96,7 +98,7 @@ defmodule Loomkin.Teams.ComplexityMonitor do
       }
     }
 
-    schedule_check(check_interval)
+    schedule_check(check_interval_override || config_check_interval())
 
     {:ok, state}
   end
@@ -135,7 +137,7 @@ defmodule Loomkin.Teams.ComplexityMonitor do
     # Reset pending event counters after check
     state = %{state | pending_events: %{conflicts: 0, debates: 0, tasks_created: 0}}
 
-    schedule_check(state.check_interval)
+    schedule_check(state.check_interval_override || config_check_interval())
     {:noreply, state}
   end
 
@@ -246,9 +248,11 @@ defmodule Loomkin.Teams.ComplexityMonitor do
   defp maybe_suggest_spawn(state, score, metrics, tasks) do
     avg = historical_avg(state.scores)
     now = System.monotonic_time(:millisecond)
-    cooldown_elapsed = now - state.last_spawn_suggested_at > state.spawn_cooldown
+    cooldown = state.spawn_cooldown_override || config_spawn_cooldown()
+    threshold = state.threshold_override || config_threshold()
+    cooldown_elapsed = now - state.last_spawn_suggested_at > cooldown
 
-    if score >= avg + 25 and score > state.threshold and cooldown_elapsed do
+    if score >= avg + 25 and score > threshold and cooldown_elapsed do
       drivers = identify_drivers(state, metrics, tasks)
       specialist_type = recommend_specialist(drivers)
       reason = "complexity spike: score #{score} vs avg #{avg}, drivers: #{inspect(drivers)}"
@@ -354,5 +358,19 @@ defmodule Loomkin.Teams.ComplexityMonitor do
         }
       })
     end)
+  end
+
+  # --- Config helpers ---
+
+  defp config_check_interval do
+    Loomkin.Config.get(:agents, :complexity_check_interval_ms) || @default_check_interval_ms
+  end
+
+  defp config_threshold do
+    Loomkin.Config.get(:agents, :complexity_threshold) || @default_threshold
+  end
+
+  defp config_spawn_cooldown do
+    Loomkin.Config.get(:agents, :spawn_cooldown_ms) || @default_spawn_cooldown_ms
   end
 end

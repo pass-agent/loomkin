@@ -202,4 +202,72 @@ defmodule Loomkin.ConfigTest do
       assert Map.has_key?(config, :decisions)
     end
   end
+
+  describe "put_nested/2" do
+    test "updates a nested key path" do
+      Loomkin.Config.put_nested([:teams, :consensus, :quorum], "unanimous")
+
+      assert Loomkin.Config.get(:teams) |> get_in([:consensus, :quorum]) == "unanimous"
+    after
+      Loomkin.Config.load(@test_dir)
+    end
+
+    test "creates intermediate maps if they don't exist" do
+      Loomkin.Config.put_nested([:agents, :max_iterations], 50)
+
+      assert Loomkin.Config.get(:agents) |> Map.get(:max_iterations) == 50
+    after
+      Loomkin.Config.load(@test_dir)
+    end
+
+    test "preserves sibling keys when updating nested value" do
+      original_mode = Loomkin.Config.get(:teams, :orchestrator_mode)
+      Loomkin.Config.put_nested([:teams, :consensus, :quorum], "unanimous")
+
+      assert Loomkin.Config.get(:teams, :orchestrator_mode) == original_mode
+    after
+      Loomkin.Config.load(@test_dir)
+    end
+  end
+
+  describe "save_to_file/1" do
+    test "writes config to .loomkin.toml" do
+      File.mkdir_p!(@test_dir)
+
+      Loomkin.Config.save_to_file(@test_dir)
+
+      toml_path = Path.join(@test_dir, ".loomkin.toml")
+      assert File.exists?(toml_path)
+
+      content = File.read!(toml_path)
+      assert content =~ "[model]"
+      assert content =~ "[permissions]"
+    after
+      File.rm_rf!(@test_dir)
+    end
+
+    test "saved file can be parsed back by Toml" do
+      File.mkdir_p!(@test_dir)
+
+      Loomkin.Config.save_to_file(@test_dir)
+
+      toml_path = Path.join(@test_dir, ".loomkin.toml")
+      assert {:ok, parsed} = Toml.decode_file(toml_path)
+      assert is_map(parsed)
+    after
+      File.rm_rf!(@test_dir)
+    end
+  end
+
+  describe "reset_key/1" do
+    test "restores a key to its default value" do
+      Loomkin.Config.put_nested([:context, :max_repo_map_tokens], 8192)
+      assert Loomkin.Config.get(:context, :max_repo_map_tokens) == 8192
+
+      Loomkin.Config.reset_key([:context, :max_repo_map_tokens])
+      assert Loomkin.Config.get(:context, :max_repo_map_tokens) == 2048
+    after
+      Loomkin.Config.load(@test_dir)
+    end
+  end
 end

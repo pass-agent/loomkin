@@ -48,7 +48,7 @@ defmodule Loomkin.Tools.SpawnConversation do
   alias Loomkin.Conversations.Weaver
 
   @min_personas 2
-  @max_personas 6
+  @default_max_personas 6
   @default_max_rounds 8
   @default_strategy "round_robin"
   @required_persona_fields [
@@ -86,8 +86,8 @@ defmodule Loomkin.Tools.SpawnConversation do
        %{
          topic: topic,
          context: param(params, :context),
-         strategy: strategy_atom(param(params, :strategy) || @default_strategy),
-         max_rounds: param(params, :max_rounds) || @default_max_rounds,
+         strategy: strategy_atom(param(params, :strategy) || config_default_strategy()),
+         max_rounds: param(params, :max_rounds) || config_default_max_rounds(),
          facilitator: param(params, :facilitator),
          personas: Enum.map(personas, &Persona.from_map/1)
        }}
@@ -133,11 +133,17 @@ defmodule Loomkin.Tools.SpawnConversation do
     {:error, "At least #{@min_personas} personas required, got #{length(personas)}"}
   end
 
-  defp validate_personas(personas) when length(personas) > @max_personas do
-    {:error, "At most #{@max_personas} personas allowed, got #{length(personas)}"}
+  defp validate_personas(personas) do
+    max = config_max_personas()
+
+    if length(personas) > max do
+      {:error, "At most #{max} personas allowed, got #{length(personas)}"}
+    else
+      do_validate_persona_fields(personas)
+    end
   end
 
-  defp validate_personas(personas) do
+  defp do_validate_persona_fields(personas) do
     missing =
       Enum.flat_map(personas, fn persona ->
         Enum.flat_map(@required_persona_fields, fn {atom_key, str_key} ->
@@ -337,5 +343,17 @@ defmodule Loomkin.Tools.SpawnConversation do
 
   defp fast_model(_session_id) do
     Loomkin.Config.get(:model, :fast) || "zai:glm-4.5"
+  end
+
+  defp config_max_personas do
+    Loomkin.Config.get(:conversations, :max_personas) || @default_max_personas
+  end
+
+  defp config_default_max_rounds do
+    Loomkin.Config.get(:conversations, :default_max_rounds) || @default_max_rounds
+  end
+
+  defp config_default_strategy do
+    Loomkin.Config.get(:conversations, :default_strategy) || @default_strategy
   end
 end

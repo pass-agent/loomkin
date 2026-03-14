@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "elixir-expert": {
+      "source": "404kidwiz/claude-supercode-skills",
+      "sourceType": "github",
+      "computedHash": "a2e651e5bb6d7805f7a1fcf19bb044dd9ce43b607e5f1723fce8f4d33d7bc009"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461"
+    },
+    "modern-css": {
+      "source": "paulirish/dotfiles",
+      "sourceType": "github",
+      "computedHash": "04b1fd69e3c088949827e7c2af748402b2b7f798fc8742e9a7315ed506b161cc"
+    }
+  }
+}

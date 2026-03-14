@@ -312,6 +312,18 @@ body {
 }
 
 /* ══════════════════════════════════════════
+   Settings Save Bar Entry
+   ══════════════════════════════════════════ */
+@keyframes settingsBarEnter {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.settings-bar-enter {
+  animation: settingsBarEnter 0.25s ease-out;
+}
+
+/* ══════════════════════════════════════════
    Tab Content Transition
    ══════════════════════════════════════════ */
 .tab-content-enter {

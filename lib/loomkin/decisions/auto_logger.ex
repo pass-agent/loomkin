@@ -3,6 +3,8 @@ defmodule Loomkin.Decisions.AutoLogger do
 
   use GenServer
 
+  require Logger
+
   alias Loomkin.Decisions.Graph
   alias Loomkin.Teams.Tasks
 
@@ -120,7 +122,7 @@ defmodule Loomkin.Decisions.AutoLogger do
          }) do
       {:ok, node} ->
         if parent_id = state.task_nodes[task_id] do
-          Graph.add_edge(parent_id, node.id, :leads_to)
+          safe_add_edge(parent_id, node.id, :leads_to)
         end
 
         {:noreply, state}
@@ -145,7 +147,7 @@ defmodule Loomkin.Decisions.AutoLogger do
          }) do
       {:ok, node} ->
         if parent_id = state.task_nodes[task_id] do
-          Graph.add_edge(parent_id, node.id, :leads_to)
+          safe_add_edge(parent_id, node.id, :leads_to)
         end
 
         {:noreply, state}
@@ -210,7 +212,7 @@ defmodule Loomkin.Decisions.AutoLogger do
 
   # Agent error
   def handle_info(%Jido.Signal{type: "agent.error", data: data}, state) do
-    agent_name = to_string(data.agent_name)
+    agent_name = data |> Map.get(:agent_name, "unknown") |> to_string()
     reason = Map.get(data, :reason, "unknown")
 
     log_node(state, %{
@@ -253,7 +255,7 @@ defmodule Loomkin.Decisions.AutoLogger do
          }) do
       {:ok, node} ->
         if parent_id = state.task_nodes[task_id] do
-          Graph.add_edge(parent_id, node.id, :leads_to)
+          safe_add_edge(parent_id, node.id, :leads_to)
         end
 
         {:noreply, state}
@@ -314,13 +316,22 @@ defmodule Loomkin.Decisions.AutoLogger do
       |> Map.put_new(:metadata, base_metadata(state))
       |> Map.update!(:metadata, &Map.merge(base_metadata(state), &1))
 
-    case Graph.add_node(attrs) do
-      {:ok, node} = result ->
-        link_to_active_goal(node, state.team_id)
-        result
+    try do
+      case Graph.add_node(attrs) do
+        {:ok, node} = result ->
+          link_to_active_goal(node, state.team_id)
+          result
 
-      {:error, _reason} = error ->
-        error
+        {:error, _reason} = error ->
+          error
+      end
+    catch
+      kind, reason ->
+        Logger.debug(
+          "[Kin:auto_logger] decision logging unavailable: #{inspect(kind)} #{inspect(reason)}"
+        )
+
+        {:error, :db_unavailable}
     end
   end
 
@@ -335,6 +346,17 @@ defmodule Loomkin.Decisions.AutoLogger do
           Graph.add_edge(goal.id, node.id, :leads_to)
       end
     end
+  end
+
+  defp safe_add_edge(from_id, to_id, label) do
+    Graph.add_edge(from_id, to_id, label)
+  catch
+    kind, reason ->
+      Logger.debug(
+        "[Kin:auto_logger] edge logging unavailable: #{inspect(kind)} #{inspect(reason)}"
+      )
+
+      {:error, :db_unavailable}
   end
 
   defp base_metadata(state, extra \\ %{}) do

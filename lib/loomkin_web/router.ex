@@ -32,6 +32,7 @@ defmodule LoomkinWeb.Router do
     live "/sessions/new", WorkspaceLive, :new
     live "/sessions/:session_id", WorkspaceLive, :show
     live "/dashboard", CostDashboardLive, :index
+    live "/settings", SettingsLive, :index
   end
 
   if Mix.env() in [:dev, :test] do
