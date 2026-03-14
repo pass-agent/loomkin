@@ -26,7 +26,9 @@ defmodule Loomkin.Config.TomlWriter do
   end
 
   defp split_top_level(map) do
-    Enum.split_with(map, fn {_k, v} -> not is_map(v) end)
+    map
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Enum.split_with(fn {_k, v} -> not is_map(v) end)
   end
 
   defp encode_table(prefix, map) when is_map(map) do

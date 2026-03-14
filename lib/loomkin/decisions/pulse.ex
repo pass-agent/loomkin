@@ -30,7 +30,7 @@ defmodule Loomkin.Decisions.Pulse do
     coverage_gaps = find_coverage_gaps(active_goals)
     low_confidence = find_low_confidence(confidence_threshold)
     stale_nodes = find_stale_nodes(stale_days)
-    health_score = compute_health(opts)
+    health_score = compute_health(Keyword.put(opts, :confidence_threshold, confidence_threshold))
 
     %{
       active_goals: active_goals,
@@ -48,12 +48,19 @@ defmodule Loomkin.Decisions.Pulse do
   def compute_health(opts \\ []) do
     team_id = Keyword.get(opts, :team_id)
 
+    confidence_threshold =
+      Keyword.get(
+        opts,
+        :confidence_threshold,
+        config_decisions(:pulse_confidence_threshold, @default_confidence_threshold)
+      )
+
     active_nodes = list_active_nodes(team_id)
     all_edges = list_all_edges(team_id, active_nodes)
 
     gap_count = count_coverage_gaps(active_nodes, all_edges)
     orphan_count = count_orphans(active_nodes, all_edges)
-    low_confidence_count = count_low_confidence(active_nodes)
+    low_confidence_count = count_low_confidence(active_nodes, confidence_threshold)
 
     100 - min(gap_count * 10, 50) - min(orphan_count * 5, 30) - min(low_confidence_count * 3, 20)
   end
@@ -113,9 +120,7 @@ defmodule Loomkin.Decisions.Pulse do
     |> Enum.count(&(not MapSet.member?(edge_node_ids, &1.id)))
   end
 
-  defp count_low_confidence(active_nodes) do
-    threshold = config_decisions(:pulse_confidence_threshold, @default_confidence_threshold)
-
+  defp count_low_confidence(active_nodes, threshold) do
     Enum.count(active_nodes, fn node ->
       node.confidence != nil and node.confidence < threshold
     end)

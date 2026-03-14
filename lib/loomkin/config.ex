@@ -251,7 +251,7 @@ defmodule Loomkin.Config do
       @table
       |> :ets.tab2list()
       |> Map.new()
-      |> Map.drop([:project_path])
+      |> Map.drop([:project_path, :auth, :channels])
 
     toml_path = Path.join(project_path, ".loomkin.toml")
     content = Loomkin.Config.TomlWriter.encode(config)

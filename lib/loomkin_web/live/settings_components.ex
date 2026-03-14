@@ -234,10 +234,10 @@ defmodule LoomkinWeb.SettingsComponents do
       phx-click="update_setting"
       phx-value-key={@key_string}
       phx-value-value={to_string(!@value)}
-      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-      style={
-        if @value, do: "background-color: rgb(139 92 246)", else: "background-color: rgb(55 65 81)"
-      }
+      class={[
+        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+        if(@value, do: "bg-violet-500", else: "bg-gray-700")
+      ]}
       role="switch"
       aria-checked={to_string(@value)}
     >

@@ -68,7 +68,7 @@ defmodule Loomkin.Teams.Debate do
 
   def initiate_debate(team_id, topic, participants, opts) do
     policy = Keyword.get(opts, :policy, ConsensusPolicy.default())
-    max_rounds = Keyword.get(opts, :max_rounds, policy.max_rounds)
+    max_rounds = Keyword.get(opts, :max_rounds, config_max_rounds(policy))
     round_timeout = Keyword.get(opts, :round_timeout_ms, config_round_timeout())
     session_id = Keyword.get(opts, :session_id)
 
@@ -809,6 +809,10 @@ defmodule Loomkin.Teams.Debate do
   end
 
   # --- Config helpers ---
+
+  defp config_max_rounds(policy) do
+    config_nested([:teams, :debate, :max_rounds], nil) || policy.max_rounds
+  end
 
   defp config_round_timeout do
     config_nested([:teams, :debate, :round_timeout_ms], @default_round_timeout_ms)

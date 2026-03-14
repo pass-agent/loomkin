@@ -687,7 +687,8 @@ defmodule Loomkin.Settings.Registry do
 
     Map.new(@settings, fn setting ->
       key_str = key_string(setting.key)
-      value = get_nested(config, setting.key) || setting.default
+      raw = get_nested(config, setting.key)
+      value = if is_nil(raw), do: setting.default, else: raw
       {key_str, value}
     end)
   end
