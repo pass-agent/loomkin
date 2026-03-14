@@ -1,5 +1,5 @@
 defmodule LoomkinWeb.SettingsLiveTest do
-  use LoomkinWeb.ConnCase
+  use LoomkinWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 

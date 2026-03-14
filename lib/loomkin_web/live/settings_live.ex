@@ -190,12 +190,32 @@ defmodule LoomkinWeb.SettingsLive do
     {:noreply, assign(socket, values: values, dirty: dirty)}
   end
 
+  def handle_event("keydown", %{"key" => key}, socket)
+      when key in ["ArrowUp", "ArrowDown"] do
+    tabs = socket.assigns.tabs
+    current_index = Enum.find_index(tabs, &(&1 == socket.assigns.active_tab))
+
+    new_index =
+      case key do
+        "ArrowUp" -> max(current_index - 1, 0)
+        "ArrowDown" -> min(current_index + 1, length(tabs) - 1)
+      end
+
+    tab = Enum.at(tabs, new_index)
+    {:noreply, assign(socket, active_tab: tab, sections: Registry.by_tab(tab))}
+  end
+
+  def handle_event("keydown", _params, socket), do: {:noreply, socket}
+
   def render(assigns) do
+    assigns = assign(assigns, :dirty_tabs, compute_dirty_tabs(assigns.dirty))
+
     ~H"""
     <.settings_layout
       active_tab={@active_tab}
       tabs={@tabs}
       dirty_count={MapSet.size(@dirty)}
+      dirty_tabs={@dirty_tabs}
       has_errors={map_size(@errors) > 0}
     >
       <.settings_tab
@@ -257,4 +277,14 @@ defmodule LoomkinWeb.SettingsLive do
   end
 
   defp cast_value(_setting, value), do: value
+
+  defp compute_dirty_tabs(dirty) do
+    dirty
+    |> Enum.reduce(MapSet.new(), fn key_string, acc ->
+      case Registry.by_key(key_string) do
+        nil -> acc
+        setting -> MapSet.put(acc, setting.tab)
+      end
+    end)
+  end
 end

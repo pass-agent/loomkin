@@ -1308,12 +1308,23 @@ defmodule Loomkin.Teams.Agent do
       max_attempts: healing_policy[:max_attempts] || 2
     }
 
-    case Loomkin.Healing.Orchestrator.request_healing(state.team_id, state.name, healing_context) do
-      {:ok, session_id} ->
-        Logger.info("[Kin:agent] #{state.name} healing session started id=#{session_id}")
+    try do
+      case Loomkin.Healing.Orchestrator.request_healing(
+             state.team_id,
+             state.name,
+             healing_context
+           ) do
+        {:ok, session_id} ->
+          Logger.info("[Kin:agent] #{state.name} healing session started id=#{session_id}")
 
-      {:error, reason} ->
-        Logger.warning("[Kin:agent] #{state.name} failed to start healing: #{inspect(reason)}")
+        {:error, reason} ->
+          Logger.warning("[Kin:agent] #{state.name} failed to start healing: #{inspect(reason)}")
+      end
+    rescue
+      e ->
+        Logger.warning(
+          "[Kin:agent] #{state.name} healing orchestrator unavailable: #{inspect(e)}"
+        )
     end
 
     {:noreply, state}

@@ -1,7 +1,14 @@
 defmodule Loomkin.Auth.Providers.GoogleTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Loomkin.Auth.Providers.Google
+
+  setup do
+    original_auth = Loomkin.Config.get(:auth)
+    Loomkin.Config.put(:auth, Loomkin.Config.defaults()[:auth])
+    on_exit(fn -> if original_auth, do: Loomkin.Config.put(:auth, original_auth) end)
+    :ok
+  end
 
   test "provider_name/0 returns :google" do
     assert :google == Google.provider_name()
