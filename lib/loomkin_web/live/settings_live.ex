@@ -63,11 +63,11 @@ defmodule LoomkinWeb.SettingsLive do
     if MapSet.size(socket.assigns.dirty) == 0 or map_size(socket.assigns.errors) > 0 do
       {:noreply, socket}
     else
-      for key_string <- socket.assigns.dirty do
+      Enum.each(socket.assigns.dirty, fn key_string ->
         setting = Registry.by_key(key_string)
         value = Map.get(socket.assigns.values, key_string)
         Loomkin.Config.put_nested(setting.key, value)
-      end
+      end)
 
       project_path =
         case Loomkin.Config.get(:project_path) do

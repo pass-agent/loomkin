@@ -811,7 +811,7 @@ defmodule Loomkin.Teams.Debate do
   # --- Config helpers ---
 
   defp config_max_rounds(policy) do
-    config_nested([:teams, :debate, :max_rounds], nil) || policy.max_rounds
+    config_nested([:teams, :debate, :max_rounds], nil) || policy.max_rounds || @default_max_rounds
   end
 
   defp config_round_timeout do

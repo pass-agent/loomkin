@@ -159,20 +159,30 @@ defmodule Loomkin.Teams.RateLimiter do
   end
 
   defp get_or_init_bucket(state, provider) do
+    configured = config_provider_buckets()
+
     case Map.fetch(state.buckets, provider) do
       {:ok, bucket} ->
+        # Re-apply configured limits so settings changes take effect at runtime
+        bucket =
+          case Map.get(configured, provider) do
+            %{max: max, refill_rate: rate} -> %{bucket | max: max, refill_rate: rate}
+            nil -> bucket
+          end
+
+        state = put_in(state, [:buckets, provider], bucket)
         {bucket, state}
 
       :error ->
         now = System.monotonic_time(:millisecond)
 
-        bucket = %{
-          tokens: @default_bucket.max,
-          max: @default_bucket.max,
-          refill_rate: @default_bucket.refill_rate,
-          last_refill: now
-        }
+        {max, rate} =
+          case Map.get(configured, provider) do
+            %{max: max, refill_rate: rate} -> {max, rate}
+            nil -> {@default_bucket.max, @default_bucket.refill_rate}
+          end
 
+        bucket = %{tokens: max, max: max, refill_rate: rate, last_refill: now}
         state = put_in(state, [:buckets, provider], bucket)
         {bucket, state}
     end

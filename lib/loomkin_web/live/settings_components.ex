@@ -424,7 +424,7 @@ defmodule LoomkinWeb.SettingsComponents do
           </button>
         </span>
       </div>
-      <form phx-submit="add_tag" class="flex gap-1">
+      <form id={"add-tag-#{@key_string}"} phx-submit="add_tag" class="flex gap-1">
         <input type="hidden" name="key" value={@key_string} />
         <input
           id={"input-#{@key_string}"}

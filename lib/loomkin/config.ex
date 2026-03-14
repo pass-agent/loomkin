@@ -39,6 +39,32 @@ defmodule Loomkin.Config do
       allowlist:
         ~w(mix elixir iex git cat head tail ls find grep rg sed awk echo mkdir cp mv touch node npm npx yarn bun cargo rustc go python python3 pip ruby gem)
     },
+    agents: %{
+      max_iterations: 25,
+      max_rate_limit_retries: 3,
+      llm_max_retries: 3,
+      llm_base_backoff_ms: 1_000,
+      shell_timeout_ms: 30_000,
+      shell_max_output_chars: 10_000,
+      complexity_check_interval_ms: 60_000,
+      complexity_threshold: 60,
+      spawn_cooldown_ms: 300_000
+    },
+    healing: %{
+      budget_usd: 0.50,
+      max_iterations: 15,
+      max_attempts: 2,
+      timeout_ms: 300_000,
+      rebalancer_check_interval_ms: 60_000,
+      stuck_threshold_ms: 300_000,
+      max_nudges: 2
+    },
+    conversations: %{
+      inactivity_timeout_ms: 60_000,
+      max_personas: 6,
+      default_max_rounds: 8,
+      default_strategy: "round_robin"
+    },
     teams: %{
       orchestrator_mode: true,
       consensus: %{

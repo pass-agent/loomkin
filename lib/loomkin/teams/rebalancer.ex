@@ -33,7 +33,7 @@ defmodule Loomkin.Teams.Rebalancer do
   @impl true
   def init(opts) do
     team_id = Keyword.fetch!(opts, :team_id)
-    check_interval = Keyword.get(opts, :check_interval, config_check_interval())
+    check_interval_override = Keyword.get(opts, :check_interval)
 
     Loomkin.Signals.subscribe("agent.status")
     Loomkin.Signals.subscribe("agent.tool.*")
@@ -42,13 +42,13 @@ defmodule Loomkin.Teams.Rebalancer do
 
     state = %{
       team_id: team_id,
-      check_interval: check_interval,
+      check_interval_override: check_interval_override,
       working_since: %{},
       last_activity: %{},
       nudge_counts: %{}
     }
 
-    schedule_check(check_interval)
+    schedule_check(check_interval_override || config_check_interval())
 
     {:ok, state}
   end
@@ -56,7 +56,7 @@ defmodule Loomkin.Teams.Rebalancer do
   @impl true
   def handle_info(:check_stuck, state) do
     state = check_for_stuck_agents(state)
-    schedule_check(state.check_interval)
+    schedule_check(state.check_interval_override || config_check_interval())
     {:noreply, state}
   end
 

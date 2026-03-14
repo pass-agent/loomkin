@@ -514,37 +514,10 @@ defmodule Loomkin.Settings.Registry do
     },
 
     # ── Intelligence: Decision Graph ──────────────────────────────────
-    %Setting{
-      key: [:decisions, :enabled],
-      label: "Decision graph enabled",
-      description: "Whether agents record architectural decisions into the decision graph.",
-      why_change: "Disable for throwaway experiments where you don't need decision tracking.",
-      type: :toggle,
-      default: true,
-      tab: "Intelligence",
-      section: "Decision Graph"
-    },
-    %Setting{
-      key: [:decisions, :enforce_pre_edit],
-      label: "Enforce pre-edit decisions",
-      description: "Require agents to log a decision node before making code edits.",
-      why_change:
-        "Enable for regulated codebases that need an audit trail of why each change was made.",
-      type: :toggle,
-      default: false,
-      tab: "Intelligence",
-      section: "Decision Graph"
-    },
-    %Setting{
-      key: [:decisions, :auto_log_commits],
-      label: "Auto-log commits",
-      description: "Automatically create decision nodes when agents make git commits.",
-      why_change: "Disable if commit-level granularity is too noisy for your decision graph.",
-      type: :toggle,
-      default: true,
-      tab: "Intelligence",
-      section: "Decision Graph"
-    },
+    # NOTE: decisions.enabled, decisions.enforce_pre_edit, and decisions.auto_log_commits
+    # are defined in config.ex defaults but not yet read by any module at runtime.
+    # They'll be added here once the decision graph respects these flags.
+
     %Setting{
       key: [:decisions, :cascade_threshold],
       label: "Cascade confidence threshold",

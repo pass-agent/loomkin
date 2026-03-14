@@ -3811,8 +3811,8 @@ defmodule LoomkinWeb.WorkspaceLive do
           </a>
 
           <%!-- Settings --%>
-          <a
-            href="/settings"
+          <.link
+            navigate={~p"/settings"}
             class="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-all duration-200 interactive text-muted"
             title="Settings"
           >
@@ -3830,7 +3830,7 @@ defmodule LoomkinWeb.WorkspaceLive do
                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               />
             </svg>
-          </a>
+          </.link>
 
           <%!-- File Explorer --%>
           <button
