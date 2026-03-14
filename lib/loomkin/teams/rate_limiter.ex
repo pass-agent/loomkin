@@ -3,12 +3,6 @@ defmodule Loomkin.Teams.RateLimiter do
 
   use GenServer
 
-  @default_buckets %{
-    "anthropic" => %{max: 80_000, refill_rate: 80_000},
-    "openai" => %{max: 90_000, refill_rate: 90_000},
-    "google" => %{max: 60_000, refill_rate: 60_000}
-  }
-
   @default_bucket %{max: 50_000, refill_rate: 50_000}
 
   @default_team_budget 5.00
@@ -151,8 +145,9 @@ defmodule Loomkin.Teams.RateLimiter do
 
   defp init_buckets do
     now = System.monotonic_time(:millisecond)
+    buckets = config_provider_buckets()
 
-    Map.new(@default_buckets, fn {provider, config} ->
+    Map.new(buckets, fn {provider, config} ->
       {provider,
        %{
          tokens: config.max,
@@ -222,5 +217,23 @@ defmodule Loomkin.Teams.RateLimiter do
       %{} = budget -> Map.get(budget, key, default)
       _ -> default
     end
+  end
+
+  defp config_provider_buckets do
+    anthropic =
+      config_nested([:teams, :budget, :provider_limits, :anthropic_tokens_per_min], 80_000)
+
+    openai = config_nested([:teams, :budget, :provider_limits, :openai_tokens_per_min], 90_000)
+    google = config_nested([:teams, :budget, :provider_limits, :google_tokens_per_min], 60_000)
+
+    %{
+      "anthropic" => %{max: anthropic, refill_rate: anthropic},
+      "openai" => %{max: openai, refill_rate: openai},
+      "google" => %{max: google, refill_rate: google}
+    }
+  end
+
+  defp config_nested(key_path, default) do
+    get_in(Loomkin.Config.all(), key_path) || default
   end
 end

@@ -11,8 +11,19 @@ defmodule Loomkin.Decisions.Pulse do
   @default_stale_days 7
 
   def generate(opts \\ []) do
-    confidence_threshold = Keyword.get(opts, :confidence_threshold, @default_confidence_threshold)
-    stale_days = Keyword.get(opts, :stale_days, @default_stale_days)
+    confidence_threshold =
+      Keyword.get(
+        opts,
+        :confidence_threshold,
+        config_decisions(:pulse_confidence_threshold, @default_confidence_threshold)
+      )
+
+    stale_days =
+      Keyword.get(
+        opts,
+        :stale_days,
+        config_decisions(:pulse_stale_days, @default_stale_days)
+      )
 
     active_goals = Graph.active_goals()
     recent_decisions = Graph.recent_decisions()
@@ -103,8 +114,10 @@ defmodule Loomkin.Decisions.Pulse do
   end
 
   defp count_low_confidence(active_nodes) do
+    threshold = config_decisions(:pulse_confidence_threshold, @default_confidence_threshold)
+
     Enum.count(active_nodes, fn node ->
-      node.confidence != nil and node.confidence < @default_confidence_threshold
+      node.confidence != nil and node.confidence < threshold
     end)
   end
 
@@ -148,5 +161,9 @@ defmodule Loomkin.Decisions.Pulse do
     ]
 
     "Pulse: " <> Enum.join(parts, ", ") <> "."
+  end
+
+  defp config_decisions(key, default) do
+    Loomkin.Config.get(:decisions, key) || default
   end
 end

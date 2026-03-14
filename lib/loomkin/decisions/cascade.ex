@@ -19,7 +19,8 @@ defmodule Loomkin.Decisions.Cascade do
   Returns `{:ok, affected_count}` or `{:ok, :above_threshold}`.
   """
   def check_and_propagate(node_id, opts \\ []) do
-    threshold = Keyword.get(opts, :threshold, @default_threshold)
+    default = Loomkin.Config.get(:decisions, :cascade_threshold) || @default_threshold
+    threshold = Keyword.get(opts, :threshold, default)
 
     case Graph.get_node(node_id) do
       nil ->

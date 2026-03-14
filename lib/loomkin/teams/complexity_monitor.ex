@@ -69,9 +69,9 @@ defmodule Loomkin.Teams.ComplexityMonitor do
   @impl true
   def init(opts) do
     team_id = Keyword.fetch!(opts, :team_id)
-    check_interval = Keyword.get(opts, :check_interval, @default_check_interval_ms)
-    threshold = Keyword.get(opts, :threshold, @default_threshold)
-    spawn_cooldown = Keyword.get(opts, :spawn_cooldown, @default_spawn_cooldown_ms)
+    check_interval = Keyword.get(opts, :check_interval, config_check_interval())
+    threshold = Keyword.get(opts, :threshold, config_threshold())
+    spawn_cooldown = Keyword.get(opts, :spawn_cooldown, config_spawn_cooldown())
 
     # Signal types are global (e.g. "team.conflict.detected", "team.task.assigned").
     # Publishers don't include team_id in the path, so we subscribe globally and
@@ -354,5 +354,19 @@ defmodule Loomkin.Teams.ComplexityMonitor do
         }
       })
     end)
+  end
+
+  # --- Config helpers ---
+
+  defp config_check_interval do
+    Loomkin.Config.get(:agents, :complexity_check_interval_ms) || @default_check_interval_ms
+  end
+
+  defp config_threshold do
+    Loomkin.Config.get(:agents, :complexity_threshold) || @default_threshold
+  end
+
+  defp config_spawn_cooldown do
+    Loomkin.Config.get(:agents, :spawn_cooldown_ms) || @default_spawn_cooldown_ms
   end
 end

@@ -33,7 +33,7 @@ defmodule Loomkin.Teams.Rebalancer do
   @impl true
   def init(opts) do
     team_id = Keyword.fetch!(opts, :team_id)
-    check_interval = Keyword.get(opts, :check_interval, @check_interval_ms)
+    check_interval = Keyword.get(opts, :check_interval, config_check_interval())
 
     Loomkin.Signals.subscribe("agent.status")
     Loomkin.Signals.subscribe("agent.tool.*")
@@ -148,7 +148,7 @@ defmodule Loomkin.Teams.Rebalancer do
         last_activity = Map.get(acc.last_activity, agent_name, working_since)
         idle_ms = now - last_activity
 
-        if idle_ms > @stuck_threshold_ms do
+        if idle_ms > config_stuck_threshold() do
           handle_stuck_agent(acc, agent_name, idle_ms)
         else
           acc
@@ -161,7 +161,9 @@ defmodule Loomkin.Teams.Rebalancer do
     nudge_count = Map.get(state.nudge_counts, agent_name, 0)
     idle_min = div(idle_ms, 60_000)
 
-    if nudge_count < @max_nudges do
+    max_nudges = config_max_nudges()
+
+    if nudge_count < max_nudges do
       new_count = nudge_count + 1
 
       nudge_msg =
@@ -175,7 +177,7 @@ defmodule Loomkin.Teams.Rebalancer do
         event: :nudge,
         idle_min: idle_min,
         nudge_count: new_count,
-        max_nudges: @max_nudges
+        max_nudges: max_nudges
       })
 
       put_in(state.nudge_counts[agent_name], new_count)
@@ -259,5 +261,19 @@ defmodule Loomkin.Teams.Rebalancer do
         get_in(sig, [Access.key(:extensions, %{}), "loomkin", "team_id"])
 
     signal_team_id == nil or signal_team_id == team_id
+  end
+
+  # --- Config helpers ---
+
+  defp config_check_interval do
+    Loomkin.Config.get(:healing, :rebalancer_check_interval_ms) || @check_interval_ms
+  end
+
+  defp config_stuck_threshold do
+    Loomkin.Config.get(:healing, :stuck_threshold_ms) || @stuck_threshold_ms
+  end
+
+  defp config_max_nudges do
+    Loomkin.Config.get(:healing, :max_nudges) || @max_nudges
   end
 end

@@ -22,9 +22,17 @@ defmodule Loomkin.LLMRetry do
   @spec with_retry(keyword(), (-> {:ok, term()} | {:error, term()})) ::
           {:ok, term()} | {:error, term()}
   def with_retry(opts \\ [], fun) do
-    max_retries = Keyword.get(opts, :max_retries, @default_max_retries)
+    max_retries = Keyword.get(opts, :max_retries, max_retries())
     on_retry = Keyword.get(opts, :on_retry, fn _attempt, _reason, _ms -> :ok end)
     do_retry(fun, on_retry, max_retries, 0)
+  end
+
+  defp max_retries do
+    Loomkin.Config.get(:agents, :llm_max_retries) || @default_max_retries
+  end
+
+  defp base_backoff_ms do
+    Loomkin.Config.get(:agents, :llm_base_backoff_ms) || @base_backoff_ms
   end
 
   defp do_retry(_fun, _on_retry, max_retries, attempt) when attempt > max_retries do
@@ -38,7 +46,7 @@ defmodule Loomkin.LLMRetry do
 
       {:error, reason} ->
         if transient?(reason) and attempt < max_retries do
-          backoff_ms = Integer.pow(2, attempt) * @base_backoff_ms
+          backoff_ms = Integer.pow(2, attempt) * base_backoff_ms()
           on_retry.(attempt + 1, reason, backoff_ms)
           Process.sleep(backoff_ms)
           do_retry(fun, on_retry, max_retries, attempt + 1)

@@ -16,8 +16,8 @@ defmodule Loomkin.AgentLoop do
 
   require Logger
 
-  @max_rate_limit_retries 3
-  @max_iterations 25
+  @default_max_rate_limit_retries 3
+  @default_max_iterations 25
 
   @type on_event :: (atom(), map() -> :ok)
 
@@ -85,7 +85,7 @@ defmodule Loomkin.AgentLoop do
         {:error, error_msg, messages}
 
       {:rate_limited, provider} ->
-        if attempt < @max_rate_limit_retries do
+        if attempt < max_rate_limit_retries() do
           backoff_ms = Integer.pow(2, attempt) * 1_000
 
           config.on_event.(:rate_limited, %{
@@ -115,13 +115,21 @@ defmodule Loomkin.AgentLoop do
       agent_name: Keyword.get(opts, :agent_name),
       team_id: Keyword.get(opts, :team_id),
       reasoning_strategy: Keyword.get(opts, :reasoning_strategy, :react),
-      max_iterations: Keyword.get(opts, :max_iterations, @max_iterations),
+      max_iterations: Keyword.get(opts, :max_iterations, max_iterations()),
       on_event: Keyword.get(opts, :on_event, fn _name, _payload -> :ok end),
       on_tool_execute: Keyword.get(opts, :on_tool_execute),
       check_permission: Keyword.get(opts, :check_permission),
       checkpoint: Keyword.get(opts, :checkpoint),
       rate_limiter: Keyword.get(opts, :rate_limiter)
     }
+  end
+
+  defp max_iterations do
+    Loomkin.Config.get(:agents, :max_iterations) || @default_max_iterations
+  end
+
+  defp max_rate_limit_retries do
+    Loomkin.Config.get(:agents, :max_rate_limit_retries) || @default_max_rate_limit_retries
   end
 
   @doc """

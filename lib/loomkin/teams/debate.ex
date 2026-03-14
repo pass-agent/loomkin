@@ -69,7 +69,7 @@ defmodule Loomkin.Teams.Debate do
   def initiate_debate(team_id, topic, participants, opts) do
     policy = Keyword.get(opts, :policy, ConsensusPolicy.default())
     max_rounds = Keyword.get(opts, :max_rounds, policy.max_rounds)
-    round_timeout = Keyword.get(opts, :round_timeout_ms, @default_round_timeout_ms)
+    round_timeout = Keyword.get(opts, :round_timeout_ms, config_round_timeout())
     session_id = Keyword.get(opts, :session_id)
 
     debate_id = Ecto.UUID.generate()
@@ -806,5 +806,15 @@ defmodule Loomkin.Teams.Debate do
       )
 
     Loomkin.Signals.publish(%{signal | data: Map.merge(signal.data, %{response: response})})
+  end
+
+  # --- Config helpers ---
+
+  defp config_round_timeout do
+    config_nested([:teams, :debate, :round_timeout_ms], @default_round_timeout_ms)
+  end
+
+  defp config_nested(key_path, default) do
+    get_in(Loomkin.Config.all(), key_path) || default
   end
 end
