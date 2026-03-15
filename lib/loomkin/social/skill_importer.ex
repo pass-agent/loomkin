@@ -74,9 +74,20 @@ defmodule Loomkin.Social.SkillImporter do
     - `{:error, term}` — other unexpected errors
 
   """
+  @valid_git_url ~r{^(https?://|git@)}
+
   @spec import_from_git(Loomkin.Accounts.User.t(), String.t(), keyword()) ::
           {:ok, [Loomkin.Schemas.Snippet.t()]} | {:error, term()}
+
   def import_from_git(user, repo_url, _opts \\ []) do
+    unless Regex.match?(@valid_git_url, repo_url) do
+      {:error, :invalid_repo_url}
+    else
+      do_import_from_git(user, repo_url)
+    end
+  end
+
+  defp do_import_from_git(user, repo_url) do
     tmp_dir =
       Path.join(System.tmp_dir!(), "loomkin_skill_import_#{System.unique_integer([:positive])}")
 

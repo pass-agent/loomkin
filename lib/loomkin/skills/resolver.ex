@@ -121,36 +121,34 @@ defmodule Loomkin.Skills.Resolver do
       Map.get(frontmatter, "name") ||
         Snippet.slugify(snippet.title)
 
-    unless is_binary(name) and name != "" and Regex.match?(@valid_skill_name, name) do
+    if not (is_binary(name) and name != "" and Regex.match?(@valid_skill_name, name)) do
       Logger.warning(
         "[Skills] Skipping snippet id=#{snippet.id} — invalid skill name: #{inspect(name)}"
       )
 
-      throw(:invalid_name)
+      nil
+    else
+      description =
+        Map.get(frontmatter, "description") ||
+          snippet.description ||
+          ""
+
+      raw_tools = Map.get(frontmatter, "allowed-tools")
+
+      allowed_tools =
+        raw_tools
+        |> List.wrap()
+        |> Enum.reject(&is_nil/1)
+
+      %Spec{
+        name: name,
+        description: description,
+        body_ref: {:inline, body},
+        source: {:file, "db:#{snippet.id}"},
+        tags: snippet.tags || [],
+        allowed_tools: allowed_tools
+      }
     end
-
-    description =
-      Map.get(frontmatter, "description") ||
-        snippet.description ||
-        ""
-
-    raw_tools = Map.get(frontmatter, "allowed-tools")
-
-    allowed_tools =
-      raw_tools
-      |> List.wrap()
-      |> Enum.reject(&is_nil/1)
-
-    %Spec{
-      name: name,
-      description: description,
-      body_ref: {:inline, body},
-      source: {:file, "db:#{snippet.id}"},
-      tags: snippet.tags || [],
-      allowed_tools: allowed_tools
-    }
-  catch
-    :invalid_name -> nil
   end
 
   defp extract_body({:inline, text}), do: {:ok, text}
@@ -176,6 +174,8 @@ defmodule Loomkin.Skills.Resolver do
         {:error, :not_found}
     end
   rescue
-    _ -> {:error, :not_found}
+    e ->
+      Logger.warning("[Skills] Failed to fetch skill body from DB: #{inspect(e)}")
+      {:error, :not_found}
   end
 end

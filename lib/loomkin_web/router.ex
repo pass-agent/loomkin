@@ -66,12 +66,12 @@ defmodule LoomkinWeb.Router do
     end
   end
 
-  # Authenticated social routes — require login in deployed mode
+  # Authenticated social routes — require login in deployed mode, pass through in local mode
   scope "/", LoomkinWeb do
     pipe_through [:browser, :require_auth_if_multi_tenant]
 
     live_session :authenticated_social,
-      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_user}] do
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_if_multi_tenant}] do
       live "/snippets/new", SnippetLive, :new
       live "/snippets/:id/edit", SnippetLive, :edit
     end

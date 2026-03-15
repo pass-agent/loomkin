@@ -6,7 +6,9 @@ defmodule Loomkin.Accounts do
   import Ecto.Query, warn: false
   alias Loomkin.Repo
 
-  alias Loomkin.Accounts.{User, UserToken, UserNotifier}
+  alias Loomkin.Accounts.User
+  alias Loomkin.Accounts.UserNotifier
+  alias Loomkin.Accounts.UserToken
 
   ## Database getters
 
@@ -302,7 +304,7 @@ defmodule Loomkin.Accounts do
   defp update_user_and_delete_all_tokens(changeset) do
     Repo.transact(fn ->
       with {:ok, user} <- Repo.update(changeset) do
-        tokens_to_expire = Repo.all_by(UserToken, user_id: user.id)
+        tokens_to_expire = Repo.all(from(t in UserToken, where: t.user_id == ^user.id))
 
         Repo.delete_all(from(t in UserToken, where: t.id in ^Enum.map(tokens_to_expire, & &1.id)))
 

@@ -41,12 +41,15 @@ defmodule LoomkinWeb.ExploreLive do
     sort = parse_sort(params["sort"])
     query = params["q"] || ""
 
-    snippets = fetch_snippets(query, type, sort)
+    socket = assign(socket, active_type: type, sort_by: sort, search_query: query)
 
     socket =
-      socket
-      |> assign(active_type: type, sort_by: sort, search_query: query)
-      |> stream(:snippets, snippets, reset: true, dom_id: &snippet_dom_id/1)
+      if connected?(socket) do
+        snippets = fetch_snippets(query, type, sort)
+        stream(socket, :snippets, snippets, reset: true, dom_id: &snippet_dom_id/1)
+      else
+        socket
+      end
 
     {:noreply, socket}
   end
@@ -272,11 +275,12 @@ defmodule LoomkinWeb.ExploreLive do
     assigns = assign(assigns, :username, username)
 
     ~H"""
-    <div
+    <.link
+      navigate={~p"/@#{@username}/#{@snippet.slug}"}
       id={@id}
       class={[
         "glass-subtle rounded-lg p-4 hover:border-border-hover transition-all",
-        "hover-lift group cursor-pointer"
+        "hover-lift group block"
       ]}
     >
       <div class="flex items-start justify-between gap-3 mb-2">
@@ -316,7 +320,7 @@ defmodule LoomkinWeb.ExploreLive do
           </span>
         </div>
       </div>
-    </div>
+    </.link>
     """
   end
 

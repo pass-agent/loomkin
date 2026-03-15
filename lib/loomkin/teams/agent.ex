@@ -234,8 +234,10 @@ defmodule Loomkin.Teams.Agent do
 
         {:ok, sub_ids} = Comms.subscribe(team_id, name)
 
+        # Look up system_prompt_extra from the kin_agents list passed at spawn time
+        # (already scoped to the session's user) rather than a global DB query.
         system_prompt_extra =
-          case Loomkin.Repo.get_by(Loomkin.Schemas.KinAgent, name: to_string(name)) do
+          case Enum.find(kin_agents, fn kin -> kin.name == to_string(name) end) do
             %{system_prompt_extra: extra} when is_binary(extra) and extra != "" -> extra
             _ -> nil
           end

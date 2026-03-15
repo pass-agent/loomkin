@@ -120,7 +120,10 @@ defmodule LoomkinWeb.UserAuth do
 
   # Do not renew session if the user is already logged in
   # to prevent CSRF errors or data being lost in tabs that are still open
-  defp renew_session(conn, user) when conn.assigns.current_scope.user.id == user.id do
+  defp renew_session(
+         %{assigns: %{current_scope: %{user: %{id: id}}}} = conn,
+         %{id: id}
+       ) do
     conn
   end
 
@@ -163,7 +166,9 @@ defmodule LoomkinWeb.UserAuth do
   end
 
   defp put_token_in_session(conn, token) do
-    put_session(conn, :user_token, token)
+    conn
+    |> put_session(:user_token, token)
+    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
   end
 
   # ── LiveView on_mount hooks ──────────────────────────────────────
@@ -192,6 +197,25 @@ defmodule LoomkinWeb.UserAuth do
         |> Phoenix.LiveView.redirect(to: ~p"/users/log-in")
 
       {:halt, socket}
+    end
+  end
+
+  def on_mount(:require_authenticated_if_multi_tenant, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    if Application.get_env(:loomkin, :multi_tenant, false) do
+      if socket.assigns.current_scope && socket.assigns.current_scope.user do
+        {:cont, socket}
+      else
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+          |> Phoenix.LiveView.redirect(to: ~p"/users/log-in")
+
+        {:halt, socket}
+      end
+    else
+      {:cont, socket}
     end
   end
 

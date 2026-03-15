@@ -9,7 +9,7 @@ defmodule Loomkin.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"Loomkin", "contact@example.com"})
+      |> from({"Loomkin", Application.get_env(:loomkin, :from_email, "noreply@loomkin.dev")})
       |> subject(subject)
       |> text_body(body)
 
@@ -41,11 +41,12 @@ defmodule Loomkin.Accounts.UserNotifier do
   @doc """
   Deliver instructions to log in with a magic link.
   """
-  def deliver_login_instructions(user, url) do
-    case user do
-      %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url)
-      _ -> deliver_magic_link_instructions(user, url)
-    end
+  def deliver_login_instructions(%User{confirmed_at: nil} = user, url) do
+    deliver_confirmation_instructions(user, url)
+  end
+
+  def deliver_login_instructions(%User{} = user, url) do
+    deliver_magic_link_instructions(user, url)
   end
 
   defp deliver_magic_link_instructions(user, url) do

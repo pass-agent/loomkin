@@ -1,6 +1,8 @@
 defmodule Loomkin.Session.ContextWindow do
   @moduledoc "Builds a windowed message list that fits within the model's context limit."
 
+  require Logger
+
   @default_context_limit 128_000
   @default_reserved_output 4096
   @default_repo_map_tokens 2048
@@ -145,7 +147,9 @@ defmodule Loomkin.Session.ContextWindow do
       end
     end
   rescue
-    _ -> system_parts
+    e ->
+      Logger.warning("[ContextWindow] Failed to inject skills: #{inspect(e)}")
+      system_parts
   end
 
   @doc """

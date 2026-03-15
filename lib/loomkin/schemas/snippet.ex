@@ -33,8 +33,6 @@ defmodule Loomkin.Schemas.Snippet do
     snippet
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> validate_inclusion(:type, Ecto.Enum.values(__MODULE__, :type))
-    |> validate_inclusion(:visibility, Ecto.Enum.values(__MODULE__, :visibility))
     |> validate_length(:title, min: 1, max: 200)
     |> validate_length(:description, max: 2000)
     |> maybe_generate_slug()
@@ -47,12 +45,13 @@ defmodule Loomkin.Schemas.Snippet do
   defp maybe_generate_slug(changeset) do
     case get_change(changeset, :slug) do
       nil ->
-        case get_change(changeset, :title) do
-          nil ->
-            changeset
+        # Generate slug from title change, or fall back to existing title for new records
+        title = get_change(changeset, :title) || get_field(changeset, :title)
 
-          title ->
-            put_change(changeset, :slug, slugify(title))
+        if title && get_field(changeset, :slug) in [nil, ""] do
+          put_change(changeset, :slug, slugify(title))
+        else
+          changeset
         end
 
       _slug ->

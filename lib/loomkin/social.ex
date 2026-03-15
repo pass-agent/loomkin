@@ -133,11 +133,12 @@ defmodule Loomkin.Social do
   def trending_snippets(opts \\ []) do
     limit = Keyword.get(opts, :limit, 10)
     days = Keyword.get(opts, :days, 7)
-    since = DateTime.add(DateTime.utc_now(), -days, :day)
+    since = NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
 
     from(s in Snippet,
       where: s.visibility == :public and s.inserted_at >= ^since,
-      order_by: [desc: s.favorite_count, desc: s.fork_count, desc: s.inserted_at]
+      order_by: [desc: s.favorite_count, desc: s.fork_count, desc: s.inserted_at],
+      preload: [:user]
     )
     |> limit(^limit)
     |> Repo.all()
@@ -148,6 +149,14 @@ defmodule Loomkin.Social do
   # ---------------------------------------------------------------------------
 
   def fork_snippet(user, %Snippet{} = snippet) do
+    unless snippet.visibility in [:public, :unlisted] or snippet.user_id == user.id do
+      {:error, :unauthorized}
+    else
+      do_fork_snippet(user, snippet)
+    end
+  end
+
+  defp do_fork_snippet(user, snippet) do
     attrs = %{
       title: snippet.title,
       description: snippet.description,
@@ -171,6 +180,8 @@ defmodule Loomkin.Social do
     end)
   end
 
+  # End of do_fork_snippet — fork_snippet guard clause returns {:error, :unauthorized} above
+
   def toggle_favorite(user, %Snippet{} = snippet) do
     case Repo.get_by(Favorite, user_id: user.id, snippet_id: snippet.id) do
       nil ->
@@ -190,8 +201,8 @@ defmodule Loomkin.Social do
               {:favorited, favorite}
 
             {:error, _changeset} ->
-              # Lost race — another process inserted first, treat as already favorited
-              Repo.rollback(:conflict)
+              # Lost race — another process inserted first, treat as no-op
+              {:already_favorited, nil}
           end
         end)
 
@@ -199,7 +210,7 @@ defmodule Loomkin.Social do
         Repo.transaction(fn ->
           {:ok, _} = Repo.delete(existing)
 
-          from(s in Snippet, where: s.id == ^snippet.id)
+          from(s in Snippet, where: s.id == ^snippet.id and s.favorite_count > 0)
           |> Repo.update_all(inc: [favorite_count: -1])
 
           :unfavorited
@@ -222,7 +233,8 @@ defmodule Loomkin.Social do
     from(f in Favorite,
       where: f.user_id == ^user.id,
       join: s in assoc(f, :snippet),
-      preload: [snippet: s],
+      where: s.visibility in [:public, :unlisted] or s.user_id == ^user.id,
+      preload: [snippet: {s, :user}],
       order_by: [desc: f.inserted_at]
     )
     |> limit(^limit)
@@ -353,34 +365,46 @@ defmodule Loomkin.Social do
   Takes the session's messages and creates an immutable snapshot.
   """
   def save_chat_log(user, session, attrs \\ %{}) do
-    messages =
-      from(m in Loomkin.Schemas.Message,
-        where: m.session_id == ^session.id,
-        order_by: [asc: m.inserted_at]
-      )
-      |> Repo.all()
-      |> Enum.map(fn msg ->
-        %{
-          "role" => to_string(msg.role),
-          "content" => msg.content
-        }
-      end)
+    if session.user_id && session.user_id != user.id do
+      {:error, :unauthorized}
+    else
+      messages =
+        from(m in Loomkin.Schemas.Message,
+          where: m.session_id == ^session.id,
+          order_by: [asc: m.inserted_at]
+        )
+        |> Repo.all()
+        |> Enum.map(fn msg ->
+          %{
+            "role" => to_string(msg.role),
+            "content" => msg.content
+          }
+        end)
 
-    content = %{
-      "messages" => messages,
-      "model" => session.model,
-      "agent_count" => Map.get(attrs, :agent_count, 1),
-      "summary" => Map.get(attrs, :summary, "")
-    }
+      # Normalize attrs to support both atom and string keys
+      title = attrs[:title] || attrs["title"] || session.title || "Chat Log"
+      description = attrs[:description] || attrs["description"]
+      tags = attrs[:tags] || attrs["tags"] || []
+      visibility = attrs[:visibility] || attrs["visibility"] || :private
+      agent_count = attrs[:agent_count] || attrs["agent_count"] || 1
+      summary = attrs[:summary] || attrs["summary"] || ""
 
-    create_snippet(user, %{
-      title: attrs[:title] || session.title || "Chat Log",
-      description: attrs[:description],
-      type: :chat_log,
-      content: content,
-      tags: attrs[:tags] || [],
-      visibility: attrs[:visibility] || :private
-    })
+      content = %{
+        "messages" => messages,
+        "model" => session.model,
+        "agent_count" => agent_count,
+        "summary" => summary
+      }
+
+      create_snippet(user, %{
+        title: title,
+        description: description,
+        type: :chat_log,
+        content: content,
+        tags: tags,
+        visibility: visibility
+      })
+    end
   end
 
   # ---------------------------------------------------------------------------

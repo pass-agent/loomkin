@@ -35,10 +35,11 @@ defmodule Loomkin.Session.ContextWindowTest do
       assert budget.system_prompt == 2048
       assert budget.decision_context == 1024
       assert budget.repo_map == 2048
+      assert budget.skills == 512
       assert budget.tool_definitions == 2048
       assert budget.reserved_output == 4096
-      # history = 128_000 - (2048 + 1024 + 2048 + 2048 + 4096) = 116_736
-      assert budget.history == 116_736
+      # history = 128_000 - (2048 + 1024 + 2048 + 512 + 2048 + 4096) = 116_224
+      assert budget.history == 116_224
     end
 
     test "respects custom options" do
@@ -52,8 +53,8 @@ defmodule Loomkin.Session.ContextWindowTest do
       assert budget.decision_context == 2048
       assert budget.repo_map == 4096
       assert budget.reserved_output == 8192
-      # history = 128_000 - (2048 + 2048 + 4096 + 2048 + 8192) = 109_568
-      assert budget.history == 109_568
+      # history = 128_000 - (2048 + 2048 + 4096 + 512 + 2048 + 8192) = 109_056
+      assert budget.history == 109_056
     end
 
     test "history is zero when zones exceed model limit" do

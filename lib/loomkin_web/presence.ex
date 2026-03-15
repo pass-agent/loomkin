@@ -51,8 +51,8 @@ defmodule LoomkinWeb.Presence do
   """
   def list_online_users do
     list(@global_topic)
-    |> Enum.map(fn {user_id, %{metas: [meta | _]}} ->
-      Map.put(meta, :user_id, user_id)
+    |> Enum.map(fn {user_id_str, %{metas: [meta | _]}} ->
+      Map.put(meta, :user_id, String.to_integer(user_id_str))
     end)
   end
 

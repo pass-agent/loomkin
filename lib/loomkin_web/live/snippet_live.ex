@@ -17,11 +17,25 @@ defmodule LoomkinWeb.SnippetLive do
   alias Loomkin.Schemas.Snippet
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Snippet")}
+    {:ok,
+     assign(socket,
+       page_title: "Snippet",
+       snippet: nil,
+       snippet_type: :skill,
+       form: nil,
+       owner_username: nil,
+       forked_from_username: nil,
+       is_owner: false,
+       is_favorited: false
+     )}
   end
 
   def handle_params(params, _uri, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    if connected?(socket) do
+      {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    else
+      {:noreply, socket}
+    end
   end
 
   defp apply_action(socket, :show, %{"username" => username, "slug" => slug}) do
@@ -132,6 +146,9 @@ defmodule LoomkinWeb.SnippetLive do
          |> put_flash(:info, "Snippet forked!")
          |> push_navigate(to: ~p"/snippets/#{fork.id}/edit")}
 
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, "Cannot fork a private snippet")}
+
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Could not fork snippet")}
     end
@@ -166,6 +183,9 @@ defmodule LoomkinWeb.SnippetLive do
            is_favorited: true,
            snippet: %{snippet | favorite_count: snippet.favorite_count + 1}
          )}
+
+      {:ok, {:already_favorited, _}} ->
+        {:noreply, assign(socket, is_favorited: true)}
 
       {:ok, :unfavorited} ->
         {:noreply,
@@ -474,6 +494,14 @@ defmodule LoomkinWeb.SnippetLive do
   # Render — show
   # ---------------------------------------------------------------------------
 
+  def render(%{live_action: :show, snippet: nil} = assigns) do
+    ~H"""
+    <div class="min-h-screen bg-surface-0 flex items-center justify-center">
+      <p class="text-gray-500 text-sm">Loading...</p>
+    </div>
+    """
+  end
+
   def render(%{live_action: :show} = assigns) do
     ~H"""
     <div class="min-h-screen bg-surface-0 relative overflow-hidden">
@@ -636,6 +664,14 @@ defmodule LoomkinWeb.SnippetLive do
   # ---------------------------------------------------------------------------
   # Render — new / edit
   # ---------------------------------------------------------------------------
+
+  def render(%{live_action: action, form: nil} = assigns) when action in [:new, :edit] do
+    ~H"""
+    <div class="min-h-screen bg-surface-0 flex items-center justify-center">
+      <p class="text-gray-500 text-sm">Loading...</p>
+    </div>
+    """
+  end
 
   def render(%{live_action: action} = assigns) when action in [:new, :edit] do
     ~H"""

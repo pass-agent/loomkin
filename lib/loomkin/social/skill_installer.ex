@@ -90,7 +90,7 @@ defmodule Loomkin.Social.SkillInstaller do
   defp write_skill_file(path, frontmatter, body) do
     yaml_lines =
       frontmatter
-      |> Enum.map(fn {key, value} -> "#{key}: #{value}" end)
+      |> Enum.map(fn {key, value} -> "#{key}: #{yaml_quote(value)}" end)
       |> Enum.join("\n")
 
     content = "---\n#{yaml_lines}\n---\n\n#{body}\n"
@@ -100,6 +100,16 @@ defmodule Loomkin.Social.SkillInstaller do
       {:error, reason} -> {:write_error, reason}
     end
   end
+
+  defp yaml_quote(value) when is_binary(value) do
+    if String.contains?(value, ["\n", ":", "#", "'", "\"", "{", "}", "[", "]"]) do
+      ~s("#{String.replace(value, "\"", "\\\"")}")
+    else
+      value
+    end
+  end
+
+  defp yaml_quote(value), do: to_string(value)
 
   defp install_agent_link(agent, name, project_path, canonical_dir) do
     agent_skills_dir = Path.join(project_path, @agent_paths[agent])
