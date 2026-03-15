@@ -71,12 +71,19 @@ defmodule LoomkinWeb.Router do
     live "/snippets/:id/edit", SnippetLive, :edit
   end
 
+  # Homepage — accessible to everyone (authenticated or not)
+  # Shows community feed + trending for visitors, full dashboard for logged-in users
+  # In local mode, redirects to project picker
+  scope "/", LoomkinWeb do
+    pipe_through [:browser]
+
+    live "/", HomeLive, :index
+  end
+
   # App routes — gated by multi-tenant auth (passes through in local mode)
-  # "/" serves HomeLive in deployed mode (multi_tenant), ProjectPickerLive in local mode
   scope "/", LoomkinWeb do
     pipe_through [:browser, :require_auth_if_multi_tenant]
 
-    live "/", HomeLive, :index
     live "/projects", ProjectPickerLive, :index
     live "/sessions/new", WorkspaceLive, :new
     live "/sessions/:session_id", WorkspaceLive, :show

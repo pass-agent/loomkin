@@ -1,73 +1,169 @@
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <div class="mx-auto max-w-sm space-y-4">
-    <div class="text-center">
-      <.header>
-        <p>Log in</p>
-        <:subtitle>
-          <%= if @current_scope do %>
-            You need to reauthenticate to perform sensitive actions on your account.
-          <% else %>
-            Don't have an account? <.link
-              navigate={~p"/users/register"}
-              class="font-semibold text-brand hover:underline"
-              phx-no-format
-            >Sign up</.link> for an account now.
-          <% end %>
-        </:subtitle>
-      </.header>
-    </div>
+<div class="min-h-screen bg-surface-0 relative overflow-hidden flex items-center justify-center">
+  <%!-- Aurora ambient background --%>
+  <div class="home-aurora" aria-hidden="true" />
 
-    <div :if={local_mail_adapter?()} class="alert alert-info">
-      <.icon name="hero-information-circle" class="size-6 shrink-0" />
-      <div>
-        <p>You are running the local mail adapter.</p>
-        <p>
-          To see sent emails, visit <.link href="/dev/mailbox" class="underline">the mailbox page</.link>.
-        </p>
+  <%!-- Centered card --%>
+  <div class="relative z-10 w-full max-w-md px-4 animate-fade-in">
+    <%!-- Logo + branding --%>
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2.5 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-brand/15 border border-brand/25 flex items-center justify-center">
+          <span class="text-brand font-bold text-lg">L</span>
+        </div>
+        <span class="text-white font-semibold text-xl tracking-tight">Loomkin</span>
       </div>
+      <p class="text-gray-500 text-sm">Sign in to your workspace</p>
     </div>
 
-    <.form :let={f} for={@form} as={:user} id="login_form_magic" action={~p"/users/log-in"}>
-      <.input
-        readonly={!!@current_scope}
-        field={f[:email]}
-        type="email"
-        label="Email"
-        autocomplete="username"
-        spellcheck="false"
-        required
-        phx-mounted={JS.focus()}
-      />
-      <.button class="btn btn-primary w-full">
-        Log in with email <span aria-hidden="true">→</span>
-      </.button>
-    </.form>
+    <%!-- Glass card --%>
+    <div class="glass rounded-2xl p-8 space-y-6">
+      <div
+        :if={local_mail_adapter?()}
+        class="glass-subtle rounded-lg p-3 flex items-start gap-2.5"
+      >
+        <.icon name="hero-information-circle" class="size-5 shrink-0 text-cyan-400 mt-0.5" />
+        <div class="text-xs text-gray-400">
+          <p>Running local mail adapter.</p>
+          <p class="mt-0.5">
+            See sent emails at <.link
+              href="/dev/mailbox"
+              class="text-brand hover:text-violet-300 underline underline-offset-2"
+            >the mailbox page</.link>.
+          </p>
+        </div>
+      </div>
 
-    <div class="divider">or</div>
+      <%!-- Email magic link form --%>
+      <.form :let={f} for={@form} as={:user} id="login_form_magic" action={~p"/users/log-in"}>
+        <div class="space-y-4">
+          <div>
+            <label for={f[:email].id} class="block text-xs font-medium text-gray-400 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              id={f[:email].id}
+              name={f[:email].name}
+              value={f[:email].value}
+              readonly={!!@current_scope}
+              autocomplete="username"
+              spellcheck="false"
+              required
+              phx-mounted={JS.focus()}
+              class={[
+                "w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600",
+                "bg-surface-1 border border-border-subtle",
+                "focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20",
+                "transition-all duration-200"
+              ]}
+              placeholder="you@example.com"
+            />
+          </div>
+          <button
+            type="submit"
+            class={[
+              "w-full py-3 rounded-xl text-sm font-medium",
+              "bg-brand hover:bg-violet-500 active:bg-violet-600",
+              "text-white shadow-lg shadow-brand/20",
+              "transition-all duration-200 hover:shadow-brand/30",
+              "flex items-center justify-center gap-2"
+            ]}
+          >
+            Sign in with email <span class="hero-arrow-right-mini w-4 h-4" />
+          </button>
+        </div>
+      </.form>
 
-    <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
-      <.input
-        readonly={!!@current_scope}
-        field={f[:email]}
-        type="email"
-        label="Email"
-        autocomplete="username"
-        spellcheck="false"
-        required
-      />
-      <.input
-        field={f[:password]}
-        type="password"
-        label="Password"
-        autocomplete="current-password"
-        spellcheck="false"
-      />
-      <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
-        Log in and stay logged in <span aria-hidden="true">→</span>
-      </.button>
-      <.button class="btn btn-primary btn-soft w-full mt-2">
-        Log in only this time
-      </.button>
-    </.form>
+      <%!-- Divider --%>
+      <div class="flex items-center gap-3">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent" />
+        <span class="text-xs text-gray-600 font-medium">or use password</span>
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent" />
+      </div>
+
+      <%!-- Password form --%>
+      <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
+        <div class="space-y-4">
+          <div>
+            <label for="password-email" class="block text-xs font-medium text-gray-400 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              id="password-email"
+              name={f[:email].name}
+              value={f[:email].value}
+              readonly={!!@current_scope}
+              autocomplete="username"
+              spellcheck="false"
+              required
+              class={[
+                "w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600",
+                "bg-surface-1 border border-border-subtle",
+                "focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20",
+                "transition-all duration-200"
+              ]}
+              placeholder="you@example.com"
+            />
+          </div>
+          <div>
+            <label for={f[:password].id} class="block text-xs font-medium text-gray-400 mb-1.5">
+              Password
+            </label>
+            <input
+              type="password"
+              id={f[:password].id}
+              name={f[:password].name}
+              autocomplete="current-password"
+              spellcheck="false"
+              class={[
+                "w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600",
+                "bg-surface-1 border border-border-subtle",
+                "focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20",
+                "transition-all duration-200"
+              ]}
+              placeholder="••••••••"
+            />
+          </div>
+          <div class="flex gap-2">
+            <button
+              type="submit"
+              name={@form[:remember_me].name}
+              value="true"
+              class={[
+                "flex-1 py-3 rounded-xl text-sm font-medium",
+                "bg-brand hover:bg-violet-500 active:bg-violet-600",
+                "text-white shadow-lg shadow-brand/20",
+                "transition-all duration-200 hover:shadow-brand/30"
+              ]}
+            >
+              Stay signed in
+            </button>
+            <button
+              type="submit"
+              class={[
+                "flex-1 py-3 rounded-xl text-sm font-medium",
+                "bg-surface-2 border border-border-subtle",
+                "text-gray-300 hover:text-white hover:border-border-hover",
+                "transition-all duration-200"
+              ]}
+            >
+              One-time login
+            </button>
+          </div>
+        </div>
+      </.form>
+    </div>
+
+    <%!-- Footer link --%>
+    <p class="text-center mt-6 text-sm text-gray-500">
+      Don't have an account?
+      <.link
+        navigate={~p"/users/register"}
+        class="text-brand hover:text-violet-300 font-medium transition-colors"
+      >
+        Create one
+      </.link>
+    </p>
   </div>
-</Layouts.app>
+</div>

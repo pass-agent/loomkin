@@ -4,7 +4,10 @@ import Config
 # Environment variables can override compile-time config here
 
 # Multi-tenant mode: enable for deployed/hosted mode, disable for local single-user mode
-config :loomkin, :multi_tenant, System.get_env("MULTI_TENANT", "false") == "true"
+# Only override from env var if MULTI_TENANT is explicitly set, otherwise respect dev.exs/prod.exs
+if multi_tenant = System.get_env("MULTI_TENANT") do
+  config :loomkin, :multi_tenant, multi_tenant == "true"
+end
 
 if model = System.get_env("LOOMKIN_MODEL") do
   config :loomkin, default_model: model

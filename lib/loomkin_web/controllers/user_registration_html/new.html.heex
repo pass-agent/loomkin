@@ -1,32 +1,77 @@
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <div class="mx-auto max-w-sm">
-    <div class="text-center">
-      <.header>
-        Register for an account
-        <:subtitle>
-          Already registered?
-          <.link navigate={~p"/users/log-in"} class="font-semibold text-brand hover:underline">
-            Log in
-          </.link>
-          to your account now.
-        </:subtitle>
-      </.header>
+<div class="min-h-screen bg-surface-0 relative overflow-hidden flex items-center justify-center">
+  <%!-- Aurora ambient background --%>
+  <div class="home-aurora" aria-hidden="true" />
+
+  <%!-- Centered card --%>
+  <div class="relative z-10 w-full max-w-md px-4 animate-fade-in">
+    <%!-- Logo + branding --%>
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2.5 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-brand/15 border border-brand/25 flex items-center justify-center">
+          <span class="text-brand font-bold text-lg">L</span>
+        </div>
+        <span class="text-white font-semibold text-xl tracking-tight">Loomkin</span>
+      </div>
+      <p class="text-gray-500 text-sm">Create your workspace</p>
     </div>
 
-    <.form :let={f} for={@changeset} action={~p"/users/register"}>
-      <.input
-        field={f[:email]}
-        type="email"
-        label="Email"
-        autocomplete="username"
-        spellcheck="false"
-        required
-        phx-mounted={JS.focus()}
-      />
+    <%!-- Glass card --%>
+    <div class="glass rounded-2xl p-8 space-y-6">
+      <.form :let={f} for={@changeset} action={~p"/users/register"}>
+        <div class="space-y-4">
+          <div>
+            <label for={f[:email].id} class="block text-xs font-medium text-gray-400 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              id={f[:email].id}
+              name={f[:email].name}
+              value={Phoenix.HTML.Form.input_value(f, :email)}
+              autocomplete="username"
+              spellcheck="false"
+              required
+              phx-mounted={JS.focus()}
+              class={[
+                "w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600",
+                "bg-surface-1 border border-border-subtle",
+                "focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20",
+                "transition-all duration-200"
+              ]}
+              placeholder="you@example.com"
+            />
+          </div>
+          <button
+            type="submit"
+            phx-disable-with="Creating account..."
+            class={[
+              "w-full py-3 rounded-xl text-sm font-medium",
+              "bg-brand hover:bg-violet-500 active:bg-violet-600",
+              "text-white shadow-lg shadow-brand/20",
+              "transition-all duration-200 hover:shadow-brand/30",
+              "flex items-center justify-center gap-2"
+            ]}
+          >
+            Create account <span class="hero-arrow-right-mini w-4 h-4" />
+          </button>
+        </div>
+      </.form>
+    </div>
 
-      <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-        Create an account
-      </.button>
-    </.form>
+    <%!-- Footer link --%>
+    <p class="text-center mt-6 text-sm text-gray-500">
+      Already have an account?
+      <.link
+        navigate={~p"/users/log-in"}
+        class="text-brand hover:text-violet-300 font-medium transition-colors"
+      >
+        Sign in
+      </.link>
+    </p>
+
+    <%!-- Social proof / tagline --%>
+    <p class="text-center mt-4 text-xs text-gray-600">
+      AI-native agent orchestration — observe, guide, and collaborate with your team
+    </p>
   </div>
-</Layouts.app>
+</div>
