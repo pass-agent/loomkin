@@ -172,19 +172,31 @@ defmodule Loomkin.Social do
   end
 
   def toggle_favorite(user, %Snippet{} = snippet) do
-    result =
-      %Favorite{}
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.put_change(:user_id, user.id)
-      |> Ecto.Changeset.put_change(:snippet_id, snippet.id)
-      |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :snippet_id])
+    case Repo.get_by(Favorite, user_id: user.id, snippet_id: snippet.id) do
+      nil ->
+        changeset =
+          %Favorite{}
+          |> Ecto.Changeset.change()
+          |> Ecto.Changeset.put_change(:user_id, user.id)
+          |> Ecto.Changeset.put_change(:snippet_id, snippet.id)
+          |> Ecto.Changeset.unique_constraint([:user_id, :snippet_id])
 
-    case result do
-      {:ok, %Favorite{id: nil}} ->
         Repo.transaction(fn ->
-          existing =
-            Repo.get_by!(Favorite, user_id: user.id, snippet_id: snippet.id)
+          case Repo.insert(changeset) do
+            {:ok, favorite} ->
+              from(s in Snippet, where: s.id == ^snippet.id)
+              |> Repo.update_all(inc: [favorite_count: 1])
 
+              {:favorited, favorite}
+
+            {:error, _changeset} ->
+              # Lost race — another process inserted first, treat as already favorited
+              Repo.rollback(:conflict)
+          end
+        end)
+
+      existing ->
+        Repo.transaction(fn ->
           {:ok, _} = Repo.delete(existing)
 
           from(s in Snippet, where: s.id == ^snippet.id)
@@ -192,17 +204,6 @@ defmodule Loomkin.Social do
 
           :unfavorited
         end)
-
-      {:ok, favorite} ->
-        Repo.transaction(fn ->
-          from(s in Snippet, where: s.id == ^snippet.id)
-          |> Repo.update_all(inc: [favorite_count: 1])
-
-          {:favorited, favorite}
-        end)
-
-      {:error, changeset} ->
-        {:error, changeset}
     end
   end
 
