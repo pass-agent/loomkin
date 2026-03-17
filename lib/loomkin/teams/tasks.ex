@@ -12,6 +12,7 @@ defmodule Loomkin.Teams.Tasks do
   alias Loomkin.Teams.Context
   alias Loomkin.Teams.CostTracker
   alias Loomkin.Teams.Learning
+  alias Loomkin.Verification.UpstreamVerifier
 
   def create_task(team_id, attrs) do
     %TeamTask{}
@@ -113,7 +114,7 @@ defmodule Loomkin.Teams.Tasks do
 
         record_capability(task, :success)
         record_learning_metric(task, true)
-        auto_schedule_unblocked(task.team_id)
+        maybe_verify_before_unblocking(task)
 
         case validate_speculative_dependents(task) do
           {:error, reason} ->
@@ -883,6 +884,66 @@ defmodule Loomkin.Teams.Tasks do
     |> union(^milestone_blocked)
     |> distinct(true)
     |> Repo.all()
+  end
+
+  defp maybe_verify_before_unblocking(task) do
+    dependent_ids = get_dependent_task_ids(task.id)
+
+    if dependent_ids == [] do
+      # No dependents — unblock immediately
+      auto_schedule_unblocked(task.team_id)
+    else
+      # Dependents exist — spawn upstream verifier before unblocking
+      team_id = task.team_id
+
+      on_complete = fn result ->
+        if result.passed do
+          Logger.info(
+            "[Verification] passed for task=#{task.id} confidence=#{result.confidence}, unblocking dependents"
+          )
+        else
+          Logger.warning(
+            "[Verification] failed for task=#{task.id} confidence=#{result.confidence}, routing to healing"
+          )
+
+          Comms.broadcast_task_event(
+            team_id,
+            {:verification_failed, task.id, result}
+          )
+
+          try do
+            Loomkin.Healing.Orchestrator.request_healing(team_id, task.owner || "unknown", %{
+              error_type: :verification_failure,
+              task_id: task.id,
+              task_title: task.title,
+              verification_result: result
+            })
+          rescue
+            e ->
+              Logger.warning("[Verification] could not route to healing: #{Exception.message(e)}")
+          end
+        end
+
+        # Always unblock dependents — verification is advisory, not blocking.
+        # Failed verification routes to healing for repair, but dependents proceed.
+        auto_schedule_unblocked(team_id)
+      end
+
+      UpstreamVerifier.start(
+        team_id: team_id,
+        task: task,
+        dependent_task_ids: dependent_ids,
+        on_complete: on_complete
+      )
+    end
+  end
+
+  defp get_dependent_task_ids(task_id) do
+    Repo.all(
+      from d in TeamTaskDep,
+        where: d.depends_on_id == ^task_id and d.dep_type in [:blocks, :requires_output],
+        select: d.task_id
+    )
   end
 
   defp auto_schedule_unblocked(team_id) do

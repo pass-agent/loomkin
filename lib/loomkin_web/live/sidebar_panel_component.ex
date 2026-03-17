@@ -1,6 +1,6 @@
 defmodule LoomkinWeb.SidebarPanelComponent do
   @moduledoc """
-  LiveComponent for the sidebar tab panel (Files, Diff, Graph).
+  LiveComponent for the sidebar tab panel (Files, Diff, Graph, Context).
 
   Renders the outer sidebar container, tab bar, and tab content.
   All state is passed as assigns from the parent. Tab events and file
@@ -30,7 +30,7 @@ defmodule LoomkinWeb.SidebarPanelComponent do
         class="flex items-center gap-0.5 px-1.5 py-1 overflow-x-auto flex-shrink-0 border-b border-subtle"
       >
         <button
-          :for={tab <- [:files, :diff, :graph]}
+          :for={tab <- [:files, :diff, :graph, :context]}
           role="tab"
           aria-selected={to_string(@active_tab == tab)}
           aria-controls={"tab-panel-#{tab}"}
@@ -54,7 +54,10 @@ defmodule LoomkinWeb.SidebarPanelComponent do
         id={"tab-panel-#{@active_tab}"}
         aria-labelledby={"tab-#{@active_tab}"}
         tabindex="0"
-        class="flex-1 overflow-auto p-3 tab-content-enter bg-surface-0"
+        class={[
+          "flex-1 overflow-auto tab-content-enter bg-surface-0",
+          @active_tab != :context && "p-3"
+        ]}
         phx-hook="TabTransition"
       >
         {render_tab(@active_tab, assigns)}
@@ -105,9 +108,13 @@ defmodule LoomkinWeb.SidebarPanelComponent do
   defp tab_icon(:graph),
     do: raw("<span class=\"hero-share-mini inline-block w-3.5 h-3.5\"></span>")
 
+  defp tab_icon(:context),
+    do: raw("<span class=\"hero-circle-stack-mini inline-block w-3.5 h-3.5\"></span>")
+
   defp tab_label(:files), do: "Files"
   defp tab_label(:diff), do: "Diff"
   defp tab_label(:graph), do: "Graph"
+  defp tab_label(:context), do: "Context"
 
   defp render_tab(:files, assigns) do
     ~H"""
@@ -178,6 +185,16 @@ defmodule LoomkinWeb.SidebarPanelComponent do
         {render_graph_sub_tab(@graph_sub_tab, assigns)}
       </div>
     </div>
+    """
+  end
+
+  defp render_tab(:context, assigns) do
+    ~H"""
+    <.live_component
+      module={LoomkinWeb.ContextLibraryComponent}
+      id="context-library"
+      team_id={@active_team_id}
+    />
     """
   end
 

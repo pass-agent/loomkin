@@ -704,7 +704,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
   end
 
-  @valid_tabs ~w(files diff graph)
+  @valid_tabs ~w(files diff graph context)
   def handle_event("switch_tab", %{"tab" => tab}, socket) when tab in @valid_tabs do
     tab_atom = String.to_existing_atom(tab)
 
@@ -3302,6 +3302,8 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   # New event types for activity feed
   def handle_info({:keeper_created, _payload} = event, socket) do
+    forward_to_context_library(socket)
+
     {:noreply, socket |> forward_to_activity(event) |> forward_to_cards_and_comms(event)}
   end
 
@@ -4125,14 +4127,6 @@ defmodule LoomkinWeb.WorkspaceLive do
           >
             <.icon name="hero-bookmark-mini" class="w-3.5 h-3.5" /> Save Chat
           </button>
-
-          <%!-- Session switcher --%>
-          <.live_component
-            module={LoomkinWeb.SessionSwitcherComponent}
-            id="session-switcher"
-            session_id={@session_id}
-            project_path={@project_path}
-          />
         </div>
       </header>
 
@@ -4220,6 +4214,12 @@ defmodule LoomkinWeb.WorkspaceLive do
         <%= if @mode == :solo do %>
           <%!-- Left: Chat + Input --%>
           <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-surface-0">
+            <.live_component
+              module={LoomkinWeb.SessionSwitcherComponent}
+              id="session-switcher"
+              session_id={@session_id}
+              project_path={@project_path}
+            />
             <div class="flex-1 overflow-auto min-h-0">
               <.live_component
                 module={LoomkinWeb.ChatComponent}
@@ -4306,6 +4306,12 @@ defmodule LoomkinWeb.WorkspaceLive do
 
             <%!-- Chat + Composer column --%>
             <div class="flex-shrink-0 flex flex-col min-w-0 border-r border-subtle">
+              <.live_component
+                module={LoomkinWeb.SessionSwitcherComponent}
+                id="session-switcher"
+                session_id={@session_id}
+                project_path={@project_path}
+              />
               <div class="flex-1 overflow-auto min-h-0">
                 <.live_component
                   module={LoomkinWeb.ChatComponent}
@@ -5913,6 +5919,22 @@ defmodule LoomkinWeb.WorkspaceLive do
     if tid do
       try do
         send_update(LoomkinWeb.TeamCostComponent, id: "team-cost", team_id: tid)
+      rescue
+        ArgumentError -> :ok
+      end
+    end
+  end
+
+  defp forward_to_context_library(socket) do
+    tid = socket.assigns[:active_team_id] || socket.assigns[:team_id]
+
+    if tid do
+      try do
+        send_update(LoomkinWeb.ContextLibraryComponent,
+          id: "context-library",
+          team_id: tid,
+          reload: true
+        )
       rescue
         ArgumentError -> :ok
       end

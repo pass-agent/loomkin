@@ -60,6 +60,9 @@ defmodule Loomkin.AgentLoop do
     # Initialize cycle detection tracker (previous tool-call signature)
     Process.put(:loomkin_prev_tool_signature, nil)
 
+    # Bootstrap failure memory: inject lessons from past errors
+    messages = bootstrap_failure_memory(messages, config)
+
     case config.reasoning_strategy do
       :react ->
         run_with_rate_limit_retry(messages, config, 0)
@@ -616,6 +619,8 @@ defmodule Loomkin.AgentLoop do
         tool_name: tool_name,
         classification: classification
       })
+
+      maybe_record_failure_memory(config, tool_name, result_text, classification)
     end
 
     tool_msg = %{role: :tool, content: result_text, tool_call_id: tool_call_id}
@@ -899,4 +904,81 @@ defmodule Loomkin.AgentLoop do
 
   defp maybe_acquire_rate_limit(%{rate_limiter: nil}, _provider), do: :ok
   defp maybe_acquire_rate_limit(%{rate_limiter: callback}, provider), do: callback.(provider)
+
+  # -- Failure memory keepers --------------------------------------------------
+
+  defp maybe_record_failure_memory(config, tool_name, error_text, classification) do
+    team_id = config.team_id
+    agent_name = config.agent_name
+
+    if team_id && agent_name do
+      failure_data = %{
+        "error_category" => to_string(classification.category),
+        "tool_name" => tool_name,
+        "error_message" => String.slice(error_text, 0, 2000),
+        "severity" => to_string(classification.severity),
+        "healable" => classification.healable,
+        "suggested_approach" => classification.suggested_approach,
+        "agent_name" => to_string(agent_name),
+        "timestamp" => DateTime.to_iso8601(DateTime.utc_now())
+      }
+
+      messages = [
+        %{
+          role: :system,
+          content:
+            "Failure record: tool=#{tool_name} category=#{classification.category} " <>
+              "severity=#{classification.severity}\n#{error_text}"
+        }
+      ]
+
+      ContextOffload.offload_to_keeper(
+        team_id,
+        agent_name,
+        messages,
+        topic: "failures:#{agent_name}",
+        metadata: Map.put(failure_data, "type", "failure_memory")
+      )
+    end
+  rescue
+    _ -> :ok
+  end
+
+  @doc """
+  Bootstrap failure memory for an agent by searching for past failure keepers
+  and injecting lessons learned into the message list.
+
+  Returns the messages list with a lessons-learned system message prepended
+  if relevant failures were found, or the original messages unchanged.
+  """
+  def bootstrap_failure_memory(messages, config) do
+    team_id = config.team_id
+    agent_name = config.agent_name
+
+    if team_id && agent_name do
+      alias Loomkin.Teams.ContextRetrieval
+
+      case ContextRetrieval.synthesize(
+             team_id,
+             "What errors occurred for #{agent_name}? What patterns? What was fixed?",
+             agent_name: to_string(agent_name)
+           ) do
+        {:ok, summary} when is_binary(summary) and summary != "" ->
+          lesson = %{
+            role: :system,
+            content: "[Lessons from past failures]\n#{String.slice(summary, 0, 3000)}",
+            priority: :high
+          }
+
+          [lesson | messages]
+
+        _ ->
+          messages
+      end
+    else
+      messages
+    end
+  rescue
+    _ -> messages
+  end
 end

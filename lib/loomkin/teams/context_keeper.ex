@@ -17,6 +17,10 @@ defmodule Loomkin.Teams.ContextKeeper do
   @chars_per_token 4
   @keyword_match_budget 10_000
   @persist_debounce_ms 50
+  @staleness_sweep_ms :timer.minutes(30)
+  @archive_staleness_threshold 75
+  @archive_min_age_days 7
+  @summary_token_threshold 5_000
 
   defstruct [
     :id,
@@ -24,9 +28,18 @@ defmodule Loomkin.Teams.ContextKeeper do
     :topic,
     :source_agent,
     :created_at,
+    :last_accessed_at,
+    :last_agent_name,
+    :summary,
     messages: [],
     token_count: 0,
     metadata: %{},
+    access_count: 0,
+    retrieval_mode_histogram: %{},
+    relevance_score: 0.0,
+    confidence: 0.5,
+    success_count: 0,
+    miss_count: 0,
     dirty: false,
     persist_ref: nil,
     persist_debounce_ms: @persist_debounce_ms
@@ -81,6 +94,11 @@ defmodule Loomkin.Teams.ContextKeeper do
     GenServer.call(pid, {:smart_retrieve, question}, 30_000)
   end
 
+  @doc "Record an access event on this keeper (called by retrieval tools)."
+  def record_access(pid, agent_name, mode) do
+    GenServer.cast(pid, {:record_access, agent_name, mode})
+  end
+
   @doc "Get full state for debugging."
   def get_state(pid) do
     GenServer.call(pid, :get_state)
@@ -89,6 +107,43 @@ defmodule Loomkin.Teams.ContextKeeper do
   @doc false
   def flush_persist(pid) do
     GenServer.call(pid, :flush_persist)
+  end
+
+  @doc """
+  Compute staleness score for a keeper state (0-100).
+
+  Four-factor model:
+  - Time decay: 5 pts/hour since creation (capped at 25)
+  - Access decay: accumulates when unused (12h no access = 25 pts)
+  - Relevance decay: inverse of relevance_score (0-25)
+  - Confidence decay: based on success/miss ratio (0-25)
+  """
+  def compute_staleness(state) when is_map(state) do
+    now = DateTime.utc_now()
+
+    time_decay = compute_time_decay(state[:created_at] || now, now)
+    access_decay = compute_access_decay(state[:last_accessed_at], now)
+    relevance_decay = compute_relevance_decay(state[:relevance_score] || 0.0)
+
+    confidence_decay =
+      compute_confidence_decay(state[:success_count] || 0, state[:miss_count] || 0)
+
+    min(time_decay + access_decay + relevance_decay + confidence_decay, 100)
+  end
+
+  @doc "Return staleness state atom based on score."
+  def staleness_state(score) when is_number(score) do
+    cond do
+      score < 25 -> :fresh
+      score < 50 -> :warm
+      score < 75 -> :stale
+      true -> :expired
+    end
+  end
+
+  @doc "Get staleness score for a running keeper."
+  def get_staleness(pid) do
+    GenServer.call(pid, :get_staleness)
   end
 
   @doc "Rehydrate all keepers for a team from the database."
@@ -165,6 +220,12 @@ defmodule Loomkin.Teams.ContextKeeper do
         state
       end
 
+    schedule_staleness_sweep()
+
+    if state.token_count >= @summary_token_threshold and is_nil(state.summary) do
+      send(self(), :generate_summary)
+    end
+
     {:ok, state}
   end
 
@@ -173,6 +234,7 @@ defmodule Loomkin.Teams.ContextKeeper do
     merged_metadata = Map.merge(state.metadata, metadata)
     all_messages = state.messages ++ messages
     token_count = estimate_tokens(all_messages)
+    was_below = state.token_count < @summary_token_threshold
 
     state = %{
       state
@@ -184,6 +246,10 @@ defmodule Loomkin.Teams.ContextKeeper do
 
     update_registry_tokens(state)
     state = schedule_persist(state)
+
+    if was_below and token_count >= @summary_token_threshold and is_nil(state.summary) do
+      send(self(), :generate_summary)
+    end
 
     {:reply, :ok, state}
   end
@@ -271,6 +337,54 @@ defmodule Loomkin.Teams.ContextKeeper do
   end
 
   @impl true
+  def handle_call(:get_staleness, _from, state) do
+    score = compute_staleness(Map.from_struct(state))
+    {:reply, %{score: score, state: staleness_state(score)}, state}
+  end
+
+  @impl true
+  def handle_cast({:record_access, agent_name, mode}, state) do
+    mode_key = to_string(mode)
+
+    histogram =
+      Map.update(state.retrieval_mode_histogram, mode_key, 1, &(&1 + 1))
+
+    state = %{
+      state
+      | access_count: state.access_count + 1,
+        last_accessed_at: DateTime.utc_now(),
+        last_agent_name: agent_name,
+        retrieval_mode_histogram: histogram,
+        dirty: true
+    }
+
+    state = schedule_persist(state)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:set_summary, summary}, state) do
+    state = %{state | summary: summary, dirty: true}
+    state = schedule_persist(state)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:generate_summary, state) do
+    pid = self()
+
+    Task.start(fn ->
+      summary = generate_summary_text(state.messages)
+
+      if summary do
+        GenServer.cast(pid, {:set_summary, summary})
+      end
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(:persist, state) do
     state = %{state | persist_ref: nil}
 
@@ -293,6 +407,20 @@ defmodule Loomkin.Teams.ContextKeeper do
       end
 
     {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(:staleness_sweep, state) do
+    score = compute_staleness(Map.from_struct(state))
+    age_days = DateTime.diff(DateTime.utc_now(), state.created_at, :day)
+
+    if score >= @archive_staleness_threshold and age_days >= @archive_min_age_days do
+      do_archive(state)
+      {:stop, :normal, state}
+    else
+      schedule_staleness_sweep()
+      {:noreply, state}
+    end
   end
 
   @impl true
@@ -331,7 +459,16 @@ defmodule Loomkin.Teams.ContextKeeper do
             token_count: token_count,
             metadata: record.metadata || %{},
             topic: record.topic,
-            source_agent: record.source_agent
+            source_agent: record.source_agent,
+            last_accessed_at: record.last_accessed_at,
+            access_count: record.access_count || 0,
+            last_agent_name: record.last_agent_name,
+            retrieval_mode_histogram: record.retrieval_mode_histogram || %{},
+            summary: record.summary,
+            relevance_score: record.relevance_score || 0.0,
+            confidence: record.confidence || 0.5,
+            success_count: record.success_count || 0,
+            miss_count: record.miss_count || 0
         }
 
       nil ->
@@ -356,6 +493,70 @@ defmodule Loomkin.Teams.ContextKeeper do
     %{state | persist_ref: ref}
   end
 
+  defp schedule_staleness_sweep do
+    Process.send_after(self(), :staleness_sweep, @staleness_sweep_ms)
+  end
+
+  defp compute_time_decay(created_at, now) do
+    hours = DateTime.diff(now, created_at, :second) / 3600.0
+    min(round(hours * 5), 25)
+  end
+
+  defp compute_access_decay(nil, _now), do: 25
+
+  defp compute_access_decay(last_accessed_at, now) do
+    hours_since_access = DateTime.diff(now, last_accessed_at, :second) / 3600.0
+    min(round(hours_since_access / 12.0 * 25), 25)
+  end
+
+  defp compute_relevance_decay(relevance_score) do
+    round((1.0 - min(relevance_score, 1.0)) * 25)
+  end
+
+  defp compute_confidence_decay(success_count, miss_count) do
+    total = success_count + miss_count
+
+    if total == 0 do
+      13
+    else
+      miss_ratio = miss_count / total
+      round(miss_ratio * 25)
+    end
+  end
+
+  defp generate_summary_text(messages) do
+    context = format_messages_as_context(messages) |> String.slice(0, 8000)
+    model = Loomkin.Teams.ModelRouter.select(:grunt)
+
+    llm_messages = [
+      ReqLLM.Context.system(
+        "Summarize the following conversation context in 100 words or fewer. " <>
+          "Focus on key decisions, outcomes, and topics discussed. Be specific and concise."
+      ),
+      ReqLLM.Context.user(context)
+    ]
+
+    case call_llm(model, llm_messages) do
+      {:ok, response} ->
+        extract_answer(response) |> String.slice(0, 500)
+
+      {:error, _} ->
+        nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp do_archive(state) do
+    import Ecto.Query
+
+    KeeperSchema
+    |> where([k], k.id == ^state.id)
+    |> Repo.update_all(set: [status: "archived"])
+  rescue
+    _ -> :ok
+  end
+
   defp do_persist(state) do
     attrs = %{
       id: state.id,
@@ -365,7 +566,16 @@ defmodule Loomkin.Teams.ContextKeeper do
       messages: %{"messages" => state.messages},
       token_count: state.token_count,
       metadata: state.metadata,
-      status: :active
+      status: :active,
+      last_accessed_at: state.last_accessed_at,
+      access_count: state.access_count,
+      last_agent_name: state.last_agent_name,
+      retrieval_mode_histogram: state.retrieval_mode_histogram,
+      summary: state.summary,
+      relevance_score: state.relevance_score,
+      confidence: state.confidence,
+      success_count: state.success_count,
+      miss_count: state.miss_count
     }
 
     %KeeperSchema{id: state.id}

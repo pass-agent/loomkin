@@ -185,6 +185,8 @@ defmodule Loomkin.Teams.Role do
     Loomkin.Tools.ContextRetrieve,
     Loomkin.Tools.SearchKeepers,
     Loomkin.Tools.ContextOffload,
+    Loomkin.Tools.IntrospectDecisionHistory,
+    Loomkin.Tools.IntrospectFailurePatterns,
     Loomkin.Tools.AskUser,
     Loomkin.Tools.SpawnConversation
   ]

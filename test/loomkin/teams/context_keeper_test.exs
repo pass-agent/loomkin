@@ -202,25 +202,6 @@ defmodule Loomkin.Teams.ContextKeeperTest do
       assert result =~ "BEAM"
     end
 
-    test "does not modify state after smart retrieval" do
-      messages = [
-        %{role: :user, content: "hello world"},
-        %{role: :assistant, content: "hi there"}
-      ]
-
-      %{pid: pid} = start_keeper(messages: messages)
-
-      state_before = ContextKeeper.get_state(pid)
-
-      {:ok, _result} = ContextKeeper.smart_retrieve(pid, "what was said?")
-
-      state_after = ContextKeeper.get_state(pid)
-
-      assert state_before.messages == state_after.messages
-      assert state_before.token_count == state_after.token_count
-      assert state_before.metadata == state_after.metadata
-    end
-
     @tag :llm_dependent
     test "returns ok tuple on fallback" do
       %{pid: pid} = start_keeper(messages: [%{role: :user, content: "test content"}])

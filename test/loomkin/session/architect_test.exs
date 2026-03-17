@@ -1,9 +1,6 @@
 defmodule Loomkin.Session.ArchitectTest do
   use Loomkin.DataCase, async: false
 
-  alias Loomkin.Session
-  alias Loomkin.Session.Manager
-
   @project_path "/tmp/loom-architect-test"
 
   setup do
@@ -72,26 +69,6 @@ defmodule Loomkin.Session.ArchitectTest do
     test "editor model defaults to nil (uses primary model)" do
       editor = Loomkin.Config.get(:model, :editor)
       assert is_nil(editor)
-    end
-  end
-
-  describe "architect mode send_message" do
-    @tag :skip
-    @tag timeout: 120_000
-    test "returns error when LLM fails (no API key)" do
-      # NOTE: This test calls a real LLM and should be mocked.
-      # Skipped until we have a proper LLM mock in place.
-      session_id = Ecto.UUID.generate()
-
-      {:ok, pid} =
-        Manager.start_session(
-          session_id: session_id,
-          model: "zai:glm-5",
-          project_path: @project_path
-        )
-
-      result = Session.send_message(pid, "Add a hello function")
-      assert {:error, _reason} = result
     end
   end
 

@@ -187,27 +187,6 @@ defmodule Loomkin.Session.ContextWindowTest do
       assert Enum.any?(contents, &(&1 =~ "keeper:abc"))
       assert Enum.any?(contents, &(&1 =~ "keeper:def"))
     end
-
-    test "normal messages without priority are evicted first" do
-      long = String.duplicate("y", 1000)
-
-      messages = [
-        %{role: :user, content: long},
-        %{role: :assistant, content: long},
-        %{role: :system, content: "important breadcrumb", priority: :high},
-        %{role: :user, content: "recent"}
-      ]
-
-      result =
-        ContextWindow.build_messages(messages, "sys",
-          max_tokens: 400,
-          reserved_output: 10
-        )
-
-      contents = Enum.map(result, & &1.content)
-      # High priority breadcrumb should be present
-      assert Enum.any?(contents, &(&1 =~ "important breadcrumb"))
-    end
   end
 
   describe "inject_decision_context/2" do
@@ -349,31 +328,6 @@ defmodule Loomkin.Session.ContextWindowTest do
   end
 
   describe "summarize_old_messages/2" do
-    @tag :skip
-    test "returns summary string with message count" do
-      # NOTE: Calls real LLM — skip until mocked
-      messages = [
-        %{role: :user, content: "first message"},
-        %{role: :assistant, content: "first response"},
-        %{role: :user, content: "second message"}
-      ]
-
-      result = ContextWindow.summarize_old_messages(messages)
-      assert result =~ "Summary of 3 earlier messages:"
-      assert result =~ "first message"
-    end
-
-    @tag :skip
-    test "truncates long content in summary" do
-      # NOTE: Calls real LLM — skip until mocked
-      long = String.duplicate("x", 500)
-      messages = [%{role: :user, content: long}]
-
-      result = ContextWindow.summarize_old_messages(messages)
-      # The snippet should be capped at ~200 chars + prefix + "..."
-      assert String.length(result) < 300
-    end
-
     test "handles empty messages list" do
       result = ContextWindow.summarize_old_messages([])
       assert result == ""

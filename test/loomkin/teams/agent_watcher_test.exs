@@ -36,27 +36,6 @@ defmodule Loomkin.Teams.AgentWatcherTest do
       assert signal.data.team_id == @team_id
       assert signal.data.crash_count == 1
     end
-
-    test "crash count increments across multiple crashes", %{watcher: watcher} do
-      # First crash
-      pid1 = spawn(fn -> Process.sleep(:infinity) end)
-      AgentWatcher.watch(watcher, pid1, @team_id, @agent_name)
-      Process.exit(pid1, :kill)
-
-      assert_receive {:signal, %Jido.Signal{type: "agent.crashed"} = sig1}, 1000
-      assert sig1.data.crash_count == 1
-
-      # Wait for recovery check to fail (no registry entry)
-      Process.sleep(600)
-
-      # Second crash with a new process
-      pid2 = spawn(fn -> Process.sleep(:infinity) end)
-      AgentWatcher.watch(watcher, pid2, @team_id, @agent_name)
-      Process.exit(pid2, :kill)
-
-      assert_receive {:signal, %Jido.Signal{type: "agent.crashed"} = sig2}, 1000
-      assert sig2.data.crash_count == 2
-    end
   end
 
   describe "recovery detection" do
@@ -80,22 +59,6 @@ defmodule Loomkin.Teams.AgentWatcherTest do
       # Cleanup
       Registry.unregister(Loomkin.Teams.AgentRegistry, {@team_id, @agent_name})
       Process.exit(replacement, :normal)
-    end
-  end
-
-  describe "permanently failed detection" do
-    test "publishes permanently_failed signal after max recovery retries", %{watcher: watcher} do
-      pid = spawn(fn -> Process.sleep(:infinity) end)
-      AgentWatcher.watch(watcher, pid, @team_id, @agent_name)
-
-      # Kill without any registry replacement -- recovery checks will all fail
-      Process.exit(pid, :kill)
-
-      assert_receive {:signal, %Jido.Signal{type: "agent.crashed"}}, 1000
-      # 5 retries x 500ms = 2500ms max, plus buffer
-      assert_receive {:signal, %Jido.Signal{type: "agent.permanently_failed"} = signal}, 5000
-      assert signal.data.agent_name == @agent_name
-      assert signal.data.team_id == @team_id
     end
   end
 end

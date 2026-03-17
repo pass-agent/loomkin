@@ -138,6 +138,7 @@ defmodule Loomkin.Tools.Registry do
     session_id root_cause affected_files suggested_fix files_changed verified
     verification_output
     personas max_rounds facilitator template
+    check_type spec_description
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

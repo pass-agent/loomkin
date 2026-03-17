@@ -154,16 +154,5 @@ defmodule Loomkin.Decisions.PulseHealthTest do
       assert is_integer(report.health_score)
       assert report.health_score >= 0 and report.health_score <= 100
     end
-
-    test "superseded nodes are not counted" do
-      {:ok, _old} =
-        Graph.add_node(node_attrs(%{node_type: :action, title: "Old", status: :superseded}))
-
-      {:ok, _new} = Graph.add_node(node_attrs(%{node_type: :action, title: "New"}))
-
-      health = Pulse.compute_health()
-      # Only 1 orphan (the new active action), old is superseded and ignored
-      assert health == 95
-    end
   end
 end

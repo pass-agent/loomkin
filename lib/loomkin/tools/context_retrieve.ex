@@ -26,14 +26,15 @@ defmodule Loomkin.Tools.ContextRetrieve do
   @max_result_chars 8000
 
   @impl true
-  def run(params, _context) do
+  def run(params, context) do
     team_id = param!(params, :team_id)
     query = param!(params, :query)
     keeper_id = param(params, :keeper_id)
     mode = param(params, :mode)
+    agent_name = param(context, :agent_name)
 
     if mode == "synthesize" do
-      case ContextRetrieval.synthesize(team_id, query) do
+      case ContextRetrieval.synthesize(team_id, query, agent_name: agent_name) do
         {:ok, result} ->
           {:ok, %{result: truncate(result, @max_result_chars)}}
 
@@ -43,6 +44,7 @@ defmodule Loomkin.Tools.ContextRetrieve do
     else
       opts = []
       opts = if keeper_id, do: Keyword.put(opts, :keeper_id, keeper_id), else: opts
+      opts = if agent_name, do: Keyword.put(opts, :agent_name, agent_name), else: opts
 
       opts =
         case mode do

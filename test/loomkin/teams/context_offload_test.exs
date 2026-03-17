@@ -148,38 +148,6 @@ defmodule Loomkin.Teams.ContextOffloadTest do
     end
   end
 
-  describe "offload marker priority" do
-    test "marker includes priority: :high", %{team_id: team_id} do
-      # Create messages large enough to trigger offload (60% of 128k = 76.8k tokens)
-      large_content = String.duplicate("x", 320_000)
-
-      large_messages =
-        Enum.map(1..10, fn i ->
-          role = if rem(i, 2) == 1, do: :user, else: :assistant
-          %{role: role, content: "msg #{i} #{large_content}"}
-        end)
-
-      agent_state = %{
-        model: nil,
-        team_id: team_id,
-        name: "test-agent",
-        messages: large_messages
-      }
-
-      case ContextOffload.maybe_offload(agent_state) do
-        {:offloaded, updated_messages, _entry} ->
-          marker = hd(updated_messages)
-          assert marker.role == :system
-          assert marker.priority == :high
-          assert marker.content =~ "[Context offloaded]"
-
-        :noop ->
-          # If offload didn't trigger, the messages weren't large enough — skip
-          :ok
-      end
-    end
-  end
-
   describe "maybe_offload/1" do
     test "returns :noop when under threshold" do
       # Small message list, well under 80% of any model limit

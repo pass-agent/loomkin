@@ -53,6 +53,14 @@ defmodule Loomkin.Application do
         # Repo index
         Loomkin.RepoIntel.Index,
 
+        # Workspace management (persistent layer above sessions)
+        {Registry, keys: :unique, name: Loomkin.Workspace.Registry},
+        {DynamicSupervisor, name: Loomkin.Workspace.Supervisor, strategy: :one_for_one},
+
+        # Verification loop registry and supervisor
+        {Registry, keys: :unique, name: Loomkin.Verification.Registry},
+        {DynamicSupervisor, name: Loomkin.Verification.Supervisor, strategy: :one_for_one},
+
         # Session management
         {DynamicSupervisor, name: Loomkin.SessionSupervisor, strategy: :one_for_one},
 
