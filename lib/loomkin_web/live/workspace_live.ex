@@ -102,6 +102,7 @@ defmodule LoomkinWeb.WorkspaceLive do
         # Save chat modal
         show_save_chat_modal: false,
         multi_tenant: Application.get_env(:loomkin, :multi_tenant, false),
+        workspace_id: nil,
         context_info: Loomkin.Session.ContextWindow.context_usage_info(nil, [])
       )
       |> stream(:comms_events, [], limit: -500)
@@ -218,6 +219,15 @@ defmodule LoomkinWeb.WorkspaceLive do
     team_id_from_session =
       try do
         Session.get_team_id(pid)
+      catch
+        _, _ -> nil
+      end
+
+    # Load workspace_id from session — needed by child components
+    # (ReflectionPanel, Kindred, etc.) and for workspace-scoped PubSub.
+    workspace_id =
+      try do
+        Session.get_workspace_id(pid)
       catch
         _, _ -> nil
       end
@@ -407,6 +417,7 @@ defmodule LoomkinWeb.WorkspaceLive do
       team_tree: team_tree,
       team_names: %{},
       active_team_id: active_team_id,
+      workspace_id: workspace_id,
       scheduled_messages: scheduled_messages,
       switch_project_modal: nil,
       recent_projects: load_recent_projects(project_path),
@@ -5973,6 +5984,8 @@ defmodule LoomkinWeb.WorkspaceLive do
 
   defp do_switch_project(socket, path) do
     team_id = socket.assigns[:team_id]
+    session_id = socket.assigns.session_id
+    user = socket.assigns[:current_scope] && socket.assigns.current_scope.user
 
     if team_id do
       # Cancel any in-flight agent loops before switching so they don't
@@ -5984,7 +5997,29 @@ defmodule LoomkinWeb.WorkspaceLive do
     end
 
     # Update the Session GenServer so the Architect uses the new path
-    Session.update_project_path(socket.assigns.session_id, path)
+    Session.update_project_path(session_id, path)
+
+    # Re-associate session with the correct workspace for the new project path.
+    # This prevents workspace_id from going stale after a project switch,
+    # which would break kindred resolution and workspace-scoped queries.
+    new_workspace_id =
+      try do
+        case Loomkin.Workspace.Server.find_or_start(%{
+               project_path: path,
+               name: Path.basename(path),
+               user_id: user && user.id
+             }) do
+          {:ok, _ws_pid, wid} ->
+            Loomkin.Workspace.Server.attach_session(wid, session_id)
+            Session.update_workspace_id(session_id, wid)
+            wid
+
+          _ ->
+            socket.assigns[:workspace_id]
+        end
+      rescue
+        _ -> socket.assigns[:workspace_id]
+      end
 
     # Track in recent projects (dedup, max 5)
     recent =
@@ -5997,6 +6032,7 @@ defmodule LoomkinWeb.WorkspaceLive do
     |> assign(
       project_path: path,
       explorer_path: path,
+      workspace_id: new_workspace_id,
       switch_project_modal: nil,
       file_tree_version: (socket.assigns[:file_tree_version] || 0) + 1,
       recent_projects: recent

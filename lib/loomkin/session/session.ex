@@ -137,6 +137,12 @@ defmodule Loomkin.Session do
     GenServer.call(pid, :get_team_id, 5_000)
   end
 
+  @doc "Get the workspace_id for a running session."
+  @spec get_workspace_id(pid()) :: String.t() | nil
+  def get_workspace_id(pid) when is_pid(pid) do
+    GenServer.call(pid, :get_workspace_id, 5_000)
+  end
+
   @doc "Update the project path for a running session."
   @spec update_project_path(pid() | String.t(), String.t()) :: :ok | {:error, term()}
   def update_project_path(pid, path) when is_pid(pid) do
@@ -146,6 +152,19 @@ defmodule Loomkin.Session do
   def update_project_path(session_id, path) when is_binary(session_id) do
     case Loomkin.Session.Manager.find_session(session_id) do
       {:ok, pid} -> update_project_path(pid, path)
+      :error -> {:error, :not_found}
+    end
+  end
+
+  @doc "Update the workspace_id for a running session (e.g. after project switch)."
+  @spec update_workspace_id(pid() | String.t(), String.t()) :: :ok | {:error, term()}
+  def update_workspace_id(pid, workspace_id) when is_pid(pid) do
+    GenServer.call(pid, {:update_workspace_id, workspace_id})
+  end
+
+  def update_workspace_id(session_id, workspace_id) when is_binary(session_id) do
+    case Loomkin.Session.Manager.find_session(session_id) do
+      {:ok, pid} -> update_workspace_id(pid, workspace_id)
       :error -> {:error, :not_found}
     end
   end
@@ -358,9 +377,31 @@ defmodule Loomkin.Session do
   end
 
   @impl true
+  def handle_call(:get_workspace_id, _from, state) do
+    wid =
+      case state.db_session do
+        %{workspace_id: wid} when is_binary(wid) -> wid
+        _ -> reload_workspace_id(state.id)
+      end
+
+    {:reply, wid, state}
+  end
+
+  @impl true
   def handle_call({:update_project_path, path}, _from, state) do
     Persistence.update_session(state.db_session, %{project_path: path})
     {:reply, :ok, %{state | project_path: path}}
+  end
+
+  @impl true
+  def handle_call({:update_workspace_id, workspace_id}, _from, state) do
+    case Persistence.update_session(state.db_session, %{workspace_id: workspace_id}) do
+      {:ok, updated} ->
+        {:reply, :ok, %{state | db_session: updated}}
+
+      {:error, _} ->
+        {:reply, :ok, state}
+    end
   end
 
   @impl true
@@ -616,8 +657,22 @@ defmodule Loomkin.Session do
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp load_workspace_for_kindred(state) do
-    case state.db_session do
-      %{workspace_id: wid} when is_binary(wid) -> Loomkin.Repo.get(Loomkin.Workspace, wid)
+    # First try the state snapshot, then reload from DB since workspace_id
+    # is persisted asynchronously by Manager and may not be in the initial snapshot.
+    wid =
+      case state.db_session do
+        %{workspace_id: wid} when is_binary(wid) -> wid
+        _ -> reload_workspace_id(state.id)
+      end
+
+    if wid, do: Loomkin.Repo.get(Loomkin.Workspace, wid), else: nil
+  rescue
+    _ -> nil
+  end
+
+  defp reload_workspace_id(session_id) do
+    case Persistence.get_session(session_id) do
+      %{workspace_id: wid} when is_binary(wid) -> wid
       _ -> nil
     end
   rescue

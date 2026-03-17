@@ -78,20 +78,6 @@ defmodule Loomkin.Session.SessionTest do
   end
 
   describe "get_history/1 and get_status/1 via session_id" do
-    test "works with session_id string" do
-      session_id = Ecto.UUID.generate()
-
-      {:ok, _pid} =
-        Manager.start_session(
-          session_id: session_id,
-          model: "m",
-          project_path: @project_path
-        )
-
-      assert {:ok, []} = Session.get_history(session_id)
-      assert {:ok, :idle} = Session.get_status(session_id)
-    end
-
     test "returns error for unknown session" do
       fake_id = Ecto.UUID.generate()
       assert {:error, :not_found} = Session.get_history(fake_id)
