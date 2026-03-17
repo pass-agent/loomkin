@@ -94,11 +94,14 @@ defmodule Loomkin.Session.Manager do
 
   defp attach_to_workspace(session_id, opts, project_path) do
     try do
+      user_id = Keyword.get(opts, :user_id)
+
       # Find or create workspace for this project
       workspace_result =
         WorkspaceServer.find_or_start(%{
           project_path: project_path,
-          name: Path.basename(project_path)
+          name: Path.basename(project_path),
+          user_id: user_id
         })
 
       case workspace_result do

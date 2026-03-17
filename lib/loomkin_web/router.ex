@@ -89,6 +89,18 @@ defmodule LoomkinWeb.Router do
     end
   end
 
+  # Org routes — require authentication (multi-tenant only)
+  scope "/", LoomkinWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :orgs,
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_user}] do
+      live "/orgs", OrgLive, :index
+      live "/orgs/new", OrgLive, :new
+      live "/orgs/:slug", OrgLive, :show
+    end
+  end
+
   # App routes — gated by multi-tenant auth (passes through in local mode)
   scope "/", LoomkinWeb do
     pipe_through [:browser, :require_auth_if_multi_tenant]

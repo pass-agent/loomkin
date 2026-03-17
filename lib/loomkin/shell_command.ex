@@ -53,16 +53,25 @@ defmodule Loomkin.ShellCommand do
   """
   @allowed_prefixes ~w(mix elixir iex true false sleep echo cat)
 
+  # Shell metacharacters that enable command chaining/injection (including newline)
+  @dangerous_pattern ~r/[;\n\r|&`$><]|\$\(/
+
   @spec validate_command(String.t()) :: :ok | {:error, String.t()}
   def validate_command(command) do
     trimmed = String.trim(command)
     first_word = trimmed |> String.split(~r/\s+/, parts: 2) |> List.first("")
 
-    if first_word in @allowed_prefixes do
-      :ok
-    else
-      {:error,
-       "Command '#{first_word}' not in allowed prefixes: #{Enum.join(@allowed_prefixes, ", ")}"}
+    cond do
+      first_word not in @allowed_prefixes ->
+        {:error,
+         "Command '#{first_word}' not in allowed prefixes: #{Enum.join(@allowed_prefixes, ", ")}"}
+
+      Regex.match?(@dangerous_pattern, trimmed) ->
+        {:error,
+         "Command contains shell metacharacters (;, |, &, `, $, >, <) which are not allowed"}
+
+      true ->
+        :ok
     end
   end
 

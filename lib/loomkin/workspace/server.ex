@@ -48,14 +48,14 @@ defmodule Loomkin.Workspace.Server do
 
   def find_or_start(attrs) do
     project_path = Map.fetch!(attrs, :project_path)
+    user_id = Map.get(attrs, :user_id)
 
-    case find_by_project_path(project_path) do
+    case find_by_project_path(project_path, user_id) do
       {:ok, workspace} ->
         ensure_started(workspace)
 
       :not_found ->
         name = Map.get(attrs, :name, Path.basename(project_path))
-        user_id = Map.get(attrs, :user_id)
 
         case create_workspace(%{
                name: name,
@@ -69,7 +69,7 @@ defmodule Loomkin.Workspace.Server do
           {:error, %Ecto.Changeset{} = changeset} ->
             if has_unique_constraint_error?(changeset) do
               # Another process won the race — retry lookup
-              case find_by_project_path(project_path) do
+              case find_by_project_path(project_path, user_id) do
                 {:ok, workspace} -> ensure_started(workspace)
                 :not_found -> {:error, :workspace_creation_conflict}
               end
@@ -309,10 +309,20 @@ defmodule Loomkin.Workspace.Server do
     {:via, Registry, {Loomkin.Workspace.Registry, workspace_id}}
   end
 
-  defp find_by_project_path(project_path) do
-    case Workspace
-         |> where([w], ^project_path in w.project_paths)
-         |> where([w], w.status in [:active, :hibernated])
+  defp find_by_project_path(project_path, user_id) do
+    query =
+      Workspace
+      |> where([w], ^project_path in w.project_paths)
+      |> where([w], w.status in [:active, :hibernated])
+
+    query =
+      if user_id do
+        where(query, [w], w.user_id == ^user_id)
+      else
+        query
+      end
+
+    case query
          |> order_by([w], desc: w.updated_at)
          |> limit(1)
          |> Repo.one() do

@@ -11,7 +11,7 @@ defmodule Loomkin.Schemas.Snippet do
 
     field :title, :string
     field :description, :string
-    field :type, Ecto.Enum, values: [:skill, :prompt, :kin_agent, :chat_log]
+    field :type, Ecto.Enum, values: [:skill, :prompt, :kin_agent, :chat_log, :reflection_report]
     field :visibility, Ecto.Enum, values: [:private, :unlisted, :public], default: :private
     field :content, :map, default: %{}
     field :tags, {:array, :string}, default: []
@@ -27,7 +27,7 @@ defmodule Loomkin.Schemas.Snippet do
   end
 
   @required_fields ~w(title type)a
-  @optional_fields ~w(description visibility content tags slug forked_from_id version)a
+  @optional_fields ~w(description visibility content tags slug forked_from_id version user_id)a
 
   def changeset(snippet, attrs) do
     snippet

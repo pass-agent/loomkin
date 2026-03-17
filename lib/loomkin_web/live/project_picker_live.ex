@@ -4,7 +4,8 @@ defmodule LoomkinWeb.ProjectPickerLive do
   alias Loomkin.Session.Persistence
 
   def mount(_params, _session, socket) do
-    projects = Persistence.list_projects()
+    user = socket.assigns[:current_scope] && socket.assigns.current_scope.user
+    projects = Persistence.list_projects(user: user)
 
     socket =
       socket
@@ -16,7 +17,8 @@ defmodule LoomkinWeb.ProjectPickerLive do
         new_path_error: nil,
         fp_open: false,
         fp_dir: nil,
-        fp_entries: []
+        fp_entries: [],
+        current_user: user
       )
       |> stream(:projects, projects, dom_id: &project_dom_id/1)
 
@@ -28,7 +30,7 @@ defmodule LoomkinWeb.ProjectPickerLive do
   end
 
   def handle_event("select_project", %{"path" => path}, socket) do
-    sessions = Persistence.list_sessions_for_project(path)
+    sessions = Persistence.list_sessions_for_project(path, user: socket.assigns[:current_user])
 
     socket =
       socket
@@ -43,7 +45,7 @@ defmodule LoomkinWeb.ProjectPickerLive do
   end
 
   def handle_event("back_to_projects", _params, socket) do
-    projects = Persistence.list_projects()
+    projects = Persistence.list_projects(user: socket.assigns[:current_user])
 
     socket =
       socket

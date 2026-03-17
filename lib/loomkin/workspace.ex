@@ -19,6 +19,7 @@ defmodule Loomkin.Workspace do
     field :status, Ecto.Enum, values: [:active, :hibernated, :archived], default: :active
 
     belongs_to :user, Loomkin.Accounts.User, type: :id
+    belongs_to :organization, Loomkin.Schemas.Organization
     has_many :sessions, Loomkin.Schemas.Session
     has_many :task_journal_entries, Loomkin.Workspace.TaskJournalEntry
 
@@ -26,7 +27,7 @@ defmodule Loomkin.Workspace do
   end
 
   @required_fields ~w(name)a
-  @optional_fields ~w(project_paths team_id status user_id)a
+  @optional_fields ~w(project_paths team_id status user_id organization_id)a
 
   def changeset(workspace, attrs) do
     workspace

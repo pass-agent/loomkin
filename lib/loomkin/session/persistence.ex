@@ -29,9 +29,11 @@ defmodule Loomkin.Session.Persistence do
   @spec list_sessions(keyword()) :: [Session.t()]
   def list_sessions(opts \\ []) do
     Session
+    |> maybe_filter_user(opts[:user])
     |> maybe_filter_status(opts[:status])
     |> maybe_filter_project_path(opts[:project_path])
     |> order_by([s], desc: s.updated_at)
+    |> maybe_limit(opts[:limit])
     |> Repo.all()
   end
 
@@ -135,18 +137,20 @@ defmodule Loomkin.Session.Persistence do
     if count > 0, do: :ok, else: {:error, :not_found}
   end
 
-  @spec find_latest_active_session(String.t()) :: Session.t() | nil
-  def find_latest_active_session(project_path) do
+  @spec find_latest_active_session(String.t(), keyword()) :: Session.t() | nil
+  def find_latest_active_session(project_path, opts \\ []) do
     Session
     |> where([s], s.project_path == ^project_path and s.status == :active)
+    |> maybe_filter_user(opts[:user])
     |> order_by([s], desc: s.updated_at)
     |> limit(1)
     |> Repo.one()
   end
 
-  @spec list_projects() :: [map()]
-  def list_projects do
+  @spec list_projects(keyword()) :: [map()]
+  def list_projects(opts \\ []) do
     Session
+    |> maybe_filter_user(opts[:user])
     |> group_by([s], s.project_path)
     |> select([s], %{
       project_path: s.project_path,
@@ -157,9 +161,9 @@ defmodule Loomkin.Session.Persistence do
     |> Repo.all()
   end
 
-  @spec list_sessions_for_project(String.t()) :: [Session.t()]
-  def list_sessions_for_project(project_path) do
-    list_sessions(project_path: project_path)
+  @spec list_sessions_for_project(String.t(), keyword()) :: [Session.t()]
+  def list_sessions_for_project(project_path, opts \\ []) do
+    list_sessions(Keyword.merge(opts, project_path: project_path))
   end
 
   defp maybe_filter_status(query, nil), do: query
@@ -173,4 +177,13 @@ defmodule Loomkin.Session.Persistence do
   defp maybe_filter_project_path(query, path) do
     where(query, [s], s.project_path == ^path)
   end
+
+  defp maybe_filter_user(query, nil), do: query
+
+  defp maybe_filter_user(query, %{id: user_id}) do
+    where(query, [s], s.user_id == ^user_id)
+  end
+
+  defp maybe_limit(query, nil), do: query
+  defp maybe_limit(query, n) when is_integer(n), do: limit(query, ^n)
 end

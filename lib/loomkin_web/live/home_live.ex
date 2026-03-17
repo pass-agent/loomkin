@@ -32,7 +32,7 @@ defmodule LoomkinWeb.HomeLive do
 
       socket =
         if connected?(socket) do
-          projects = Persistence.list_projects()
+          projects = Persistence.list_projects(user: user)
 
           {snippet_counts, favorites, recent_sessions} =
             if user do
@@ -43,7 +43,7 @@ defmodule LoomkinWeb.HomeLive do
                 |> Enum.map(fn fav -> fav.snippet end)
                 |> Repo.preload(:user)
 
-              sessions = Persistence.list_sessions(limit: 5)
+              sessions = Persistence.list_sessions(user: user, limit: 5)
 
               {counts, favs, sessions}
             else

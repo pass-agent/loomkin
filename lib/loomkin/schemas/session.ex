@@ -18,7 +18,7 @@ defmodule Loomkin.Schemas.Session do
     field :team_id, :string
     field :bootstrap_spawned, :boolean, default: false
 
-    belongs_to :user, Loomkin.Accounts.User
+    belongs_to :user, Loomkin.Accounts.User, type: :id
     belongs_to :workspace, Loomkin.Workspace
     has_many :messages, Loomkin.Schemas.Message
 
