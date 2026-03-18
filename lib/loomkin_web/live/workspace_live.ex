@@ -321,6 +321,9 @@ defmodule LoomkinWeb.WorkspaceLive do
         socket
       end
 
+    # Replay comms history from signal journal so the feed isn't empty on mount
+    socket = replay_comms_history(socket)
+
     # Load existing history — fall back to DB if session process is not running
     messages =
       case Session.get_history(session_id) do
@@ -6095,4 +6098,254 @@ defmodule LoomkinWeb.WorkspaceLive do
     LoomkinWeb.Presence.list_online_users()
     |> Enum.filter(&MapSet.member?(following_ids, &1.user_id))
   end
+
+  # --- Comms history replay ---
+
+  # Replays recorded signals from the journal and converts them to comms events,
+  # backfilling the comms stream on mount so users see history.
+  defp replay_comms_history(socket) do
+    team_ids = socket.assigns[:subscribed_teams] || MapSet.new()
+
+    if MapSet.size(team_ids) == 0 do
+      socket
+    else
+      # Replay collaboration and team signals from the last 30 minutes
+      thirty_min_ago = System.os_time(:microsecond) - 30 * 60 * 1_000_000
+
+      recorded_signals =
+        ["collaboration.**", "team.**", "context.**"]
+        |> Enum.flat_map(fn path ->
+          case Loomkin.Signals.replay(path, thirty_min_ago) do
+            {:ok, records} when is_list(records) -> records
+            _ -> []
+          end
+        end)
+
+      # Filter by team, convert to comms events, sort chronologically, take last 100
+      comms_events =
+        recorded_signals
+        |> Enum.filter(fn rec ->
+          Loomkin.Signals.signal_for_team?(rec.signal, nil) or
+            Enum.any?(team_ids, &Loomkin.Signals.signal_for_team?(rec.signal, &1))
+        end)
+        # Sort by signal time (ISO 8601) or log ID before converting, to preserve order
+        |> Enum.sort_by(fn rec -> rec.signal.time || rec.id end)
+        |> Enum.map(&signal_to_comms_event/1)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.take(-100)
+
+      # Insert all historical events into the comms stream
+      Enum.reduce(comms_events, socket, fn event, acc ->
+        acc
+        |> stream_insert(:comms_events, event)
+        |> update(:comms_event_count, &(&1 + 1))
+      end)
+    end
+  end
+
+  defp parse_signal_time(nil), do: DateTime.utc_now()
+
+  defp parse_signal_time(time_str) when is_binary(time_str) do
+    case DateTime.from_iso8601(time_str) do
+      {:ok, dt, _offset} -> dt
+      _ -> DateTime.utc_now()
+    end
+  end
+
+  defp parse_signal_time(_), do: DateTime.utc_now()
+
+  # Converts a RecordedSignal to a comms event struct, or nil if not comms-worthy.
+  defp signal_to_comms_event(%{signal: %Jido.Signal{} = sig}) do
+    # Parse the signal's time field (ISO 8601) for accurate timestamps
+    timestamp = parse_signal_time(sig.time)
+    case sig.type do
+      "collaboration.peer.message" ->
+        agent = sig.data[:from] || "unknown"
+
+        content =
+          case sig.data[:message] do
+            {:peer_message, _sender, text} -> text
+            text when is_binary(text) -> text
+            other -> inspect(other)
+          end
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :peer_message,
+          agent: agent,
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id]}
+        }
+
+      "collaboration.peer.discovery" ->
+        agent = sig.data[:from] || "unknown"
+        content = sig.data[:content] || sig.data[:message] || "Shared a discovery"
+        content = if is_binary(content), do: content, else: inspect(content)
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :discovery,
+          agent: agent,
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id]}
+        }
+
+      "collaboration.conversation.started" ->
+        topic = sig.data[:topic] || "unknown"
+        count = length(sig.data[:participants] || [])
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :conversation_started,
+          agent: "system",
+          content: "Conversation started: #{topic} (#{count} participants)",
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{
+            conversation_id: sig.data[:conversation_id],
+            team_id: sig.data[:team_id],
+            topic: topic
+          }
+        }
+
+      "collaboration.conversation.ended" ->
+        reason = sig.data[:reason] || "completed"
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :conversation_ended,
+          agent: "system",
+          content: "Conversation ended: #{reason}",
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{
+            conversation_id: sig.data[:conversation_id],
+            team_id: sig.data[:team_id]
+          }
+        }
+
+      "collaboration.conversation.turn" ->
+        speaker = sig.data[:speaker] || "unknown"
+        content = sig.data[:content] || ""
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :conversation_turn,
+          agent: speaker,
+          content: "#{speaker}: #{content}",
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{
+            conversation_id: sig.data[:conversation_id],
+            team_id: sig.data[:team_id]
+          }
+        }
+
+      "collaboration.vote.response" ->
+        response = sig.data[:response] || %{}
+        agent = response[:from] || "unknown"
+        choice = response[:choice] || "abstain"
+        confidence = response[:confidence]
+
+        content =
+          if confidence,
+            do: "voted '#{choice}' (confidence: #{confidence})",
+            else: "voted '#{choice}'"
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :vote_response,
+          agent: agent,
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{
+            team_id: sig.data[:team_id],
+            vote_id: sig.data[:vote_id],
+            choice: choice
+          }
+        }
+
+      "team.task.created" ->
+        title = sig.data[:title] || ""
+
+        content =
+          if is_binary(title) and byte_size(title) > 0,
+            do: "New task: #{String.slice(title, 0, 200)}",
+            else: "New task created"
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :task_created,
+          agent: "system",
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id], title: title}
+        }
+
+      "team.task.completed" ->
+        agent = sig.data[:agent] || sig.data[:completed_by] || "unknown"
+        result = sig.data[:result] || ""
+
+        content =
+          if is_binary(result) and byte_size(result) > 0,
+            do: "Completed: #{String.slice(result, 0, 300)}",
+            else: "Task completed"
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :task_complete,
+          agent: agent,
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id]}
+        }
+
+      "team.task.assigned" ->
+        agent = sig.data[:agent] || sig.data[:assigned_to] || "unknown"
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :task_assigned,
+          agent: agent,
+          content: "Picked up a task",
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id]}
+        }
+
+      "context.update" ->
+        agent = sig.data[:agent] || sig.data[:from] || "unknown"
+        payload = sig.data[:payload] || sig.data
+
+        content =
+          case payload do
+            %{type: :discovery, content: c} when is_binary(c) -> c
+            %{content: c} when is_binary(c) -> c
+            _ -> "Shared a discovery"
+          end
+
+        %{
+          id: Ecto.UUID.generate(),
+          type: :discovery,
+          agent: agent,
+          content: content,
+          timestamp: timestamp,
+          expanded: false,
+          metadata: %{team_id: sig.data[:team_id]}
+        }
+
+      # Skip noisy/non-comms signal types
+      _ ->
+        nil
+    end
+  end
+
+  defp signal_to_comms_event(_), do: nil
 end
