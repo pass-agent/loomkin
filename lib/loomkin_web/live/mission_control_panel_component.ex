@@ -31,9 +31,16 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
   use LoomkinWeb, :live_component
 
   # Statuses that indicate an agent is actively doing something
-  @active_statuses [:working, :thinking, :approval_pending, :ask_user_pending,
-                    :waiting_permission, :suspended_healing, :recovering,
-                    :awaiting_synthesis]
+  @active_statuses [
+    :working,
+    :thinking,
+    :approval_pending,
+    :ask_user_pending,
+    :waiting_permission,
+    :suspended_healing,
+    :recovering,
+    :awaiting_synthesis
+  ]
 
   # Content types that indicate active visual activity
   @active_content_types [:thinking, :tool_call, :streaming, :message]
@@ -706,14 +713,18 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
   end
 
   defp role_to_icon(role) when is_atom(role) or is_binary(role) do
-    base = role |> to_string() |> String.downcase() |> String.split([" ", "-", "_"]) |> List.first()
+    base =
+      role |> to_string() |> String.downcase() |> String.split([" ", "-", "_"]) |> List.first()
+
     Map.get(@system_role_icons, base, "◆")
   end
 
   defp role_to_icon(_), do: "◆"
 
   defp role_to_accent(role) when is_atom(role) or is_binary(role) do
-    base = role |> to_string() |> String.downcase() |> String.split([" ", "-", "_"]) |> List.first()
+    base =
+      role |> to_string() |> String.downcase() |> String.split([" ", "-", "_"]) |> List.first()
+
     Map.get(@role_accents, base, @default_accent)
   end
 

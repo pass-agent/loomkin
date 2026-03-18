@@ -661,8 +661,9 @@ defmodule LoomkinWeb.AgentCommsComponent do
   defp short_team_label(_), do: ""
 
   # Map event types to filter categories
-  defp comms_category(type) when type in [:task_created, :task_assigned, :task_complete, :tasks_unblocked],
-    do: "tasks"
+  defp comms_category(type)
+       when type in [:task_created, :task_assigned, :task_complete, :tasks_unblocked],
+       do: "tasks"
 
   defp comms_category(type)
        when type in [

@@ -53,7 +53,8 @@ defmodule Loomkin.Tools.UpdateBacklogItem do
       |> maybe_put_raw(:epic, param(params, :epic))
 
     if map_size(attrs) == 0 do
-      {:error, "No fields to update. Provide at least one of: status, priority, result, assigned_to, assigned_team, description, category, epic"}
+      {:error,
+       "No fields to update. Provide at least one of: status, priority, result, assigned_to, assigned_team, description, category, epic"}
     else
       case Backlog.update_item(item_id, attrs) do
         {:ok, item} ->
@@ -61,14 +62,15 @@ defmodule Loomkin.Tools.UpdateBacklogItem do
 
           {:ok,
            %{
-             result: """
-             Backlog item updated (#{changes}):
-               ID: #{item.id}
-               Title: #{item.title}
-               Status: #{item.status}
-               Priority: #{item.priority}
-             """
-             |> String.trim()
+             result:
+               """
+               Backlog item updated (#{changes}):
+                 ID: #{item.id}
+                 Title: #{item.title}
+                 Status: #{item.status}
+                 Priority: #{item.priority}
+               """
+               |> String.trim()
            }}
 
         {:error, :not_found} ->
@@ -103,11 +105,13 @@ defmodule Loomkin.Tools.UpdateBacklogItem do
 
   defp maybe_put_parsed_int(attrs, _key, nil), do: attrs
   defp maybe_put_parsed_int(attrs, key, val) when is_integer(val), do: Map.put(attrs, key, val)
+
   defp maybe_put_parsed_int(attrs, key, val) when is_binary(val) do
     case Integer.parse(val) do
       {n, _} -> Map.put(attrs, key, n)
       :error -> attrs
     end
   end
+
   defp maybe_put_parsed_int(attrs, _key, _), do: attrs
 end

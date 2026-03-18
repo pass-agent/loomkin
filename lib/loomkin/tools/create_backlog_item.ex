@@ -45,13 +45,19 @@ defmodule Loomkin.Tools.CreateBacklogItem do
     title = param!(params, :title)
 
     status = param(params, :status) || "todo"
+
     unless status in @valid_statuses do
-      return_error("Invalid status '#{status}'. Must be one of: #{Enum.join(@valid_statuses, ", ")}")
+      return_error(
+        "Invalid status '#{status}'. Must be one of: #{Enum.join(@valid_statuses, ", ")}"
+      )
     end
 
     scope = param(params, :scope_estimate) || "session"
+
     unless scope in @valid_scopes do
-      return_error("Invalid scope_estimate '#{scope}'. Must be one of: #{Enum.join(@valid_scopes, ", ")}")
+      return_error(
+        "Invalid scope_estimate '#{scope}'. Must be one of: #{Enum.join(@valid_scopes, ", ")}"
+      )
     end
 
     tags = param(params, :tags)
@@ -74,17 +80,18 @@ defmodule Loomkin.Tools.CreateBacklogItem do
       {:ok, item} ->
         {:ok,
          %{
-           result: """
-           Backlog item created:
-             ID: #{item.id}
-             Title: #{item.title}
-             Priority: #{item.priority}
-             Status: #{item.status}
-             Category: #{item.category || "none"}
-             Epic: #{item.epic || "none"}
-             Scope: #{item.scope_estimate}
-           """
-           |> String.trim()
+           result:
+             """
+             Backlog item created:
+               ID: #{item.id}
+               Title: #{item.title}
+               Priority: #{item.priority}
+               Status: #{item.status}
+               Category: #{item.category || "none"}
+               Epic: #{item.epic || "none"}
+               Scope: #{item.scope_estimate}
+             """
+             |> String.trim()
          }}
 
       {:error, changeset} ->
@@ -96,11 +103,13 @@ defmodule Loomkin.Tools.CreateBacklogItem do
 
   defp parse_int(nil, default), do: default
   defp parse_int(val, _default) when is_integer(val), do: val
+
   defp parse_int(val, default) when is_binary(val) do
     case Integer.parse(val) do
       {n, _} -> n
       :error -> default
     end
   end
+
   defp parse_int(_, default), do: default
 end

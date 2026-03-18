@@ -3934,162 +3934,162 @@ defmodule LoomkinWeb.WorkspaceLive do
 
       <%!-- ── Main Content — Mission Control layout ── --%>
       <div id="main-content" class="flex flex-1 min-h-0 flex-col xl:flex-row">
-          <%!-- Left: Kin Cards + Comms (full height) + Composer --%>
-          <div
-            id="mc-main-container"
-            class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
-          >
-            <%!-- Kin cards + comms fill all available space --%>
-            <div class="flex-1 overflow-hidden flex flex-col min-h-0">
-              <.live_component
-                module={LoomkinWeb.MissionControlPanelComponent}
-                id="mission-control-panel"
-                agent_cards={@agent_cards}
-                concierge_card_names={@concierge_card_names}
-                system_card_names={@system_card_names}
-                worker_card_names={@worker_card_names}
-                comms_event_count={@comms_event_count}
-                comms_stream={@streams.comms_events}
-                focused_agent={@focused_agent}
-                inspector_mode={@inspector_mode}
-                kin_agents={@kin_agents}
-                cached_agents={@cached_agents}
-                active_team_id={@active_team_id}
-                leader_approval_pending={@leader_approval_pending}
-                collab_health={@collab_health}
-              />
-            </div>
-
-            <%!-- Pending ask_user questions --%>
-            <div
-              :if={@pending_questions != []}
-              class="flex-shrink-0 px-4 py-2.5 bg-violet-950/20"
-            >
-              <.live_component
-                module={LoomkinWeb.AskUserComponent}
-                id="ask-user-questions-mc"
-                questions={@pending_questions}
-              />
-            </div>
-
-            <%!-- Composer with session history toggle --%>
+        <%!-- Left: Kin Cards + Comms (full height) + Composer --%>
+        <div
+          id="mc-main-container"
+          class="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
+        >
+          <%!-- Kin cards + comms fill all available space --%>
+          <div class="flex-1 overflow-hidden flex flex-col min-h-0">
             <.live_component
-              module={LoomkinWeb.ComposerComponent}
-              id="composer"
-              input_text={@input_text}
-              reply_target={Map.get(assigns, :reply_target)}
-              cached_agents={@cached_agents}
-              last_user_message={@last_user_message}
-              queue_drawer={@queue_drawer}
-              scheduled_messages={@scheduled_messages}
-              agent_queues={@agent_queues}
-              active_team_id={@active_team_id}
-              session_id={@session_id}
-              status={@status}
+              module={LoomkinWeb.MissionControlPanelComponent}
+              id="mission-control-panel"
               agent_cards={@agent_cards}
-              broadcast_mode={@broadcast_mode}
-              agent_count={length(@cached_agents)}
-            />
-
-            <%!-- Queue drawer overlay --%>
-            <.live_component
-              :if={@queue_drawer}
-              module={LoomkinWeb.MessageQueueComponent}
-              id={"queue-drawer-#{@queue_drawer.agent}"}
-              queue={Map.get(@agent_queues, @queue_drawer.agent, [])}
-              agent_name={@queue_drawer.agent}
-              team_id={@queue_drawer.team_id}
+              concierge_card_names={@concierge_card_names}
+              system_card_names={@system_card_names}
+              worker_card_names={@worker_card_names}
+              comms_event_count={@comms_event_count}
+              comms_stream={@streams.comms_events}
+              focused_agent={@focused_agent}
+              inspector_mode={@inspector_mode}
+              kin_agents={@kin_agents}
+              cached_agents={@cached_agents}
+              active_team_id={@active_team_id}
+              leader_approval_pending={@leader_approval_pending}
+              collab_health={@collab_health}
             />
           </div>
 
-          <%!-- Session History Modal --%>
+          <%!-- Pending ask_user questions --%>
           <div
-            :if={@show_session_history}
-            id="session-history-modal"
-            class="fixed inset-0 z-50 flex items-center justify-center"
+            :if={@pending_questions != []}
+            class="flex-shrink-0 px-4 py-2.5 bg-violet-950/20"
           >
-            <div
-              class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              phx-click="toggle_session_history"
-              aria-hidden="true"
+            <.live_component
+              module={LoomkinWeb.AskUserComponent}
+              id="ask-user-questions-mc"
+              questions={@pending_questions}
             />
-            <div class="relative z-10 glass rounded-2xl w-full max-w-3xl h-[75vh] flex flex-col overflow-hidden animate-fade-in">
-              <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-                <div class="flex items-center gap-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4 text-violet-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <h2 class="text-sm font-semibold text-white">Session History</h2>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button
-                    :if={
-                      @multi_tenant && @current_scope && @current_scope.user &&
-                        @session_id
-                    }
-                    phx-click="open_save_chat_modal"
-                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-surface-2 transition-colors"
-                    title="Save chat as snippet"
-                  >
-                    <.icon name="hero-bookmark-mini" class="w-3.5 h-3.5" /> Save
-                  </button>
-                  <button
-                    phx-click="toggle_session_history"
-                    class="text-zinc-500 hover:text-zinc-300 text-xs"
-                  >
-                    Close
-                  </button>
-                </div>
+          </div>
+
+          <%!-- Composer with session history toggle --%>
+          <.live_component
+            module={LoomkinWeb.ComposerComponent}
+            id="composer"
+            input_text={@input_text}
+            reply_target={Map.get(assigns, :reply_target)}
+            cached_agents={@cached_agents}
+            last_user_message={@last_user_message}
+            queue_drawer={@queue_drawer}
+            scheduled_messages={@scheduled_messages}
+            agent_queues={@agent_queues}
+            active_team_id={@active_team_id}
+            session_id={@session_id}
+            status={@status}
+            agent_cards={@agent_cards}
+            broadcast_mode={@broadcast_mode}
+            agent_count={length(@cached_agents)}
+          />
+
+          <%!-- Queue drawer overlay --%>
+          <.live_component
+            :if={@queue_drawer}
+            module={LoomkinWeb.MessageQueueComponent}
+            id={"queue-drawer-#{@queue_drawer.agent}"}
+            queue={Map.get(@agent_queues, @queue_drawer.agent, [])}
+            agent_name={@queue_drawer.agent}
+            team_id={@queue_drawer.team_id}
+          />
+        </div>
+
+        <%!-- Session History Modal --%>
+        <div
+          :if={@show_session_history}
+          id="session-history-modal"
+          class="fixed inset-0 z-50 flex items-center justify-center"
+        >
+          <div
+            class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            phx-click="toggle_session_history"
+            aria-hidden="true"
+          />
+          <div class="relative z-10 glass rounded-2xl w-full max-w-3xl h-[75vh] flex flex-col overflow-hidden animate-fade-in">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+              <div class="flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 text-violet-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h2 class="text-sm font-semibold text-white">Session History</h2>
               </div>
-              <div class="px-4 py-2 border-b border-border-subtle bg-surface-1/50">
-                <.live_component
-                  module={LoomkinWeb.SessionSwitcherComponent}
-                  id="session-switcher"
-                  session_id={@session_id}
-                  project_path={@project_path}
-                />
-              </div>
-              <div class="flex-1 overflow-auto min-h-0">
-                <.live_component
-                  module={LoomkinWeb.ChatComponent}
-                  id="chat"
-                  messages={@messages}
-                  status={@status}
-                  current_tool={@current_tool}
-                  streaming={@streaming}
-                  streaming_content={@streaming_content}
-                  streaming_agent={@streaming_agent}
-                  architect_phase={@architect_phase}
-                  plan_steps={@plan_steps}
-                  current_step={@current_step}
-                  failed_message_idx={@failed_message_idx}
-                  context_info={@context_info}
-                />
+              <div class="flex items-center gap-2">
+                <button
+                  :if={
+                    @multi_tenant && @current_scope && @current_scope.user &&
+                      @session_id
+                  }
+                  phx-click="open_save_chat_modal"
+                  class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-zinc-400 hover:text-white hover:bg-surface-2 transition-colors"
+                  title="Save chat as snippet"
+                >
+                  <.icon name="hero-bookmark-mini" class="w-3.5 h-3.5" /> Save
+                </button>
+                <button
+                  phx-click="toggle_session_history"
+                  class="text-zinc-500 hover:text-zinc-300 text-xs"
+                >
+                  Close
+                </button>
               </div>
             </div>
+            <div class="px-4 py-2 border-b border-border-subtle bg-surface-1/50">
+              <.live_component
+                module={LoomkinWeb.SessionSwitcherComponent}
+                id="session-switcher"
+                session_id={@session_id}
+                project_path={@project_path}
+              />
+            </div>
+            <div class="flex-1 overflow-auto min-h-0">
+              <.live_component
+                module={LoomkinWeb.ChatComponent}
+                id="chat"
+                messages={@messages}
+                status={@status}
+                current_tool={@current_tool}
+                streaming={@streaming}
+                streaming_content={@streaming_content}
+                streaming_agent={@streaming_agent}
+                architect_phase={@architect_phase}
+                plan_steps={@plan_steps}
+                current_step={@current_step}
+                failed_message_idx={@failed_message_idx}
+                context_info={@context_info}
+              />
+            </div>
           </div>
+        </div>
 
-          <%!-- Right: Agent Deep-Focus Panel (w-80, collapsible) --%>
-          <.live_component
-            module={LoomkinWeb.ContextInspectorComponent}
-            id="context-inspector"
-            focused_agent={@focused_agent}
-            focused_card={if(@focused_agent, do: Map.get(@agent_cards, @focused_agent))}
-            inspector_mode={@inspector_mode}
-            session_id={@session_id}
-            team_id={@active_team_id}
-          />
+        <%!-- Right: Agent Deep-Focus Panel (w-80, collapsible) --%>
+        <.live_component
+          module={LoomkinWeb.ContextInspectorComponent}
+          id="context-inspector"
+          focused_agent={@focused_agent}
+          focused_card={if(@focused_agent, do: Map.get(@agent_cards, @focused_agent))}
+          inspector_mode={@inspector_mode}
+          session_id={@session_id}
+          team_id={@active_team_id}
+        />
 
         <%!-- Social Side Panel (deployed mode only) --%>
         <LoomkinWeb.SocialPanelComponent.social_panel
@@ -4137,7 +4137,10 @@ defmodule LoomkinWeb.WorkspaceLive do
               {length(@debug_signals)} events
             </span>
           </div>
-          <button phx-click="toggle_debug_panel" class="text-zinc-500 hover:text-zinc-300 text-xs px-2 py-0.5 rounded hover:bg-zinc-800 transition-colors">
+          <button
+            phx-click="toggle_debug_panel"
+            class="text-zinc-500 hover:text-zinc-300 text-xs px-2 py-0.5 rounded hover:bg-zinc-800 transition-colors"
+          >
             ✕
           </button>
         </div>
@@ -4243,7 +4246,6 @@ defmodule LoomkinWeb.WorkspaceLive do
       _ -> socket
     end
   end
-
 
   defp route_permission_response(_socket, action, %{source: {:agent, team_id, agent_name}} = req) do
     case Loomkin.Teams.Manager.find_agent(team_id, agent_name) do
@@ -4417,7 +4419,6 @@ defmodule LoomkinWeb.WorkspaceLive do
 
     assign(socket, auth_version: auth_version)
   end
-
 
   defp refresh_task_graph(socket) do
     ref = System.unique_integer()
@@ -5689,7 +5690,6 @@ defmodule LoomkinWeb.WorkspaceLive do
   defp format_llm_error(%{message: msg}) when is_binary(msg), do: msg
   defp format_llm_error(reason) when is_binary(reason), do: reason
   defp format_llm_error(reason), do: inspect(reason)
-
 
   # --- Ask User helpers ---
 

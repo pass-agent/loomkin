@@ -80,7 +80,7 @@ defmodule Loomkin.Backlog do
     BacklogItem
     |> where([b], b.status in [:todo, :in_progress])
     |> maybe_scope_workspace(workspace_id)
-    |> order_by([b], [asc: b.priority, asc: b.sort_order, desc: b.inserted_at])
+    |> order_by([b], asc: b.priority, asc: b.sort_order, desc: b.inserted_at)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -93,7 +93,7 @@ defmodule Loomkin.Backlog do
     BacklogItem
     |> where([b], b.status == ^status)
     |> maybe_scope_workspace(workspace_id)
-    |> order_by([b], [asc: b.priority, asc: b.sort_order, desc: b.inserted_at])
+    |> order_by([b], asc: b.priority, asc: b.sort_order, desc: b.inserted_at)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -106,7 +106,7 @@ defmodule Loomkin.Backlog do
     |> where([b], b.status in [:todo, :in_progress, :blocked])
     |> where([b], not is_nil(b.epic))
     |> maybe_scope_workspace(workspace_id)
-    |> order_by([b], [asc: b.epic, asc: b.priority, asc: b.sort_order])
+    |> order_by([b], asc: b.epic, asc: b.priority, asc: b.sort_order)
     |> Repo.all()
     |> Enum.group_by(& &1.epic)
   end
@@ -119,7 +119,7 @@ defmodule Loomkin.Backlog do
     BacklogItem
     |> where([b], b.category == ^category)
     |> maybe_scope_workspace(workspace_id)
-    |> order_by([b], [asc: b.priority, asc: b.sort_order, desc: b.inserted_at])
+    |> order_by([b], asc: b.priority, asc: b.sort_order, desc: b.inserted_at)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -130,7 +130,7 @@ defmodule Loomkin.Backlog do
 
     BacklogItem
     |> where([b], b.assigned_team == ^team_id)
-    |> order_by([b], [asc: b.priority, asc: b.sort_order, desc: b.inserted_at])
+    |> order_by([b], asc: b.priority, asc: b.sort_order, desc: b.inserted_at)
     |> limit(^limit)
     |> Repo.all()
   end
@@ -144,7 +144,7 @@ defmodule Loomkin.Backlog do
     BacklogItem
     |> where([b], ilike(b.title, ^pattern) or ilike(b.description, ^pattern))
     |> maybe_scope_workspace(workspace_id)
-    |> order_by([b], [asc: b.priority, desc: b.inserted_at])
+    |> order_by([b], asc: b.priority, desc: b.inserted_at)
     |> limit(^limit)
     |> Repo.all()
   end

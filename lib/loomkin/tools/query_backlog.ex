@@ -22,8 +22,7 @@ defmodule Loomkin.Tools.QueryBacklog do
       query_type: [
         type: :string,
         required: true,
-        doc:
-          "Query type: actionable, by_status, by_epic, by_category, by_team, search, summary"
+        doc: "Query type: actionable, by_status, by_epic, by_category, by_team, search, summary"
       ],
       status: [type: :string, doc: "Status filter for 'by_status' query"],
       category: [type: :string, doc: "Category filter for 'by_category' query"],
@@ -163,11 +162,13 @@ defmodule Loomkin.Tools.QueryBacklog do
 
   defp parse_int(nil, default), do: default
   defp parse_int(val, _default) when is_integer(val), do: val
+
   defp parse_int(val, default) when is_binary(val) do
     case Integer.parse(val) do
       {n, _} -> n
       :error -> default
     end
   end
+
   defp parse_int(_, default), do: default
 end

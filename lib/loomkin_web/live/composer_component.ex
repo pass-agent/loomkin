@@ -192,7 +192,9 @@ defmodule LoomkinWeb.ComposerComponent do
                     @reply_target && @reply_target.agent == agent.name && "bg-surface-3/20"
                   ]}
                 >
-                  <span class="text-sm flex-shrink-0">{LoomkinWeb.AgentColors.role_icon(agent[:role])}</span>
+                  <span class="text-sm flex-shrink-0">
+                    {LoomkinWeb.AgentColors.role_icon(agent[:role])}
+                  </span>
                   <span class="truncate" style={"color: #{agent_color(agent.name)};"}>
                     {agent.name}
                   </span>
