@@ -2908,6 +2908,7 @@ defmodule Loomkin.Teams.Agent do
     [
       model: state.model,
       tools: tools,
+      role: state.role,
       system_prompt: system_prompt,
       project_path: state.project_path,
       project_path_resolver: project_path_resolver,

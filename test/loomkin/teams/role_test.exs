@@ -324,9 +324,9 @@ defmodule Loomkin.Teams.RoleTest do
       assert weaver.reasoning_strategy == :cot
     end
 
-    test "weaver has exactly 19 tools" do
+    test "weaver has exactly 20 tools" do
       {:ok, weaver} = Role.get(:weaver)
-      assert length(weaver.tools) == 19
+      assert length(weaver.tools) == 20
     end
   end
 

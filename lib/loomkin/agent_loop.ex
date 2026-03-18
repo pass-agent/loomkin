@@ -113,6 +113,7 @@ defmodule Loomkin.AgentLoop do
     %{
       model: Keyword.fetch!(opts, :model),
       tools: Keyword.get(opts, :tools, []),
+      role: Keyword.get(opts, :role),
       system_prompt: Keyword.fetch!(opts, :system_prompt),
       project_path: Keyword.get(opts, :project_path),
       project_path_resolver: Keyword.get(opts, :project_path_resolver),
@@ -388,113 +389,134 @@ defmodule Loomkin.AgentLoop do
         {:ok, messages}
 
       {:ok, tool_module} ->
-        # Check permissions if a check_permission callback is provided
-        permission_result =
-          if config.check_permission do
-            config.check_permission.(tool_name, tool_path)
-          else
-            :allowed
+        # Role-based tool filtering: reject tools not allowed for this role
+        role_allowed =
+          case config.role do
+            nil -> true
+            role -> Loomkin.Tools.ToolFilter.allowed?(role, tool_module)
           end
 
-        case permission_result do
-          :allowed ->
-            # Tag context for permitted external reads so file_read can bypass safe_path!
-            context =
-              if effective_path &&
-                   Loomkin.Tool.outside_project?(
-                     Loomkin.Tool.resolve_path(tool_path, effective_path),
-                     effective_path
-                   ) do
-                Map.put(
-                  context,
-                  :allowed_external_path,
-                  Loomkin.Tool.resolve_path(tool_path, effective_path)
-                )
-              else
-                context
-              end
+        if not role_allowed do
+          reason = Loomkin.Tools.ToolFilter.denial_reason(config.role, tool_module)
 
-            # Pass read_files set to tools for read-before-write enforcement
-            read_files = Process.get(:loomkin_read_files, MapSet.new())
-            context = Map.put(context, :read_files, read_files)
+          Logger.warning(
+            "[Kin:tool_filter] Blocked tool=#{tool_name} for role=#{config.role}: #{reason}"
+          )
 
-            # Set project path in process dictionary for hook modules
-            Process.put(:loomkin_project_path, effective_path)
+          result_text =
+            "Error: Tool '#{tool_name}' is not available for your role (#{config.role}). #{reason}"
 
-            # Load hooks once for both pre and post phases
-            pre_hooks = HookRunner.load_hooks(:pre_tool)
-            post_hooks = HookRunner.load_hooks(:post_tool)
-
-            case HookRunner.run_pre_hooks(pre_hooks, tool_name, tool_args) do
-              :deny ->
-                Logger.warning("[Kin:hook] pre-hook denied tool=#{tool_name}")
-                result_text = "Error: Tool '#{tool_name}' blocked by pre-tool hook"
-
-                messages =
-                  record_tool_result(messages, config, tool_name, tool_call_id, result_text)
-
-                {:ok, messages}
-
-              {:ask, reason} ->
-                Logger.info(
-                  "[Kin:hook] pre-hook asked confirmation tool=#{tool_name} reason=#{reason}"
-                )
-
-                result_text = "Tool '#{tool_name}' requires confirmation: #{reason}"
-
-                messages =
-                  record_tool_result(messages, config, tool_name, tool_call_id, result_text)
-
-                {:ok, messages}
-
-              :allow ->
-                raw_result = run_tool(tool_module, tool_args, context, config)
-
-                result_text =
-                  case HookRunner.run_post_hooks(post_hooks, tool_name, tool_args, raw_result) do
-                    {:rollback, reason} ->
-                      raw_result <> "\n\nWarning: post-tool hook flagged: #{reason}"
-
-                    :ok ->
-                      raw_result
-                  end
-
-                # Track successful file_read calls
-                maybe_track_read_file(tool_name, tool_args, effective_path, result_text)
-
-                messages =
-                  record_tool_result(messages, config, tool_name, tool_call_id, result_text)
-
-                # Post-tool checkpoint — let the observer see the result
-                post_tool_checkpoint = %Checkpoint{
-                  type: :post_tool,
-                  agent_name: config.agent_name,
-                  team_id: config.team_id,
-                  iteration: iteration,
-                  tool_name: tool_name,
-                  tool_result: result_text,
-                  messages: messages
-                }
-
-                case maybe_checkpoint(config, post_tool_checkpoint) do
-                  :continue -> {:ok, messages}
-                  {:pause, reason} -> {:paused, reason, messages}
-                end
+          messages = record_tool_result(messages, config, tool_name, tool_call_id, result_text)
+          {:ok, messages}
+        else
+          # Check permissions if a check_permission callback is provided
+          permission_result =
+            if config.check_permission do
+              config.check_permission.(tool_name, tool_path)
+            else
+              :allowed
             end
 
-          {:pending, pending_data} ->
-            pending =
-              Map.merge(pending_data, %{
-                tool_call: tool_call,
-                tool_module: tool_module,
-                tool_name: tool_name,
-                tool_path: tool_path,
-                tool_call_id: tool_call_id,
-                tool_args: tool_args,
-                context: context
-              })
+          case permission_result do
+            :allowed ->
+              # Tag context for permitted external reads so file_read can bypass safe_path!
+              context =
+                if effective_path &&
+                     Loomkin.Tool.outside_project?(
+                       Loomkin.Tool.resolve_path(tool_path, effective_path),
+                       effective_path
+                     ) do
+                  Map.put(
+                    context,
+                    :allowed_external_path,
+                    Loomkin.Tool.resolve_path(tool_path, effective_path)
+                  )
+                else
+                  context
+                end
 
-            {:pending, pending, messages}
+              # Pass read_files set to tools for read-before-write enforcement
+              read_files = Process.get(:loomkin_read_files, MapSet.new())
+              context = Map.put(context, :read_files, read_files)
+
+              # Set project path in process dictionary for hook modules
+              Process.put(:loomkin_project_path, effective_path)
+
+              # Load hooks once for both pre and post phases
+              pre_hooks = HookRunner.load_hooks(:pre_tool)
+              post_hooks = HookRunner.load_hooks(:post_tool)
+
+              case HookRunner.run_pre_hooks(pre_hooks, tool_name, tool_args) do
+                :deny ->
+                  Logger.warning("[Kin:hook] pre-hook denied tool=#{tool_name}")
+                  result_text = "Error: Tool '#{tool_name}' blocked by pre-tool hook"
+
+                  messages =
+                    record_tool_result(messages, config, tool_name, tool_call_id, result_text)
+
+                  {:ok, messages}
+
+                {:ask, reason} ->
+                  Logger.info(
+                    "[Kin:hook] pre-hook asked confirmation tool=#{tool_name} reason=#{reason}"
+                  )
+
+                  result_text = "Tool '#{tool_name}' requires confirmation: #{reason}"
+
+                  messages =
+                    record_tool_result(messages, config, tool_name, tool_call_id, result_text)
+
+                  {:ok, messages}
+
+                :allow ->
+                  raw_result = run_tool(tool_module, tool_args, context, config)
+
+                  result_text =
+                    case HookRunner.run_post_hooks(post_hooks, tool_name, tool_args, raw_result) do
+                      {:rollback, reason} ->
+                        raw_result <> "\n\nWarning: post-tool hook flagged: #{reason}"
+
+                      :ok ->
+                        raw_result
+                    end
+
+                  # Track successful file_read calls
+                  maybe_track_read_file(tool_name, tool_args, effective_path, result_text)
+
+                  messages =
+                    record_tool_result(messages, config, tool_name, tool_call_id, result_text)
+
+                  # Post-tool checkpoint — let the observer see the result
+                  post_tool_checkpoint = %Checkpoint{
+                    type: :post_tool,
+                    agent_name: config.agent_name,
+                    team_id: config.team_id,
+                    iteration: iteration,
+                    tool_name: tool_name,
+                    tool_result: result_text,
+                    messages: messages
+                  }
+
+                  case maybe_checkpoint(config, post_tool_checkpoint) do
+                    :continue -> {:ok, messages}
+                    {:pause, reason} -> {:paused, reason, messages}
+                  end
+              end
+
+            {:pending, pending_data} ->
+              pending =
+                Map.merge(pending_data, %{
+                  tool_call: tool_call,
+                  tool_module: tool_module,
+                  tool_name: tool_name,
+                  tool_path: tool_path,
+                  tool_call_id: tool_call_id,
+                  tool_args: tool_args,
+                  context: context
+                })
+
+              {:pending, pending, messages}
+          end
         end
     end
   end
