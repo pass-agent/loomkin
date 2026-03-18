@@ -202,10 +202,13 @@ defmodule LoomkinWeb.ContextInspectorComponent do
   # ── Tab content ─────────────────────────────────────────────────────
 
   defp render_tab(:activity, assigns) do
+    color = agent_color(assigns.focused_agent)
+    assigns = assign(assigns, :color, color)
+
     ~H"""
-    <div class="p-3 space-y-3">
+    <div class="p-3 space-y-3 h-full flex flex-col">
       <%!-- Current status --%>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-shrink-0">
         <span class={[
           "w-1.5 h-1.5 rounded-full flex-shrink-0",
           agent_status_dot(@focused_card.status)
@@ -224,7 +227,7 @@ defmodule LoomkinWeb.ContextInspectorComponent do
       <%!-- Current tool indicator --%>
       <div
         :if={@focused_card[:last_tool]}
-        class="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-1/80 "
+        class="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-1/80 flex-shrink-0"
       >
         <span class="text-xs">{tool_emoji(@focused_card.last_tool.name)}</span>
         <span class="text-[11px] font-mono truncate text-secondary">
@@ -232,66 +235,95 @@ defmodule LoomkinWeb.ContextInspectorComponent do
         </span>
       </div>
 
-      <%!-- Agent's current thinking/message content --%>
-      <%= case @focused_card.content_type do %>
-        <% :thinking -> %>
-          <div class="rounded-xl bg-surface-1/80  p-3.5">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-              <span class="text-[10px] font-medium text-violet-400 uppercase tracking-wider">
-                Thinking
+      <%!-- Scrollable thought history --%>
+      <div
+        id={"inspector-thought-history-#{@focused_agent}"}
+        phx-hook="ScrollToBottom"
+        class="flex-1 overflow-y-auto min-h-0 space-y-2 thought-history-scroll"
+      >
+        <%!-- Past thoughts --%>
+        <%= for {entry, idx} <- Enum.with_index(Map.get(@focused_card, :thought_history, [])) do %>
+          <div
+            id={"inspector-thought-#{idx}"}
+            class="rounded-xl bg-surface-1/80 p-3 opacity-70"
+          >
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <span class={inspector_thought_badge_class(entry.type)}>
+                {inspector_thought_label(entry.type)}
+              </span>
+              <span class="text-[9px] text-muted/40 font-mono ml-auto">
+                {format_inspector_time(entry.timestamp)}
               </span>
             </div>
-            <div class="text-xs leading-relaxed text-secondary agent-card-content">
-              {render_markdown(@focused_card.latest_content)}
+            <div class="text-xs leading-relaxed text-secondary agent-card-content line-clamp-8">
+              {render_markdown(entry.content)}
             </div>
           </div>
-        <% :last_thinking -> %>
-          <div class="rounded-xl bg-surface-1/80  p-3.5 opacity-60">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="text-[10px] font-medium text-muted uppercase tracking-wider">
-                Last thought
-              </span>
-            </div>
-            <div class="text-xs leading-relaxed text-secondary agent-card-content">
-              {render_markdown(@focused_card.latest_content)}
-            </div>
-          </div>
-        <% :message -> %>
-          <div class="rounded-xl bg-surface-1/80  p-3.5">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">
-                Response
-              </span>
-            </div>
-            <div class="text-xs leading-relaxed text-secondary agent-card-content">
-              {render_markdown(@focused_card.latest_content)}
-            </div>
-          </div>
-        <% _ -> %>
-          <%= if @focused_card[:last_response] do %>
-            <div class="rounded-xl bg-surface-1/80  p-3.5 opacity-60">
+        <% end %>
+
+        <%!-- Current live thought/message --%>
+        <%= case @focused_card.content_type do %>
+          <% :thinking -> %>
+            <div class="rounded-xl bg-surface-1/80 p-3.5">
               <div class="flex items-center gap-1.5 mb-2">
-                <span class="text-[10px] font-medium text-muted uppercase tracking-wider">
-                  Last response
+                <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                <span class="text-[10px] font-medium text-violet-400 uppercase tracking-wider">
+                  Thinking
                 </span>
               </div>
               <div class="text-xs leading-relaxed text-secondary agent-card-content">
-                {render_markdown(@focused_card.last_response)}
+                {render_markdown(@focused_card.latest_content)}
               </div>
             </div>
-          <% else %>
-            <div class="rounded-xl  py-8 text-center">
-              <p class="text-xs text-muted italic">
-                <%= if @focused_card.status == :complete do %>
-                  Agent has completed its work
-                <% else %>
-                  Waiting for activity...
-                <% end %>
-              </p>
+          <% :last_thinking -> %>
+            <div class="rounded-xl bg-surface-1/80 p-3.5 opacity-60">
+              <div class="flex items-center gap-1.5 mb-2">
+                <span class="text-[10px] font-medium text-muted uppercase tracking-wider">
+                  Last thought
+                </span>
+              </div>
+              <div class="text-xs leading-relaxed text-secondary agent-card-content">
+                {render_markdown(@focused_card.latest_content)}
+              </div>
             </div>
-          <% end %>
-      <% end %>
+          <% :message -> %>
+            <div class="rounded-xl bg-surface-1/80 p-3.5">
+              <div class="flex items-center gap-1.5 mb-2">
+                <span class="text-[10px] font-medium text-emerald-400 uppercase tracking-wider">
+                  Response
+                </span>
+              </div>
+              <div class="text-xs leading-relaxed text-secondary agent-card-content">
+                {render_markdown(@focused_card.latest_content)}
+              </div>
+            </div>
+          <% _ -> %>
+            <%= if @focused_card[:last_response] do %>
+              <div class="rounded-xl bg-surface-1/80 p-3.5 opacity-60">
+                <div class="flex items-center gap-1.5 mb-2">
+                  <span class="text-[10px] font-medium text-muted uppercase tracking-wider">
+                    Last response
+                  </span>
+                </div>
+                <div class="text-xs leading-relaxed text-secondary agent-card-content">
+                  {render_markdown(@focused_card.last_response)}
+                </div>
+              </div>
+            <% else %>
+              <%= if Map.get(@focused_card, :thought_history, []) == [] do %>
+                <div class="rounded-xl py-8 text-center">
+                  <p class="text-xs text-muted italic">
+                    <%= if @focused_card.status == :complete do %>
+                      Agent has completed its work
+                    <% else %>
+                      Waiting for activity...
+                    <% end %>
+                  </p>
+                </div>
+              <% end %>
+            <% end %>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -454,4 +486,25 @@ defmodule LoomkinWeb.ContextInspectorComponent do
   end
 
   defp render_markdown(_), do: ""
+
+  # --- Thought history helpers ---
+
+  defp inspector_thought_badge_class(:thinking),
+    do: "text-[9px] font-medium text-violet-400/70 uppercase tracking-wider"
+
+  defp inspector_thought_badge_class(:message),
+    do: "text-[9px] font-medium text-emerald-400/70 uppercase tracking-wider"
+
+  defp inspector_thought_badge_class(_),
+    do: "text-[9px] font-medium text-muted/50 uppercase tracking-wider"
+
+  defp inspector_thought_label(:thinking), do: "Thought"
+  defp inspector_thought_label(:message), do: "Response"
+  defp inspector_thought_label(type), do: to_string(type)
+
+  defp format_inspector_time(%DateTime{} = dt) do
+    Calendar.strftime(dt, "%H:%M:%S")
+  end
+
+  defp format_inspector_time(_), do: ""
 end

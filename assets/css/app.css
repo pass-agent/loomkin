@@ -906,6 +906,21 @@ body {
 .agent-card-content pre { margin: 0.25em 0; overflow-x: auto; }
 .agent-card-content a { color: var(--brand); text-decoration: underline; }
 
+/* Thought history scrollable container */
+.thought-history-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+.thought-history-scroll::-webkit-scrollbar { width: 4px; }
+.thought-history-scroll::-webkit-scrollbar-track { background: transparent; }
+.thought-history-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+}
+.thought-history-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
 /* ── Inspector Collapse Transition ── */
 .inspector-panel {
   transition: width 0.3s ease, opacity 0.2s ease;

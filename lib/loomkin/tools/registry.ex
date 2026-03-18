@@ -45,6 +45,7 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.TeamSpawn,
     Loomkin.Tools.TeamAssign,
     Loomkin.Tools.TeamProgress,
+    Loomkin.Tools.TeamComms,
     Loomkin.Tools.TeamDissolve,
     Loomkin.Tools.CreateRendezvous,
     Loomkin.Tools.PeerResolveNegotiation
@@ -144,6 +145,7 @@ defmodule Loomkin.Tools.Registry do
     personas max_rounds facilitator template
     check_type spec_description
     test_command success_criteria max_iterations
+    minutes
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

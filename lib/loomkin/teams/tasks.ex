@@ -95,6 +95,20 @@ defmodule Loomkin.Teams.Tasks do
         open_questions: get_flexible(attrs, :open_questions, "open_questions") || []
       }
 
+      # Warn when task is completed with no substantive artifacts
+      if empty_artifacts?(changeset_attrs) do
+        Logger.warning(
+          "[Tasks] Task #{task.id} (#{task.title}) completed by #{task.owner} with no artifacts " <>
+            "(no actions_taken, discoveries, or files_changed). Result: #{String.slice(result, 0..100)}"
+        )
+
+        Comms.broadcast_task_event(
+          task.team_id,
+          {:task_quality_warning, task.id, task.owner,
+           "Task completed without artifacts — no actions, discoveries, or files changed"}
+        )
+      end
+
       task
       |> TeamTask.changeset(changeset_attrs)
       |> Repo.update()
@@ -1086,5 +1100,11 @@ defmodule Loomkin.Teams.Tasks do
       {:ok, val} -> val
       :error -> Map.get(map, string_key)
     end
+  end
+
+  defp empty_artifacts?(attrs) do
+    (attrs.actions_taken || []) == [] and
+      (attrs.discoveries || []) == [] and
+      (attrs.files_changed || []) == []
   end
 end

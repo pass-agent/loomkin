@@ -399,42 +399,90 @@ defmodule LoomkinWeb.AgentCommsComponent do
         </span>
 
         <%!-- Body --%>
-        <div class="flex-1 min-w-0 flex items-baseline gap-1.5">
-          <button
-            class="text-xs font-semibold hover:underline flex-shrink-0"
-            style={"color: #{@agent_color};"}
-            phx-click="focus_card_agent"
-            phx-value-agent={@event.agent}
-            type="button"
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-1.5">
+            <button
+              class="text-xs font-semibold hover:underline flex-shrink-0"
+              style={"color: #{@agent_color};"}
+              phx-click="focus_card_agent"
+              phx-value-agent={@event.agent}
+              type="button"
+            >
+              {@event.agent}
+            </button>
+            <span
+              :if={@event.metadata[:team_id] && @event.metadata[:team_id] != @root_team_id}
+              class="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700/50"
+            >
+              {short_team_label(@event.metadata[:team_id])}
+            </span>
+            <span
+              :if={
+                @event.type not in [
+                  :peer_message,
+                  :message,
+                  :question,
+                  :answer,
+                  :discovery,
+                  :conversation_turn
+                ]
+              }
+              class="text-xs text-zinc-400 leading-5 truncate"
+            >
+              {@event.content}
+            </span>
+            <span
+              :if={@event.type == :discovery && @event.metadata[:relevance]}
+              class="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 border border-emerald-800/50"
+              data-testid="relevance-badge"
+              title={relevance_badge_title(@event.metadata[:relevance])}
+            >
+              {length(@event.metadata[:relevance][:recipients] || [])} recipients
+            </span>
+            <%!-- Timestamp (inline for non-message types) --%>
+            <span
+              :if={
+                @event.type not in [
+                  :peer_message,
+                  :message,
+                  :question,
+                  :answer,
+                  :discovery,
+                  :conversation_turn
+                ]
+              }
+              class="ml-auto flex-shrink-0 text-[10px] tabular-nums text-zinc-500 leading-5"
+            >
+              {format_timestamp(@event.timestamp)}
+            </span>
+          </div>
+          <%!-- Message content shown directly for communication event types --%>
+          <div
+            :if={
+              @event.type in [
+                :peer_message,
+                :message,
+                :question,
+                :answer,
+                :discovery,
+                :conversation_turn
+              ]
+            }
+            class="mt-0.5"
           >
-            {@event.agent}
-          </button>
-          <span
-            :if={@event.metadata[:team_id] && @event.metadata[:team_id] != @root_team_id}
-            class="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700/50"
-          >
-            {short_team_label(@event.metadata[:team_id])}
-          </span>
-          <span class="text-xs text-zinc-400 leading-5 truncate">
-            {@event.content}
-          </span>
-          <span
-            :if={@event.type == :discovery && @event.metadata[:relevance]}
-            class="flex-shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-emerald-900/40 text-emerald-400 border border-emerald-800/50"
-            data-testid="relevance-badge"
-            title={relevance_badge_title(@event.metadata[:relevance])}
-          >
-            {length(@event.metadata[:relevance][:recipients] || [])} recipients
-          </span>
+            <p class="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-3">
+              {@event.content}
+            </p>
+            <span class="text-[10px] tabular-nums text-zinc-500 mt-0.5 inline-block">
+              {format_timestamp(@event.timestamp)}
+            </span>
+          </div>
         </div>
 
-        <%!-- Timestamp --%>
-        <span class="flex-shrink-0 text-[10px] tabular-nums text-zinc-500 leading-5">
-          {format_timestamp(@event.timestamp)}
-        </span>
+        <%!-- Timestamp for non-message types only (handled inline above for messages) --%>
       </summary>
 
-      <%!-- Expanded content --%>
+      <%!-- Expanded content (full message on click) --%>
       <div
         class="mt-1.5 ml-5 text-xs text-zinc-300 rounded-md px-2.5 py-2"
         style={"background: #{@config.accent_bg};"}

@@ -37,7 +37,9 @@ defmodule LoomkinWeb.AgentCardComponent do
        prev_focused: nil,
        rendered_last_response: nil,
        prev_last_response: nil,
-       capability_bars_data: []
+       capability_bars_data: [],
+       rendered_history: [],
+       prev_history_len: 0
      )}
   end
 
@@ -94,6 +96,30 @@ defmodule LoomkinWeb.AgentCardComponent do
       end
 
     socket = assign(socket, :capability_bars_data, caps)
+
+    # Memoize thought_history rendering — only re-render when new entries are added
+    history = Map.get(card || %{}, :thought_history, [])
+    history_len = length(history)
+    prev_history_len = socket.assigns.prev_history_len
+
+    socket =
+      if history_len != prev_history_len do
+        rendered_history =
+          Enum.map(history, fn entry ->
+            %{
+              content: render_card_markdown(format_content(entry.content, true)),
+              type: entry.type,
+              timestamp: entry.timestamp
+            }
+          end)
+
+        assign(socket,
+          rendered_history: rendered_history,
+          prev_history_len: history_len
+        )
+      else
+        socket
+      end
 
     {:ok, socket}
   end
@@ -257,63 +283,118 @@ defmodule LoomkinWeb.AgentCardComponent do
         />
 
         <%!-- Content area --%>
-        <div class={["flex-1 min-h-0", @focused && "overflow-auto"]}>
-          <%= case @card.content_type do %>
-            <% :thinking -> %>
-              <div
-                class={[
-                  "text-[13px] leading-relaxed agent-card-content rounded-lg px-3 py-2",
-                  !@focused && "line-clamp-4"
-                ]}
-                style={"color: var(--text-secondary); background: #{@agent_color}06; border-left: 2px solid #{@agent_color}30;"}
-              >
-                {@rendered_content}
-              </div>
-            <% :last_thinking -> %>
-              <div
-                class={[
-                  "text-[13px] leading-relaxed opacity-50 agent-card-content pl-3",
-                  !@focused && "line-clamp-3"
-                ]}
-                style={"color: var(--text-secondary); border-left: 2px solid #{@agent_color}15;"}
-              >
-                {@rendered_content}
-              </div>
-            <% :message -> %>
-              <div
-                class={[
-                  "text-[13px] leading-relaxed agent-card-content",
-                  !@focused && "line-clamp-4"
-                ]}
-                style="color: var(--text-secondary);"
-              >
-                {@rendered_content}
-              </div>
-            <% _ -> %>
-              <%= cond do %>
-                <% @rendered_last_response -> %>
-                  <div
-                    class={[
-                      "text-[13px] leading-relaxed opacity-50 agent-card-content",
-                      !@focused && "line-clamp-3"
-                    ]}
-                    style="color: var(--text-secondary);"
-                  >
-                    {@rendered_last_response}
+        <div class={["flex-1 min-h-0", @focused && "flex flex-col overflow-hidden"]}>
+          <%!-- Thought history (focused mode: scrollable, unfocused: hidden) --%>
+          <%= if @focused && @rendered_history != [] do %>
+            <div
+              id={"thought-history-#{@card.name}"}
+              phx-hook="ScrollToBottom"
+              class="flex-1 overflow-y-auto min-h-0 space-y-2 mb-2 thought-history-scroll"
+            >
+              <%= for {entry, idx} <- Enum.with_index(@rendered_history) do %>
+                <div
+                  id={"thought-#{@card.name}-#{idx}"}
+                  class="text-[12px] leading-relaxed agent-card-content rounded-lg px-3 py-2"
+                  style={thought_entry_style(entry.type, @agent_color)}
+                >
+                  <div class="flex items-center gap-1.5 mb-1">
+                    <span class={thought_type_badge_class(entry.type)}>
+                      {thought_type_label(entry.type)}
+                    </span>
+                    <span class="text-[9px] text-muted/40 font-mono">
+                      {format_thought_time(entry.timestamp)}
+                    </span>
                   </div>
-                <% @card.status == :complete -> %>
-                  <div class="flex items-center gap-3 py-2">
-                    <div class="h-px flex-1 bg-surface-3" />
-                    <span class="text-xs font-medium" style={"color: #{@agent_color}60;"}>done</span>
-                    <div class="h-px flex-1 bg-surface-3" />
-                  </div>
-                <% true -> %>
-                  <div class="flex items-center gap-2 text-[11px] text-muted/40 font-mono py-1">
-                    <span class="kin-idle-blink" style={"color: #{@agent_color}30;"}>_</span>
-                    <span>standby</span>
-                  </div>
+                  <div class="line-clamp-6">{entry.content}</div>
+                </div>
               <% end %>
+
+              <%!-- Current streaming thought at the bottom --%>
+              <%= if @card.content_type == :thinking && @rendered_content != "" do %>
+                <div
+                  class="text-[12px] leading-relaxed agent-card-content rounded-lg px-3 py-2"
+                  style={"color: var(--text-secondary); background: #{@agent_color}06; border-left: 2px solid #{@agent_color}30;"}
+                >
+                  <div class="flex items-center gap-1.5 mb-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    <span class="text-[9px] font-medium text-violet-400 uppercase tracking-wider">
+                      Thinking
+                    </span>
+                  </div>
+                  {@rendered_content}
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <%!-- Non-focused or no history: show current thought only --%>
+            <%= case @card.content_type do %>
+              <% :thinking -> %>
+                <div
+                  class={[
+                    "text-[13px] leading-relaxed agent-card-content rounded-lg px-3 py-2",
+                    !@focused && "line-clamp-4"
+                  ]}
+                  style={"color: var(--text-secondary); background: #{@agent_color}06; border-left: 2px solid #{@agent_color}30;"}
+                >
+                  {@rendered_content}
+                </div>
+              <% :last_thinking -> %>
+                <div
+                  class={[
+                    "text-[13px] leading-relaxed opacity-50 agent-card-content pl-3",
+                    !@focused && "line-clamp-3"
+                  ]}
+                  style={"color: var(--text-secondary); border-left: 2px solid #{@agent_color}15;"}
+                >
+                  {@rendered_content}
+                </div>
+              <% :message -> %>
+                <div
+                  class={[
+                    "text-[13px] leading-relaxed agent-card-content",
+                    !@focused && "line-clamp-4"
+                  ]}
+                  style="color: var(--text-secondary);"
+                >
+                  {@rendered_content}
+                </div>
+              <% _ -> %>
+                <%= cond do %>
+                  <% @rendered_last_response -> %>
+                    <div
+                      class={[
+                        "text-[13px] leading-relaxed opacity-50 agent-card-content",
+                        !@focused && "line-clamp-3"
+                      ]}
+                      style="color: var(--text-secondary);"
+                    >
+                      {@rendered_last_response}
+                    </div>
+                  <% @card.status == :complete -> %>
+                    <div class="flex items-center gap-3 py-2">
+                      <div class="h-px flex-1 bg-surface-3" />
+                      <span class="text-xs font-medium" style={"color: #{@agent_color}60;"}>
+                        done
+                      </span>
+                      <div class="h-px flex-1 bg-surface-3" />
+                    </div>
+                  <% true -> %>
+                    <div class="flex items-center gap-2 text-[11px] text-muted/40 font-mono py-1">
+                      <span class="kin-idle-blink" style={"color: #{@agent_color}30;"}>_</span>
+                      <span>standby</span>
+                    </div>
+                <% end %>
+            <% end %>
           <% end %>
+
+          <%!-- History count badge (unfocused only, when history exists) --%>
+          <div
+            :if={!@focused && @rendered_history != []}
+            class="mt-1 flex items-center gap-1 text-[9px] text-muted/40 font-mono"
+          >
+            <.icon name="hero-clock-mini" class="w-3 h-3" />
+            <span>{length(@rendered_history)} previous thoughts</span>
+          </div>
 
           <%!-- Last tool readout — console-style --%>
           <div
@@ -937,6 +1018,39 @@ defmodule LoomkinWeb.AgentCardComponent do
   defp hex_to_rgba(color, _alpha), do: color
 
   # --- Spawn gate helpers ---
+
+  # --- Thought history helpers ---
+
+  defp thought_entry_style(:thinking, agent_color) do
+    "color: var(--text-secondary); background: #{agent_color}06; border-left: 2px solid #{agent_color}20;"
+  end
+
+  defp thought_entry_style(:message, _agent_color) do
+    "color: var(--text-secondary); background: rgba(52, 211, 153, 0.04); border-left: 2px solid rgba(52, 211, 153, 0.2);"
+  end
+
+  defp thought_entry_style(_, agent_color) do
+    "color: var(--text-secondary); background: #{agent_color}04; border-left: 2px solid #{agent_color}10;"
+  end
+
+  defp thought_type_badge_class(:thinking),
+    do: "text-[9px] font-medium text-violet-400/70 uppercase tracking-wider"
+
+  defp thought_type_badge_class(:message),
+    do: "text-[9px] font-medium text-emerald-400/70 uppercase tracking-wider"
+
+  defp thought_type_badge_class(_),
+    do: "text-[9px] font-medium text-muted/50 uppercase tracking-wider"
+
+  defp thought_type_label(:thinking), do: "thought"
+  defp thought_type_label(:message), do: "response"
+  defp thought_type_label(type), do: to_string(type)
+
+  defp format_thought_time(%DateTime{} = dt) do
+    Calendar.strftime(dt, "%H:%M:%S")
+  end
+
+  defp format_thought_time(_), do: ""
 
   # --- Test delegates for private helper functions ---
   # These thin wrappers allow unit tests to verify private logic

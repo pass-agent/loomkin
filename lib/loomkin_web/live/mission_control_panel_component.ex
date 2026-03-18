@@ -33,6 +33,7 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
       socket
       |> assign(assigns)
       |> assign_new(:active_tab, fn -> :kin end)
+      |> assign_new(:inspector_mode, fn -> :auto_follow end)
 
     {:ok, socket}
   end
@@ -49,8 +50,12 @@ defmodule LoomkinWeb.MissionControlPanelComponent do
 
   @impl true
   def render(assigns) do
+    # Only show focused card in the left panel when the user explicitly pinned it
+    # (inspector_mode == :pinned). Auto-follow updates the right inspector panel only,
+    # so the left panel stays on whichever tab (kin/comms) the user chose.
     focused_card =
-      if assigns.focused_agent do
+      if assigns.focused_agent && assigns.inspector_mode == :pinned &&
+           assigns.active_tab == :kin do
         Map.get(assigns.agent_cards, assigns.focused_agent)
       end
 

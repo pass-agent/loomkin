@@ -56,7 +56,8 @@ defmodule Loomkin.Teams.Agent do
     last_asked_at: nil,
     pending_ask_user: nil,
     spawned_child_teams: [],
-    auto_approve_spawns: false
+    auto_approve_spawns: false,
+    wake_ref: nil
   ]
 
   # --- Public API ---
@@ -1124,7 +1125,8 @@ defmodule Loomkin.Teams.Agent do
   @impl true
   def handle_cast({:peer_message, from, content}, state) do
     peer_msg = %{role: :user, content: "[Peer #{from}]: #{content}"}
-    {:noreply, %{state | messages: state.messages ++ [peer_msg]}}
+    state = %{state | messages: state.messages ++ [peer_msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -1823,7 +1825,8 @@ defmodule Loomkin.Teams.Agent do
   @impl true
   def handle_info({:peer_message, from, content}, state) do
     peer_msg = %{role: :user, content: "[Peer #{from}]: #{content}"}
-    {:noreply, %{state | messages: state.messages ++ [peer_msg]}}
+    state = %{state | messages: state.messages ++ [peer_msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -1895,6 +1898,52 @@ defmodule Loomkin.Teams.Agent do
     end
   end
 
+  # Wake-up handler: when an idle agent accumulates messages (peer messages, queries,
+  # task notifications), this starts a new loop so the agent processes them.
+  @impl true
+  def handle_info(:wake_up, state) do
+    state = %{state | wake_ref: nil}
+
+    if state.status != :idle || state.loop_task != nil do
+      {:noreply, state}
+    else
+      # Nothing to process — stay idle
+      if state.messages == [] do
+        {:noreply, state}
+      else
+        Logger.info(
+          "[Kin:agent] waking idle agent=#{state.name} with #{length(state.messages)} accumulated messages"
+        )
+
+        # Create a synthetic task for tracking
+        task_id = "wake_#{state.team_id}_#{state.name}_#{System.unique_integer([:positive])}"
+        title = "Process incoming messages"
+
+        Context.cache_task(state.team_id, task_id, %{
+          title: title,
+          status: :in_progress,
+          owner: state.name
+        })
+
+        state = %{state | task: %{id: task_id, title: title}}
+        state = set_status_and_broadcast(state, :working)
+
+        messages = state.messages
+        loop_opts = build_loop_opts(state)
+        snapshot = build_snapshot(state)
+
+        async_task =
+          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+            run_loop_with_escalation(messages, loop_opts, snapshot)
+          end)
+
+        Logger.debug("[Kin:loop] wake spawned agent=#{state.name} ref=#{inspect(async_task.ref)}")
+
+        {:noreply, %{state | loop_task: {async_task, nil}}}
+      end
+    end
+  end
+
   @impl true
   def handle_info({:query, query_id, from, question, enrichments}, state) do
     # Don't process our own broadcast questions — but allow cross-team queries
@@ -1934,7 +1983,8 @@ defmodule Loomkin.Teams.Agent do
         """
       }
 
-      {:noreply, %{state | messages: state.messages ++ [query_msg]}}
+      state = %{state | messages: state.messages ++ [query_msg]}
+      {:noreply, maybe_wake_idle(state)}
     end
   end
 
@@ -1954,7 +2004,8 @@ defmodule Loomkin.Teams.Agent do
       """
     }
 
-    {:noreply, %{state | messages: state.messages ++ [answer_msg]}}
+    state = %{state | messages: state.messages ++ [answer_msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -1983,7 +2034,7 @@ defmodule Loomkin.Teams.Agent do
       content: "[System] Sub-team #{sub_team_id} completed and dissolved.#{summary}"
     }
 
-    {:noreply, %{state | messages: state.messages ++ [msg]}}
+    {:noreply, maybe_wake_idle(%{state | messages: state.messages ++ [msg]})}
   end
 
   @impl true
@@ -2184,7 +2235,8 @@ defmodule Loomkin.Teams.Agent do
       """
     }
 
-    {:noreply, %{state | messages: state.messages ++ [review_msg]}}
+    state = %{state | messages: state.messages ++ [review_msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -2195,7 +2247,8 @@ defmodule Loomkin.Teams.Agent do
         "[System] Task #{task_id} by #{owner} is ready for review. Summary: #{summary || "none"}"
     }
 
-    {:noreply, %{state | messages: state.messages ++ [msg]}}
+    state = %{state | messages: state.messages ++ [msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -2251,7 +2304,8 @@ defmodule Loomkin.Teams.Agent do
 
     msg = %{role: :system, content: content}
 
-    {:noreply, %{state | messages: state.messages ++ [msg]}}
+    state = %{state | messages: state.messages ++ [msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -2300,7 +2354,8 @@ defmodule Loomkin.Teams.Agent do
         else: msg
 
     messages = state.messages ++ [%{role: :user, content: msg}]
-    {:noreply, %{state | messages: messages}}
+    state = %{state | messages: messages}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -2318,7 +2373,8 @@ defmodule Loomkin.Teams.Agent do
     msg = if keeper_id, do: msg <> "\n  → Re-evaluate using keeper #{keeper_id}", else: msg
 
     messages = state.messages ++ [%{role: :user, content: msg}]
-    {:noreply, %{state | messages: messages}}
+    state = %{state | messages: messages}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   @impl true
@@ -2339,7 +2395,8 @@ defmodule Loomkin.Teams.Agent do
   @impl true
   def handle_info({:inject_system_message, content}, state) do
     msg = %{role: :system, content: content}
-    {:noreply, %{state | messages: state.messages ++ [msg]}}
+    state = %{state | messages: state.messages ++ [msg]}
+    {:noreply, maybe_wake_idle(state)}
   end
 
   def handle_info({:child_team_spawned, child_team_id}, state) do
@@ -2658,6 +2715,17 @@ defmodule Loomkin.Teams.Agent do
     state = %{state | priority_queue: [], pending_updates: []}
     if had_messages?, do: broadcast_queue_update(state)
     state
+  end
+
+  # Schedule a wake-up for an idle agent after a short debounce.
+  # This coalesces rapid-fire messages so we don't start multiple loops.
+  defp maybe_wake_idle(state) do
+    if state.status == :idle and state.loop_task == nil and state.wake_ref == nil do
+      ref = Process.send_after(self(), :wake_up, 500)
+      %{state | wake_ref: ref}
+    else
+      state
+    end
   end
 
   defp drain_healing_queue(state) do

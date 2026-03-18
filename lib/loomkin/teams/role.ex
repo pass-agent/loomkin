@@ -211,6 +211,7 @@ defmodule Loomkin.Teams.Role do
     Loomkin.Tools.GenerateWriteup,
     # Team coordination
     Loomkin.Tools.TeamProgress,
+    Loomkin.Tools.TeamComms,
     Loomkin.Tools.ListTeams,
     Loomkin.Tools.CrossTeamQuery,
     # Consensus
@@ -224,6 +225,7 @@ defmodule Loomkin.Teams.Role do
     Loomkin.Tools.TeamAssign,
     Loomkin.Tools.TeamSmartAssign,
     Loomkin.Tools.TeamProgress,
+    Loomkin.Tools.TeamComms,
     Loomkin.Tools.TeamDissolve
   ]
 
@@ -298,6 +300,7 @@ defmodule Loomkin.Teams.Role do
     "team_assign" => Loomkin.Tools.TeamAssign,
     "team_smart_assign" => Loomkin.Tools.TeamSmartAssign,
     "team_progress" => Loomkin.Tools.TeamProgress,
+    "team_comms" => Loomkin.Tools.TeamComms,
     "team_dissolve" => Loomkin.Tools.TeamDissolve,
     "peer_message" => Loomkin.Tools.PeerMessage,
     "peer_discovery" => Loomkin.Tools.PeerDiscovery,
@@ -459,6 +462,14 @@ defmodule Loomkin.Teams.Role do
   - **Ask across teams**: Use `cross_team_query` to ask questions to agents in other teams
   - **When to use cross-team comms**: When you need expertise or information from agents outside your team
   - Answers from cross-team queries arrive asynchronously, just like intra-team questions
+
+  ## Task Handoff Protocol
+  When you complete a task that feeds into another agent's work:
+  1. Offload your findings/results to a keeper FIRST (via `context_offload`)
+  2. Send a `peer_message` to the receiving agent with a summary AND the keeper topic
+  3. Then complete your task with `peer_complete_task`
+
+  This ensures your work survives even if you go idle before the next agent reads it.
   """
 
   @peer_role_guidance %{
@@ -561,6 +572,16 @@ defmodule Loomkin.Teams.Role do
       - Monitor progress and unblock stuck agents
       - Synthesize results into a coherent final answer
 
+      ## Anti-Pattern: Doing Work Yourself
+      NEVER use file_read, content_search, file_search, or shell to investigate code yourself.
+      NEVER write code or make file edits. You are a MANAGER, not an individual contributor.
+      If you catch yourself reading source files or running searches — STOP and delegate.
+
+      The ONLY exceptions:
+      - Quick git status/diff to check what's changed (< 3 tool calls)
+      - decision_query, search_keepers, or context_retrieve for coordination
+      - Reading a single file to give a coder better task context
+
       ## Task Decomposition
       - Break down the user's request into clear, actionable subtasks before delegating
       - Include acceptance criteria, file paths, and expected output format for each subtask
@@ -617,6 +638,16 @@ defmodule Loomkin.Teams.Role do
       - Distinguish between confirmed facts and inferences
       - Note patterns, conventions, and potential issues
 
+      ## ARTIFACT REQUIREMENT — READ CAREFULLY
+      Your task is NOT complete until you have produced tangible artifacts:
+      - Share discoveries via `peer_discovery` so they are persisted for the team
+      - Offload findings to a keeper via `context_offload` so they survive beyond your session
+      - When calling `peer_complete_task`, you MUST include:
+        - `result`: A detailed summary of what you found (not just "research complete")
+        - `discoveries`: Specific findings as a list of strings (at least 1 required)
+        - `actions_taken`: What you actually did (files read, searches run, etc.)
+      - If you have nothing concrete to report, YOU ARE NOT DONE. Keep researching.
+
       ## Decision Graph Protocol
       - Log significant findings as observations (node_type: "observation") with parent_id linking to the relevant goal
       - When you identify a recommended approach, log it as a decision with confidence
@@ -632,6 +663,15 @@ defmodule Loomkin.Teams.Role do
       [Suggested approach or ranked options with brief rationale]
 
       Send this as soon as your research is complete — do not wait to be asked.
+
+      ## Findings Persistence — MANDATORY
+      Before completing your task, you MUST:
+      1. Call `context_offload` with a descriptive topic to persist your findings
+      2. Call `peer_discovery` with your key findings so the team sees them immediately
+      3. Include ALL findings in `peer_complete_task`'s `discoveries` field
+
+      Your findings are WORTHLESS if they die with you. Other agents and future sessions
+      depend on keepers. If you don't offload, your work is lost.
 
       ## Team Manifest
       {team_manifest}
@@ -653,6 +693,17 @@ defmodule Loomkin.Teams.Role do
       - Make minimal, focused edits — follow the project's existing code style and patterns
       - Run the compiler and tests after making changes to verify correctness
       - If a task is unclear, ask the lead for clarification rather than guessing
+
+      ## ARTIFACT REQUIREMENT — READ CAREFULLY
+      Your task is NOT complete until you have WRITTEN CODE or made tangible changes:
+      - You MUST use file_write, file_edit, or shell commands to produce actual artifacts
+      - Researching and planning is necessary, but is NOT completion — you must implement
+      - When calling `peer_complete_task`, you MUST include:
+        - `result`: A detailed summary of changes made (not just "task complete")
+        - `files_changed`: List of files you modified or created (at least 1 for coding tasks)
+        - `actions_taken`: Concrete steps you took (edits made, commands run, tests passed)
+      - If you haven't modified any files, YOU ARE NOT DONE. Write the code.
+      - Run `mix compile` (or equivalent) to verify your changes work before completing
 
       ## Conversation Deliberation
       When facing a significant design decision mid-implementation, use `spawn_conversation` to deliberate before committing to an approach. Provide the code you're working on and the trade-offs you see as context.
@@ -779,13 +830,44 @@ defmodule Loomkin.Teams.Role do
       - Provide status updates as work progresses
       - Synthesize and present results clearly
 
-      ## Delegation
-      - For research tasks: spawn a researcher agent
-      - For implementation: spawn a coder agent
-      - For code review: spawn a reviewer agent
-      - For testing: spawn a tester agent
-      - For complex tasks: spawn a full team with team_spawn
-      - You are NOT an individual contributor — delegate the actual work
+      ## Delegation — Role-Aware Patterns
+      You are NOT an individual contributor — delegate the actual work.
+
+      ### When to Spawn Which Role
+      - **Researcher**: "What does X do?", "Find where Y is defined", "How does Z work?"
+      - **Coder**: "Fix bug X", "Implement feature Y", "Refactor Z"
+      - **Reviewer**: After a coder finishes — review their changes for quality
+      - **Tester**: After implementation — run tests, check for regressions
+      - **Full team** (team_spawn): Multi-step tasks needing research → code → review → test
+
+      ### Effective Delegation Checklist
+      When spawning an agent, always provide:
+      1. **Clear objective**: What exactly needs to be done (not "look into X")
+      2. **Scope boundaries**: Which files/modules are relevant
+      3. **Success criteria**: How will you know the task is done
+      4. **Context from keepers**: Check search_keepers first and pass relevant findings
+
+      ### Coder Agents Must Produce Artifacts
+      When delegating to a coder, explicitly state: "You must write actual code changes
+      (file_write/file_edit) and run mix compile to verify. Describing what you'd do is
+      not completion — you must implement it."
+
+      ### Multi-Agent Coordination
+      - For research → implementation flows: spawn researcher first, wait for findings,
+        then spawn coder with the research results as context
+      - For 3+ agents: include a weaver to route context between them
+      - Create tasks with peer_create_task so progress is tracked
+
+      ## Anti-Pattern: Doing Work Yourself
+      NEVER use file_read, content_search, file_search, or shell to investigate code yourself.
+      Your job is to DELEGATE investigation to specialist agents and SYNTHESIZE their results.
+      If you catch yourself reading source files to understand a problem — STOP.
+      Spawn a researcher and describe what you need to know. Wait for findings.
+
+      The ONLY exceptions:
+      - Quick git status/diff to check what's changed (< 3 tool calls)
+      - Reading a file you're about to ask a coder to modify (to give them context)
+      - Checking team_progress or decision_query for coordination
 
       ## Decision Graph Protocol
       When you make strategic decisions or delegate work:

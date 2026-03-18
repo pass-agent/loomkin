@@ -10,6 +10,7 @@ defmodule LoomkinWeb.MissionControlPanelComponentTest do
     worker_card_names: [],
     comms_event_count: 0,
     focused_agent: nil,
+    inspector_mode: :auto_follow,
     kin_agents: [],
     cached_agents: [],
     active_team_id: "team-1",
@@ -78,15 +79,28 @@ defmodule LoomkinWeb.MissionControlPanelComponentTest do
     assert html =~ "Rex"
   end
 
-  test "renders focused agent back button" do
+  test "renders focused agent back button when pinned" do
     assigns =
       Map.merge(@base_assigns, %{
         focused_agent: "alice",
+        inspector_mode: :pinned,
         agent_cards: %{"alice" => build_card("alice")}
       })
 
     html = render_component(LoomkinWeb.MissionControlPanelComponent, assigns)
     assert html =~ "All agents"
+  end
+
+  test "does not show focused card view when inspector_mode is auto_follow" do
+    assigns =
+      Map.merge(@base_assigns, %{
+        focused_agent: "alice",
+        inspector_mode: :auto_follow,
+        agent_cards: %{"alice" => build_card("alice")}
+      })
+
+    html = render_component(LoomkinWeb.MissionControlPanelComponent, assigns)
+    refute html =~ "All agents"
   end
 
   describe "leader approval banner" do
