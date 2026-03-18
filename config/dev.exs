@@ -6,11 +6,15 @@ config :loomkin, :multi_tenant, true
 # Use Docker Postgres port by default; override with DB_PORT for system-installed Postgres
 config :loomkin, Loomkin.Repo, port: String.to_integer(System.get_env("DB_PORT") || "5488")
 
-# Set LOOMKIN_SELF_EDIT=1 when loomkin agents edit this codebase —
-# disables code reloader, file watchers, and live reload to prevent
-# restart loops and module-unavailability crashes during edits.
-# Restart the server manually to pick up changes.
-# Toggling the env var auto-cleans the build (see mix.exs guard).
+# Self-edit mode — set LOOMKIN_SELF_EDIT=1 when loomkin agents edit this codebase.
+# Disables code reloader, file watchers, and live reload to prevent restart loops
+# and module-unavailability crashes during edits. Restart the server to pick up changes.
+#
+# Switching modes:  The mix.exs guard auto-cleans the build when this env var
+# changes, so you can just toggle and recompile — no manual `mix clean` needed.
+#
+#   make self-edit     # start server in self-edit mode
+#   make dev           # start server in normal dev mode
 self_edit? = System.get_env("LOOMKIN_SELF_EDIT") == "1"
 
 # Development endpoint configuration

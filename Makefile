@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help setup dev test format db.up db.down db.reset dev.up dev.down
+.PHONY: help setup dev self-edit test format db.up db.down db.reset dev.up dev.down
 
 help:          ## Show available targets
 	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,9 @@ setup:         ## Install all dependencies and configure the project
 
 dev:           ## Start the dev server
 	mix phx.server
+
+self-edit:     ## Start in self-edit mode (code reloader off for agent edits)
+	LOOMKIN_SELF_EDIT=1 mix phx.server
 
 test:          ## Run the test suite
 	mix test
