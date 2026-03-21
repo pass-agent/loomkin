@@ -14,6 +14,9 @@ defmodule Loomkin.Application do
     # Create ETS table for Plug session store (must exist before endpoint starts)
     :ets.new(:loomkin_sessions, [:named_table, :public, :set])
 
+    # Create ETS table for persistent shell sessions (per-agent CWD + env)
+    :ets.new(Loomkin.Tools.ShellSession.table_name(), [:named_table, :public, :set])
+
     children =
       [
         # Storage
@@ -63,6 +66,9 @@ defmodule Loomkin.Application do
 
         # Session management
         {DynamicSupervisor, name: Loomkin.SessionSupervisor, strategy: :one_for_one},
+
+        # Tool execution concurrency limits
+        Loomkin.Tools.RunnerRegistry,
 
         # Team agent orchestration
         Loomkin.Teams.Supervisor,

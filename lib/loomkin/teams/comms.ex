@@ -3,6 +3,7 @@ defmodule Loomkin.Teams.Comms do
 
   require Logger
 
+  alias Loomkin.Security.Redactor
   alias Loomkin.Signals
   alias Loomkin.Signals.Extensions.Causality
   alias Loomkin.Teams.Topics
@@ -62,6 +63,8 @@ defmodule Loomkin.Teams.Comms do
 
   @doc "Send a direct message to a specific agent."
   def send_to(team_id, agent_name, message) do
+    message = redact_message(message)
+
     signal =
       Loomkin.Signals.Collaboration.PeerMessage.new!(
         %{from: "system", team_id: team_id},
@@ -75,6 +78,8 @@ defmodule Loomkin.Teams.Comms do
 
   @doc "Broadcast a message to the entire team."
   def broadcast(team_id, message) do
+    message = redact_message(message)
+
     signal =
       Loomkin.Signals.Collaboration.PeerMessage.new!(%{from: "system", team_id: team_id})
 
@@ -418,4 +423,7 @@ defmodule Loomkin.Teams.Comms do
       end
     end
   end
+
+  defp redact_message(message) when is_binary(message), do: Redactor.redact(message)
+  defp redact_message(message), do: message
 end

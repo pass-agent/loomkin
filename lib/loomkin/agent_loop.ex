@@ -12,6 +12,7 @@ defmodule Loomkin.AgentLoop do
   alias Loomkin.Permissions.HookRunner
   alias Loomkin.Session.ContextWindow
   alias Loomkin.Teams.ContextOffload
+  alias Loomkin.Security.Redactor
   alias Loomkin.Telemetry, as: LoomkinTelemetry
 
   require Logger
@@ -559,20 +560,33 @@ defmodule Loomkin.AgentLoop do
         atomized_args
       end
 
-    result =
-      LoomkinTelemetry.span_tool_execute(tool_meta, fn ->
-        try do
-          Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
-        rescue
-          e ->
-            Logger.error(
-              "[Kin:tool] #{tool_meta.tool_name} raised: #{Exception.message(e)}\n" <>
-                Exception.format_stacktrace(__STACKTRACE__)
-            )
+    tool_type = String.to_existing_atom(tool_meta.tool_name)
 
-            {:error, Exception.message(e)}
-        end
-      end)
+    result =
+      case Loomkin.Tools.RunnerRegistry.acquire(tool_type) do
+        :ok ->
+          try do
+            LoomkinTelemetry.span_tool_execute(tool_meta, fn ->
+              try do
+                Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
+              rescue
+                e ->
+                  Logger.error(
+                    "[Kin:tool] #{tool_meta.tool_name} raised: #{Exception.message(e)}\n" <>
+                      Exception.format_stacktrace(__STACKTRACE__)
+                  )
+
+                  {:error, Exception.message(e)}
+              end
+            end)
+          after
+            Loomkin.Tools.RunnerRegistry.release(tool_type)
+          end
+
+        {:error, :concurrency_limit} ->
+          {:error,
+           "Tool #{tool_meta.tool_name} rejected: concurrency limit reached. Try again shortly."}
+      end
 
     format_tool_result(result)
   end
@@ -633,6 +647,9 @@ defmodule Loomkin.AgentLoop do
       else
         result_text
       end
+
+    # Redact secrets before the result reaches PubSub, logs, or LLM context
+    result_text = Redactor.redact(result_text)
 
     emit(config, :tool_complete, %{tool_name: tool_name, result: result_text})
 
