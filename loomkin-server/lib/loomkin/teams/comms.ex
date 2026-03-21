@@ -108,6 +108,7 @@ defmodule Loomkin.Teams.Comms do
   end
 
   def broadcast_context(team_id, %{from: from} = payload, opts) do
+    payload = redact_payload(payload)
     signal = Loomkin.Signals.Context.Update.new!(%{from: to_string(from), team_id: team_id})
 
     %{signal | data: Map.merge(signal.data, %{payload: payload})}
@@ -426,4 +427,13 @@ defmodule Loomkin.Teams.Comms do
 
   defp redact_message(message) when is_binary(message), do: Redactor.redact(message)
   defp redact_message(message), do: message
+
+  defp redact_payload(payload) when is_map(payload) do
+    Map.new(payload, fn
+      {k, v} when is_binary(v) -> {k, Redactor.redact(v)}
+      {k, v} -> {k, v}
+    end)
+  end
+
+  defp redact_payload(payload), do: payload
 end

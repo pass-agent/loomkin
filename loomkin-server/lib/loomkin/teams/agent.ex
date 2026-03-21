@@ -307,13 +307,13 @@ defmodule Loomkin.Teams.Agent do
       end
     end
 
-    # Save crash checkpoint synchronously (terminate must be fast but checkpoint is critical)
+    # Clean up persistent shell session first (cheap ETS op, must succeed)
+    Loomkin.Tools.ShellSession.cleanup({state.team_id, state.name})
+
+    # Save crash checkpoint synchronously (may block on DB I/O)
     if reason != :normal and reason != :shutdown do
       save_checkpoint_sync(state, :crashed, inspect(reason))
     end
-
-    # Clean up persistent shell session for this agent
-    Loomkin.Tools.ShellSession.cleanup({state.team_id, state.name})
 
     Comms.unsubscribe(state.subscription_ids)
   end
