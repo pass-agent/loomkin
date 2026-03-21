@@ -109,7 +109,11 @@ defmodule Loomkin.Decisions.SupervisionTest do
         })
 
       Loomkin.Signals.publish(signal)
-      Process.sleep(50)
+
+      [{logger_pid, _}] =
+        Registry.lookup(Loomkin.Teams.AgentRegistry, {:auto_logger, team_id})
+
+      Loomkin.Decisions.AutoLogger.flush(logger_pid)
 
       nodes = Loomkin.Decisions.Graph.list_nodes(node_type: :action)
       assert Enum.any?(nodes, &(&1.title == "Agent test-agent joined team"))

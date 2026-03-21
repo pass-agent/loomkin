@@ -15,22 +15,31 @@ defmodule Loomkin.Teams.ContextRetrieval do
   `[%{id: id, topic: topic, source_agent: source_agent, token_count: count, staleness: score, staleness_state: atom}]`
   """
   def list_keepers(team_id) do
-    Registry.select(Loomkin.Teams.AgentRegistry, [
-      {{{team_id, :"$1"}, :"$2", :"$3"}, [], [%{name: :"$1", pid: :"$2", meta: :"$3"}]}
-    ])
-    |> Enum.filter(fn %{meta: meta} -> meta[:type] == :keeper end)
-    |> Enum.map(fn %{name: name, pid: pid, meta: meta} ->
-      # name is "keeper:<id>"
-      id = String.replace_prefix(to_string(name), "keeper:", "")
+    entries =
+      Registry.select(Loomkin.Keepers.Registry, [
+        {{{team_id, :"$1"}, :"$2", :"$3"}, [], [%{id: :"$1", pid: :"$2", meta: :"$3"}]}
+      ])
 
-      staleness_info =
-        try do
-          ContextKeeper.get_staleness(pid)
-        rescue
-          _ -> %{score: 0, state: :fresh}
-        catch
-          :exit, _ -> %{score: 0, state: :fresh}
-        end
+    # Batch staleness: collect all states in one pass instead of N blocking calls
+    staleness_map =
+      entries
+      |> Enum.reduce(%{}, fn %{id: id, pid: pid}, acc ->
+        info =
+          try do
+            state = :sys.get_state(pid)
+            score = ContextKeeper.compute_staleness(Map.from_struct(state))
+            %{score: score, state: ContextKeeper.staleness_state(score)}
+          rescue
+            _ -> %{score: 0, state: :fresh}
+          catch
+            :exit, _ -> %{score: 0, state: :fresh}
+          end
+
+        Map.put(acc, id, info)
+      end)
+
+    Enum.map(entries, fn %{id: id, pid: pid, meta: meta} ->
+      staleness_info = Map.get(staleness_map, id, %{score: 0, state: :fresh})
 
       %{
         id: id,
@@ -302,7 +311,7 @@ defmodule Loomkin.Teams.ContextRetrieval do
   end
 
   defp retrieve_from_keeper(team_id, keeper_id, query, mode, agent_name) do
-    case Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"}) do
+    case Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id}) do
       [{pid, _meta}] ->
         if agent_name, do: ContextKeeper.record_access(pid, agent_name, mode)
 

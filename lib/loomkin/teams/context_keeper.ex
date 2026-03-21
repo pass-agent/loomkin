@@ -5,7 +5,7 @@ defmodule Loomkin.Teams.ContextKeeper do
   Supports both raw retrieval (keyword matching) and smart retrieval
   (single LLM call to answer questions about stored context).
 
-  Registered in AgentRegistry as `{team_id, "keeper:<id>"}` with
+  Registered in Loomkin.Keepers.Registry as `{team_id, keeper_id}` with
   metadata `%{type: :keeper, topic: topic, tokens: count}`.
   """
 
@@ -69,7 +69,7 @@ defmodule Loomkin.Teams.ContextKeeper do
     GenServer.start_link(__MODULE__, opts,
       name:
         {:via, Registry,
-         {Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{id}"},
+         {Loomkin.Keepers.Registry, {team_id, id},
           %{type: :keeper, topic: topic, tokens: 0, source_agent: source_agent}}}
     )
   end
@@ -151,16 +151,20 @@ defmodule Loomkin.Teams.ContextKeeper do
     GenServer.call(pid, :get_staleness)
   end
 
-  @doc "Rehydrate all keepers for a team from the database."
+  @rehydrate_limit 50
+
+  @doc "Rehydrate keepers for a team from the database (most recent first, capped at #{@rehydrate_limit})."
   def rehydrate_from_db(team_id) do
     keepers =
       Loomkin.Schemas.ContextKeeper
       |> where([k], k.team_id == ^team_id and k.status == :active)
+      |> order_by([k], desc: k.inserted_at)
+      |> limit(@rehydrate_limit)
       |> Repo.all()
 
     Enum.each(keepers, fn record ->
       # Skip if already running
-      case Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{record.id}"}) do
+      case Registry.lookup(Loomkin.Keepers.Registry, {team_id, record.id}) do
         [{_pid, _}] ->
           :ok
 
@@ -601,8 +605,8 @@ defmodule Loomkin.Teams.ContextKeeper do
 
   defp update_registry_tokens(state) do
     Registry.update_value(
-      Loomkin.Teams.AgentRegistry,
-      {state.team_id, "keeper:#{state.id}"},
+      Loomkin.Keepers.Registry,
+      {state.team_id, state.id},
       fn _old ->
         %{
           type: :keeper,

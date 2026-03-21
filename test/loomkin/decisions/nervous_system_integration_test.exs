@@ -107,7 +107,10 @@ defmodule Loomkin.Decisions.NervousSystemIntegrationTest do
 
       Loomkin.Signals.publish(signal)
 
-      Process.sleep(100)
+      [{logger_pid, _}] =
+        Registry.lookup(Loomkin.Teams.AgentRegistry, {:auto_logger, team_id})
+
+      Loomkin.Decisions.AutoLogger.flush(logger_pid)
 
       # AutoLogger should have created an observation node
       nodes = Graph.list_nodes(node_type: :observation)

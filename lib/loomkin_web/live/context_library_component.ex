@@ -153,7 +153,7 @@ defmodule LoomkinWeb.ContextLibraryComponent do
     |> where([k], k.id == ^id)
     |> Loomkin.Repo.update_all(set: [status: "archived"])
 
-    case Registry.lookup(Loomkin.Teams.AgentRegistry, {socket.assigns.team_id, "keeper:#{id}"}) do
+    case Registry.lookup(Loomkin.Keepers.Registry, {socket.assigns.team_id, id}) do
       [{pid, _}] -> GenServer.stop(pid, :normal)
       [] -> :ok
     end
@@ -169,7 +169,7 @@ defmodule LoomkinWeb.ContextLibraryComponent do
     import Ecto.Query
     alias Loomkin.Schemas.ContextKeeper, as: KeeperSchema
 
-    case Registry.lookup(Loomkin.Teams.AgentRegistry, {socket.assigns.team_id, "keeper:#{id}"}) do
+    case Registry.lookup(Loomkin.Keepers.Registry, {socket.assigns.team_id, id}) do
       [{pid, _}] -> GenServer.stop(pid, :normal)
       [] -> :ok
     end
@@ -857,7 +857,7 @@ defmodule LoomkinWeb.ContextLibraryComponent do
   defp toggle_dir(:desc), do: :asc
 
   defp fetch_keeper_detail(team_id, id) do
-    case Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{id}"}) do
+    case Registry.lookup(Loomkin.Keepers.Registry, {team_id, id}) do
       [{pid, _}] ->
         try do
           state = ContextKeeper.get_state(pid)

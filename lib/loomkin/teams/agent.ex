@@ -240,7 +240,7 @@ defmodule Loomkin.Teams.Agent do
       {:ok, role_config} ->
         model = Keyword.get(opts, :model) || ModelRouter.default_model()
 
-        {:ok, sub_ids} = Comms.subscribe(team_id, name)
+        {:ok, sub_ids} = Comms.subscribe(team_id, name, role: role)
 
         # Look up system_prompt_extra from the kin_agents list passed at spawn time
         # (already scoped to the session's user) rather than a global DB query.
@@ -2911,9 +2911,8 @@ defmodule Loomkin.Teams.Agent do
     # Kin agent customization: append user-defined extra instructions if present.
     system_prompt = maybe_inject_system_prompt_extra(system_prompt, state)
 
-    # Project conventions: inject AGENTS.md, CONTRIBUTING.md, etc. so agents
-    # respect project-level rules (commit format, code style, etc.)
-    system_prompt = maybe_inject_project_conventions(system_prompt, state.project_path)
+    # Project conventions are injected by context_window.ex:inject_project_rules/2
+    # during build_messages/3 (with ETS caching), so we don't duplicate here.
 
     # A resolver fn allows AgentLoop to read the latest project_path from
     # team ETS at every tool call, even when the Task captured stale opts.
@@ -3073,41 +3072,6 @@ defmodule Loomkin.Teams.Agent do
       _ ->
         system_prompt
     end
-  end
-
-  defp maybe_inject_project_conventions(system_prompt, nil), do: system_prompt
-
-  defp maybe_inject_project_conventions(system_prompt, project_path) do
-    # Load structured LOOMKIN.md rules
-    system_prompt =
-      case Loomkin.ProjectRules.load(project_path) do
-        {:ok, rules} ->
-          formatted = Loomkin.ProjectRules.format_for_prompt(rules)
-          if formatted != "", do: system_prompt <> "\n\n" <> formatted, else: system_prompt
-
-        _ ->
-          system_prompt
-      end
-
-    # Load convention files (AGENTS.md, CLAUDE.md, CONTRIBUTING.md, etc.)
-    convention_files = Loomkin.ProjectRules.load_convention_files(project_path)
-    formatted = Loomkin.ProjectRules.format_convention_files(convention_files)
-
-    if formatted != "" do
-      # Cap at ~4000 chars to avoid bloating the system prompt
-      truncated =
-        if String.length(formatted) > 4000 do
-          String.slice(formatted, 0, 4000) <> "\n\n[... convention file content truncated]"
-        else
-          formatted
-        end
-
-      system_prompt <> "\n\n" <> truncated
-    else
-      system_prompt
-    end
-  rescue
-    _e -> system_prompt
   end
 
   @non_specialist_roles [:lead, :concierge, :orienter, "lead", "concierge", "orienter"]
@@ -3670,6 +3634,8 @@ defmodule Loomkin.Teams.Agent do
       state.messages
   end
 
+  @keeper_index_cap 10
+
   defp inject_keeper_index(prompt, team_id) do
     keepers = ContextRetrieval.list_keepers(team_id)
 
@@ -3679,9 +3645,24 @@ defmodule Loomkin.Teams.Agent do
           "none yet"
 
         list ->
-          Enum.map_join(list, "\n", fn k ->
-            "- [#{k.id}] \"#{k.topic}\" by #{k.source_agent} (#{k.token_count} tokens)"
-          end)
+          total = length(list)
+
+          shown =
+            list
+            |> Enum.sort_by(& &1.staleness, :asc)
+            |> Enum.take(@keeper_index_cap)
+
+          lines =
+            Enum.map_join(shown, "\n", fn k ->
+              "- [#{k.id}] \"#{k.topic}\" by #{k.source_agent} (#{k.token_count} tokens)"
+            end)
+
+          if total > @keeper_index_cap do
+            lines <>
+              "\n[#{length(shown)} of #{total} keepers shown — use search_keepers tool for more]"
+          else
+            lines
+          end
       end
 
     if String.contains?(prompt, "{keeper_index}") do

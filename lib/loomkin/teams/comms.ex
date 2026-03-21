@@ -8,19 +8,36 @@ defmodule Loomkin.Teams.Comms do
   alias Loomkin.Teams.Topics
 
   @doc """
-  Subscribe agent to all team signal paths.
+  Subscribe agent to team signal paths based on role.
+
+  Leads and concierge get full subscriptions (all 5 paths).
+  Specialists get a reduced set (team, collaboration, context) to avoid
+  unnecessary handle_info calls from agent and decision signals they no-op on.
 
   Returns `{:ok, subscription_ids}` where `subscription_ids` is a list of
   subscription references that can be passed to `unsubscribe/1` for cleanup.
   """
-  def subscribe(_team_id, _agent_name) do
-    paths = [
-      Topics.agent_all(),
-      Topics.team_all(),
-      Topics.context_all(),
-      Topics.collaboration_all(),
-      Topics.decision_all()
-    ]
+  def subscribe(team_id, agent_name, opts \\ [])
+
+  def subscribe(_team_id, _agent_name, opts) do
+    role = Keyword.get(opts, :role)
+
+    paths =
+      if role in [:lead, :concierge] or is_nil(role) do
+        [
+          Topics.agent_all(),
+          Topics.team_all(),
+          Topics.context_all(),
+          Topics.collaboration_all(),
+          Topics.decision_all()
+        ]
+      else
+        [
+          Topics.team_all(),
+          Topics.collaboration_all(),
+          Topics.context_all()
+        ]
+      end
 
     subscription_ids =
       Enum.reduce(paths, [], fn path, acc ->

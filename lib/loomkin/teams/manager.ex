@@ -323,7 +323,7 @@ defmodule Loomkin.Teams.Manager do
     end
   end
 
-  @doc "List all agents in a team (excludes keepers and other non-agent entries)."
+  @doc "List all agents in a team."
   def list_agents(team_id) do
     raw =
       Registry.select(Loomkin.Teams.AgentRegistry, [
@@ -332,7 +332,7 @@ defmodule Loomkin.Teams.Manager do
 
     filtered =
       Enum.filter(raw, fn %{pid: pid, meta: meta} ->
-        Process.alive?(pid) and is_map(meta) and meta[:type] != :keeper and
+        Process.alive?(pid) and is_map(meta) and
           (Map.has_key?(meta, :role) or Map.has_key?(meta, "role"))
       end)
 

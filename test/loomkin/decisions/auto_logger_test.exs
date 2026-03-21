@@ -52,10 +52,14 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
     send(pid, {:signal, sig})
   end
 
+  defp flush!(pid) do
+    AutoLogger.flush(pid)
+  end
+
   describe "agent_status events" do
     test "logs action node on first :working status", %{team_id: team_id, logger_pid: pid} do
       send_status(pid, "alice", team_id, :working)
-      Process.sleep(200)
+      flush!(pid)
 
       nodes = Graph.list_nodes(node_type: :action)
       assert length(nodes) == 1
@@ -66,9 +70,9 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
 
     test "only logs once per agent (deduplicates)", %{team_id: team_id, logger_pid: pid} do
       send_status(pid, "bob", team_id, :working)
-      Process.sleep(200)
+      flush!(pid)
       send_status(pid, "bob", team_id, :working)
-      Process.sleep(200)
+      flush!(pid)
 
       nodes = Graph.list_nodes(node_type: :action)
       assert length(nodes) == 1
@@ -77,7 +81,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
     test "logs separate nodes for different agents", %{team_id: team_id, logger_pid: pid} do
       send_status(pid, "alice", team_id, :working)
       send_status(pid, "bob", team_id, :working)
-      Process.sleep(200)
+      flush!(pid)
 
       nodes = Graph.list_nodes(node_type: :action)
       assert length(nodes) == 2
@@ -88,7 +92,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
 
     test "ignores non-working statuses", %{team_id: team_id, logger_pid: pid} do
       send_status(pid, "carol", team_id, :idle)
-      Process.sleep(200)
+      flush!(pid)
 
       assert Graph.list_nodes(node_type: :action) == []
     end
@@ -99,7 +103,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
       {:ok, task} = create_task(team_id, "Implement feature X")
 
       send_task_assigned(pid, task.id, "alice", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       nodes = Graph.list_nodes(node_type: :action)
       assert length(nodes) == 1
@@ -116,10 +120,10 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
       {:ok, task} = create_task(team_id, "Fix bug Y")
 
       send_task_assigned(pid, task.id, "bob", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       send_task_completed(pid, task.id, "bob", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       outcomes = Graph.list_nodes(node_type: :outcome)
       assert length(outcomes) == 1
@@ -137,10 +141,10 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
       {:ok, task} = create_task(team_id, "Deploy service")
 
       send_task_assigned(pid, task.id, "carol", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       send_task_failed(pid, task.id, "carol", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       outcomes = Graph.list_nodes(node_type: :outcome)
       assert length(outcomes) == 1
@@ -165,8 +169,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
         })
 
       send(pid, {:signal, sig})
-
-      Process.sleep(200)
+      flush!(pid)
 
       nodes = Graph.list_nodes(node_type: :observation)
       assert length(nodes) == 1
@@ -181,7 +184,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
     test "are skipped (redundant with keeper_created)", %{team_id: team_id, logger_pid: pid} do
       sig = Loomkin.Signals.Context.Offloaded.new!(%{agent_name: "alice", team_id: team_id})
       send(pid, {:signal, sig})
-      Process.sleep(200)
+      flush!(pid)
 
       assert Graph.list_nodes() == []
     end
@@ -198,7 +201,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
         })
 
       send_status(pid, "alice", team_id, :working)
-      Process.sleep(200)
+      flush!(pid)
 
       action = hd(Graph.list_nodes(node_type: :action))
       edges = Graph.list_edges(from_node_id: goal.id, edge_type: :leads_to)
@@ -209,9 +212,8 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
   describe "tool event filtering" do
     test "low-value tools are completely skipped", %{team_id: team_id, logger_pid: pid} do
       send_tool_executing(pid, "alice", "directory_list", team_id)
-      Process.sleep(50)
       send_tool_complete(pid, "alice", "directory_list", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       assert Graph.list_nodes(node_type: :action) == []
       assert Graph.list_nodes(node_type: :outcome) == []
@@ -223,16 +225,15 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
         send_tool_complete(pid, "alice", tool, team_id)
       end
 
-      Process.sleep(200)
+      flush!(pid)
 
       assert Graph.list_nodes() == []
     end
 
     test "meaningful tools still produce nodes", %{team_id: team_id, logger_pid: pid} do
       send_tool_executing(pid, "alice", "file_write", team_id)
-      Process.sleep(50)
       send_tool_complete(pid, "alice", "file_write", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       # Fast completion — should produce a single combined action node
       actions = Graph.list_nodes(node_type: :action)
@@ -250,7 +251,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
       send_tool_executing(pid, "bob", "file_edit", team_id)
       # No sleep — completes immediately (< 1s)
       send_tool_complete(pid, "bob", "file_edit", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       actions = Graph.list_nodes(node_type: :action)
       assert length(actions) == 1
@@ -270,7 +271,7 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
       # Simulate slow tool by waiting over the threshold
       Process.sleep(1100)
       send_tool_complete(pid, "carol", "team_spawn", team_id)
-      Process.sleep(200)
+      flush!(pid)
 
       actions = Graph.list_nodes(node_type: :action)
       assert length(actions) == 1
@@ -284,6 +285,46 @@ defmodule Loomkin.Decisions.AutoLoggerTest do
 
       edges = Graph.list_edges(edge_type: :leads_to, to_node_id: outcome.id)
       assert Enum.any?(edges, &(&1.from_node_id == action.id))
+    end
+  end
+
+  describe "batching behaviour" do
+    test "flush/1 writes buffered nodes to DB", %{team_id: team_id, logger_pid: pid} do
+      send_status(pid, "alice", team_id, :working)
+      send_status(pid, "bob", team_id, :working)
+
+      # Before flush: nothing in DB
+      assert Graph.list_nodes(node_type: :action) == []
+
+      flush!(pid)
+
+      # After flush: nodes written
+      assert length(Graph.list_nodes(node_type: :action)) == 2
+    end
+
+    test "auto-flushes when buffer exceeds threshold", %{team_id: team_id, logger_pid: pid} do
+      # Generate enough signals to exceed the 20-entry threshold
+      for i <- 1..21 do
+        send_status(pid, "agent_#{i}", team_id, :working)
+      end
+
+      # Give the GenServer time to process messages and auto-flush
+      _ = :sys.get_state(pid)
+
+      nodes = Graph.list_nodes(node_type: :action)
+      assert length(nodes) >= 20
+    end
+
+    test "terminate flushes remaining buffer", %{team_id: team_id, logger_pid: pid} do
+      send_status(pid, "alice", team_id, :working)
+      _ = :sys.get_state(pid)
+
+      # Stop the process (triggers terminate)
+      GenServer.stop(pid)
+
+      nodes = Graph.list_nodes(node_type: :action)
+      assert length(nodes) == 1
+      assert hd(nodes).title == "Agent alice joined team"
     end
   end
 

@@ -44,14 +44,14 @@ defmodule Loomkin.Teams.ContextKeeperTest do
   end
 
   describe "start_link/1" do
-    test "starts and registers in AgentRegistry" do
+    test "starts and registers in Keepers.Registry" do
       %{pid: pid, team_id: team_id, id: id} = start_keeper()
 
       assert Process.alive?(pid)
 
       # Check registry
       assert [{^pid, meta}] =
-               Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{id}"})
+               Registry.lookup(Loomkin.Keepers.Registry, {team_id, id})
 
       assert meta.type == :keeper
     end

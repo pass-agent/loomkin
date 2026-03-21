@@ -67,13 +67,13 @@ defmodule Loomkin.Decisions.Writeup do
         |> Enum.uniq_by(& &1.id)
 
       team_id ->
-        Graph.list_nodes(team_id: team_id)
+        Graph.list_nodes(team_id: team_id, limit: :none)
 
       session_id ->
-        Graph.list_nodes(session_id: session_id)
+        Graph.list_nodes(session_id: session_id, limit: :none)
 
       true ->
-        Graph.list_nodes(status: :active)
+        Graph.list_nodes(status: :active, limit: :none)
     end
   end
 

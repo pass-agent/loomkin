@@ -23,6 +23,7 @@ defmodule Loomkin.Teams.Supervisor do
       [
         Loomkin.Teams.TableRegistry,
         {Registry, keys: :unique, name: Loomkin.Teams.AgentRegistry},
+        {Registry, keys: :unique, name: Loomkin.Keepers.Registry},
         {DynamicSupervisor, name: Loomkin.Teams.AgentSupervisor, strategy: :one_for_one},
         {Loomkin.Teams.AgentWatcher, name: Loomkin.Teams.AgentWatcher},
         Loomkin.Teams.RateLimiter,

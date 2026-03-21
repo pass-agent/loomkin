@@ -43,7 +43,7 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
       |> Repo.insert!()
 
       # Keepers should not be running yet (create_team doesn't rehydrate)
-      assert Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"}) == []
+      assert Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id}) == []
 
       # ensure_nervous_system should start the keeper
       Manager.ensure_nervous_system(team_id)
@@ -52,7 +52,7 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
       Process.sleep(50)
 
       assert [{pid, meta}] =
-               Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"})
+               Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id})
 
       assert Process.alive?(pid)
       assert meta.type == :keeper
@@ -85,13 +85,13 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
       Process.sleep(50)
 
       [{pid1, _}] =
-        Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"})
+        Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id})
 
       Manager.ensure_nervous_system(team_id)
       Process.sleep(50)
 
       [{pid2, _}] =
-        Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"})
+        Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id})
 
       # Same process — not restarted
       assert pid1 == pid2
@@ -118,7 +118,7 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
       Process.sleep(50)
 
       # Archived keeper should not be started
-      assert Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"}) == []
+      assert Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id}) == []
     end
 
     test "rehydrates multiple keepers for the same team" do
@@ -147,7 +147,7 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
 
       for keeper_id <- keeper_ids do
         assert [{pid, _}] =
-                 Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"})
+                 Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id})
 
         assert Process.alive?(pid)
       end
@@ -198,7 +198,7 @@ defmodule Loomkin.Teams.KeeperRehydrationTest do
       Process.sleep(100)
 
       assert [{pid, meta}] =
-               Registry.lookup(Loomkin.Teams.AgentRegistry, {team_id, "keeper:#{keeper_id}"})
+               Registry.lookup(Loomkin.Keepers.Registry, {team_id, keeper_id})
 
       assert Process.alive?(pid)
       assert meta.type == :keeper

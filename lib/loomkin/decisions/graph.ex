@@ -56,10 +56,22 @@ defmodule Loomkin.Decisions.Graph do
     end
   end
 
+  @default_list_limit 100
+
   def list_nodes(filters \\ []) do
-    DecisionNode
-    |> apply_node_filters(filters)
-    |> Repo.all()
+    {limit, filters} = Keyword.pop(filters, :limit, @default_list_limit)
+
+    query =
+      DecisionNode
+      |> apply_node_filters(filters)
+
+    query =
+      case limit do
+        :none -> query
+        n when is_integer(n) and n > 0 -> query |> limit(^n)
+      end
+
+    Repo.all(query)
   end
 
   defp apply_node_filters(query, []), do: query
