@@ -19,6 +19,8 @@ defmodule Loomkin.Tools.Shell do
       timeout: [type: :integer, doc: "Timeout in milliseconds (default: 30000)"]
     ]
 
+  alias Loomkin.Tools.ShellSession
+
   import Loomkin.Tool, only: [param!: 2, param: 3]
 
   @default_timeout 30_000
@@ -59,12 +61,65 @@ defmodule Loomkin.Tools.Shell do
     command = param!(params, :command)
     timeout = param(params, :timeout, default_timeout())
 
+    agent_key = agent_key(context)
+    session_cwd = session_cwd(agent_key, project_path)
+
     with :ok <- check_blocklist(command),
          :ok <- check_allowlist(command),
-         :ok <- check_working_directory(command, project_path) do
-      execute_via_port(command, project_path, timeout)
+         :ok <- check_working_directory(command, project_path, session_cwd) do
+      wrapped = ShellSession.wrap_command_for_cwd_tracking(command)
+      session_env = session_env(agent_key)
+
+      case execute_via_port(wrapped, session_cwd, timeout, session_env) do
+        {:ok, %{result: raw_result}} ->
+          {cleaned, new_cwd} = ShellSession.extract_cwd_from_output(raw_result)
+
+          if agent_key do
+            if new_cwd, do: ShellSession.update_cwd(agent_key, new_cwd)
+
+            exports = ShellSession.extract_exports(command)
+            ShellSession.merge_env(agent_key, exports)
+          end
+
+          {:ok, %{result: cleaned}}
+
+        {:error, raw_result} when is_binary(raw_result) ->
+          {cleaned, new_cwd} = ShellSession.extract_cwd_from_output(raw_result)
+
+          if agent_key && new_cwd do
+            ShellSession.update_cwd(agent_key, new_cwd)
+          end
+
+          {:error, cleaned}
+
+        error ->
+          error
+      end
     end
   end
+
+  defp agent_key(context) do
+    team_id = context[:team_id]
+    agent_name = context[:agent_name]
+
+    if team_id && agent_name do
+      {team_id, agent_name}
+    end
+  end
+
+  defp session_cwd(nil, project_path), do: project_path
+
+  defp session_cwd(key, project_path) do
+    ShellSession.init_session(key, project_path)
+    ShellSession.get_cwd(key, project_path)
+  end
+
+  defp session_env(nil), do: []
+
+  defp session_env(key),
+    do:
+      ShellSession.get_env(key)
+      |> Enum.map(fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)
 
   # --- Validation ---
 
@@ -99,15 +154,16 @@ defmodule Loomkin.Tools.Shell do
     end
   end
 
-  defp check_working_directory(command, project_path) do
+  defp check_working_directory(command, project_path, session_cwd) do
     project_root = String.trim_trailing(project_path, "/")
+    cwd = session_cwd || project_path
 
     # 1. Block cd to paths outside project
     cd_targets = Regex.scan(~r/\bcd\s+([^\s;&|]+)/, command, capture: :all_but_first)
 
     cd_escape =
       Enum.find(cd_targets, fn [target] ->
-        expanded = Path.expand(target, project_path)
+        expanded = Path.expand(target, cwd)
         not path_within?(expanded, project_root)
       end)
 
@@ -158,15 +214,18 @@ defmodule Loomkin.Tools.Shell do
 
   # --- Execution ---
 
-  defp execute_via_port(command, project_path, timeout) do
-    port =
-      Port.open({:spawn_executable, "/bin/sh"}, [
-        {:args, ["-c", command]},
-        :binary,
-        :exit_status,
-        :stderr_to_stdout,
-        {:cd, project_path}
-      ])
+  defp execute_via_port(command, cwd, timeout, env) do
+    port_opts = [
+      {:args, ["-c", command]},
+      :binary,
+      :exit_status,
+      :stderr_to_stdout,
+      {:cd, cwd}
+    ]
+
+    port_opts = if env != [], do: [{:env, env} | port_opts], else: port_opts
+
+    port = Port.open({:spawn_executable, "/bin/sh"}, port_opts)
 
     collect_output(port, [], timeout)
   end

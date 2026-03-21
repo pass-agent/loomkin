@@ -32,6 +32,16 @@ config :loomkin,
   max_repo_map_tokens: 2048,
   max_decision_context_tokens: 1024
 
+# Tool runner concurrency limits (per-type and total)
+config :loomkin, :runner_limits, %{
+  shell: 20,
+  file_write: 10,
+  file_edit: 10,
+  git: 5,
+  default: 10,
+  total: 50
+}
+
 # Approval gate default timeout (5 minutes); override per gate via params[:timeout] (seconds)
 config :loomkin, :approval_gate_timeout_ms, 300_000
 

@@ -33,3 +33,6 @@ config :loomkin, Loomkin.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client in test
 config :swoosh, :api_client, false
+
+# Secret redaction is disabled in test by default; tests opt in via Redactor.enable/0
+config :loomkin, :env, :test

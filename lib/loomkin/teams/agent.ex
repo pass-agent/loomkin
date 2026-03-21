@@ -312,6 +312,9 @@ defmodule Loomkin.Teams.Agent do
       save_checkpoint_sync(state, :crashed, inspect(reason))
     end
 
+    # Clean up persistent shell session for this agent
+    Loomkin.Tools.ShellSession.cleanup({state.team_id, state.name})
+
     Comms.unsubscribe(state.subscription_ids)
   end
 
