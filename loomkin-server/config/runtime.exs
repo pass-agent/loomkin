@@ -19,6 +19,15 @@ if ollama_host = System.get_env("OLLAMA_HOST") do
   config :loomkin, ollama_host: ollama_host
 end
 
+# Relay client — connects local daemon to cloud relay for mobile access
+config :loomkin, Loomkin.Relay.Client,
+  enabled: System.get_env("LOOMKIN_RELAY_ENABLED") == "true",
+  relay_url: System.get_env("LOOMKIN_RELAY_URL", "wss://loomkin.fly.dev/relay/websocket"),
+  token: System.get_env("LOOMKIN_RELAY_TOKEN"),
+  heartbeat_interval_ms: 15_000,
+  reconnect_base_ms: 1_000,
+  reconnect_max_ms: 30_000
+
 if database_url = System.get_env("DATABASE_URL") do
   config :loomkin, Loomkin.Repo,
     url: database_url,

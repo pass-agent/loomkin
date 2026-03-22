@@ -17,6 +17,9 @@ defmodule Loomkin.Application do
     # Create ETS table for persistent shell sessions (per-agent CWD + env)
     :ets.new(Loomkin.Tools.ShellSession.table_name(), [:named_table, :public, :set])
 
+    # Create ETS table for relay daemon registry (must exist before endpoint starts)
+    Loomkin.Relay.Server.Registry.init()
+
     children =
       [
         # Storage
@@ -86,6 +89,12 @@ defmodule Loomkin.Application do
         {Registry, keys: :unique, name: Loomkin.Conversations.Registry},
         {DynamicSupervisor, name: Loomkin.Conversations.Supervisor, strategy: :one_for_one},
 
+        # Relay: pending command request tracking
+        {Registry, keys: :unique, name: Loomkin.Relay.PendingCommands},
+
+        # Relay: heartbeat monitor for stale daemon connections
+        Loomkin.Relay.Server.HeartbeatMonitor,
+
         # Channel adapters (Telegram, Discord)
         Loomkin.Channels.Supervisor,
 
@@ -95,6 +104,7 @@ defmodule Loomkin.Application do
         # Self-healing orchestrator (manages heal-diagnose-fix-resume lifecycle)
         {Loomkin.Healing.Orchestrator, shutdown: 15_000}
       ] ++
+        maybe_start_relay_client() ++
         maybe_start_mcp_server() ++
         maybe_start_endpoint()
 
@@ -109,6 +119,16 @@ defmodule Loomkin.Application do
 
   defp maybe_start_endpoint do
     [LoomkinWeb.Endpoint]
+  end
+
+  defp maybe_start_relay_client do
+    config = Application.get_env(:loomkin, Loomkin.Relay.Client, [])
+
+    if config[:enabled] do
+      [Loomkin.Relay.Client, Loomkin.Relay.Client.EventForwarder]
+    else
+      []
+    end
   end
 
   defp maybe_start_mcp_server do
