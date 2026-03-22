@@ -7,10 +7,10 @@ services:
     hostname: loomkin-dev
     ports:
       - "2222:22"
+      - "4200:4200"
     networks:
       loomkin-dev-net:
         aliases:
-          - loomkin-dev
           - loomkin-dev
     volumes:
       - dev-home:/home/loomkin
