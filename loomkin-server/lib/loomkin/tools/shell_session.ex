@@ -102,7 +102,8 @@ defmodule Loomkin.Tools.ShellSession do
         :ok
 
       [] ->
-        :ets.insert(@table, {key, %{cwd: ".", env: new_env}})
+        # Session should already exist via init_session; skip merge if missing
+        # to avoid creating a session with an unsafe default CWD.
         :ok
     end
   end

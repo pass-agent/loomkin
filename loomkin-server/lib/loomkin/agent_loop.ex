@@ -560,7 +560,12 @@ defmodule Loomkin.AgentLoop do
         atomized_args
       end
 
-    tool_type = String.to_existing_atom(tool_meta.tool_name)
+    tool_type =
+      try do
+        String.to_existing_atom(tool_meta.tool_name)
+      rescue
+        ArgumentError -> :default
+      end
 
     result =
       case Loomkin.Tools.RunnerRegistry.acquire(tool_type) do

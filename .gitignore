@@ -1,34 +1,24 @@
-# The directory Mix will write compiled artifacts to.
-/_build/
-
-# If you run "mix test --cover", coverage assets end up here.
-/cover/
-
-# The directory Mix downloads your dependencies sources to.
-/deps/
-
-# Where third-party dependencies like ExDoc output generated docs.
-/doc/
-
-# If the VM crashes, it generates a dump, let's ignore it too.
-erl_crash.dump
-
-# Also ignore archive artifacts (built via "mix archive.build").
+# Elixir/Mix build artifacts (inside loomkin-server/)
+loomkin-server/_build/
+loomkin-server/cover/
+loomkin-server/deps/
+loomkin-server/doc/
 *.ez
-
-# Ignore package tarball (built via "mix hex.build").
 loomkin-*.tar
+
+# VM crash dumps
+erl_crash.dump
 
 # Temporary files, for example, from tests.
 /tmp/
 .loomkin/
 
 # Phoenix/assets
-/priv/static/assets/
-/assets/node_modules/
+loomkin-server/priv/static/assets/
+loomkin-server/assets/node_modules/
 npm-debug.log
 
-# Root-level JS tooling (commitlint)
+# Root-level JS tooling
 /node_modules/
 /package-lock.json
 

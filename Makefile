@@ -1,5 +1,7 @@
 .DEFAULT_GOAL := help
 
+SERVER_DIR := loomkin-server
+
 .PHONY: help setup dev self-edit test format db.up db.down db.reset dev.up dev.down
 
 help:          ## Show available targets
@@ -9,10 +11,10 @@ setup:         ## Install all dependencies and configure the project
 	brew bundle
 	localias start
 	mise install
-	npm install
+	pnpm install
 	lefthook install
 	$(MAKE) db.up
-	mix setup
+	cd $(SERVER_DIR) && mix setup
 	@echo ""
 	@echo "If mise-managed tools are not active, add this to your shell config (~/.zshrc or ~/.bashrc):"
 	@echo "  eval \"\$$(mise activate zsh)\"   # zsh"
@@ -20,16 +22,16 @@ setup:         ## Install all dependencies and configure the project
 	@echo "Then open a new terminal or run: eval \"\$$(mise activate zsh)\""
 
 dev:           ## Start the dev server
-	mix phx.server
+	cd $(SERVER_DIR) && mix phx.server
 
 self-edit:     ## Start in self-edit mode (code reloader off for agent edits)
-	LOOMKIN_SELF_EDIT=1 mix phx.server
+	cd $(SERVER_DIR) && LOOMKIN_SELF_EDIT=1 mix phx.server
 
 test:          ## Run the test suite
-	mix test
+	cd $(SERVER_DIR) && mix test
 
 format:        ## Format Elixir source files
-	mix format
+	cd $(SERVER_DIR) && mix format
 
 db.up:         ## Start the Postgres container
 	docker compose up -d --wait
@@ -38,11 +40,10 @@ db.down:       ## Stop the Postgres container
 	docker compose down
 
 db.reset:      ## Reset the database (drop, create, migrate, seed)
-	mix ecto.reset
+	cd $(SERVER_DIR) && mix ecto.reset
 
 dev.up:   ## Start the shared dev container
 	docker compose -f .devcontainer/docker-compose.yml up -d --build
 
 dev.down: ## Stop the shared dev container
 	docker compose -f .devcontainer/docker-compose.yml down
-

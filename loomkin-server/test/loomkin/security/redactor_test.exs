@@ -1,5 +1,5 @@
 defmodule Loomkin.Security.RedactorTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Loomkin.Security.Redactor
 

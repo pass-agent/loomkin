@@ -12,6 +12,17 @@ We have to move fast. The sea is moving under our feet.
 
 **If something's missing, that's an opportunity.** No AGENTS.md? No usage_rules? Something feels like it should exist but doesn't? Open a PR or file an issue. The repo is days old -- there's a lot to build and we want your input on what it becomes.
 
+## Repository Structure
+
+This is a monorepo. The main components are:
+
+- **`loomkin-server/`** — The Elixir/Phoenix server (the core of the project)
+- **`apps/`** — Client applications (desktop, mobile) — added in later phases
+- **`packages/`** — Shared JS/TS libraries — added in later phases
+- **`services/`** — Polyglot backend services — added in later phases
+
+All `mix` commands should be run from within the `loomkin-server/` directory, or use the `make` targets from the repo root.
+
 ## Prerequisites
 
 Before you start, make sure you have:
@@ -19,6 +30,7 @@ Before you start, make sure you have:
 - **Elixir 1.18+** (with Erlang/OTP 27+) -- we use [mise](https://mise.jdx.dev/) for version management (versions are pinned in `.mise.toml`)
 - **PostgreSQL 17** -- running locally or via Docker
 - **Node.js 22** -- for asset compilation
+- **pnpm 10** -- for JS workspace management (installed via mise)
 
 You can verify your setup with:
 
@@ -26,6 +38,7 @@ You can verify your setup with:
 elixir --version
 psql --version
 node --version
+pnpm --version
 ```
 
 ## Getting Set Up
@@ -112,7 +125,7 @@ lefthook install
 If you haven't run `make setup`, install lefthook first: `brew bundle` (it's in the `Brewfile`).
 
 This installs two hooks:
-- **pre-commit** -- runs `mix format --check-formatted` and blocks if formatting is off
+- **pre-commit** -- runs `mix format --check-formatted` (inside `loomkin-server/`) and blocks if formatting is off
 - **commit-msg** -- validates your commit message against the conventional commits rules
 
 ### Before You Commit
@@ -120,7 +133,7 @@ This installs two hooks:
 Always run the formatter:
 
 ```bash
-mix format
+cd loomkin-server && mix format
 ```
 
 The project has a `.formatter.exs` that handles all formatting rules. If your editor supports it, enable format-on-save.
@@ -128,14 +141,14 @@ The project has a `.formatter.exs` that handles all formatting rules. If your ed
 Run the tests to make sure nothing is broken:
 
 ```bash
-mix test
+cd loomkin-server && mix test
 ```
 
 To run a specific test file or line:
 
 ```bash
-mix test test/loomkin/teams/agent_test.exs
-mix test test/loomkin/teams/agent_test.exs:42
+cd loomkin-server && mix test test/loomkin/teams/agent_test.exs
+cd loomkin-server && mix test test/loomkin/teams/agent_test.exs:42
 ```
 
 ## Submitting a Pull Request

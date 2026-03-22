@@ -1,8 +1,8 @@
 pre-commit:
   commands:
     format:
-      run: mise exec -- mix format --check-formatted
-      fail_text: "Run `mix format` to fix formatting"
+      run: cd loomkin-server && mise exec -- mix format --check-formatted
+      fail_text: "Run `cd loomkin-server && mix format` to fix formatting"
 
 commit-msg:
   commands:

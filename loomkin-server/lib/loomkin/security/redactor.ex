@@ -11,25 +11,27 @@ defmodule Loomkin.Security.Redactor do
 
   @replacement "[REDACTED]"
 
-  # Built-in patterns: {regex, label} — order matters for overlapping matches.
-  # These cover the most common API key and token formats.
+  # Built-in patterns — order matters for overlapping matches.
+  # Each entry is {regex, label} for full-match replacement, or
+  # {regex, label, replacement} with backreferences for partial replacement.
   @builtin_patterns [
     # OpenAI / Anthropic / Stripe sk- keys (at least 20 chars after prefix)
     {~r/sk-[A-Za-z0-9_\-]{20,}/, "sk-* key"},
     # AWS access key IDs
     {~r/AKIA[0-9A-Z]{16}/, "AWS access key"},
     # AWS secret keys (40-char base64ish following common env patterns)
-    {~r/(?<=AWS_SECRET_ACCESS_KEY[=: ]["']?)[A-Za-z0-9\/+=]{40}/, "AWS secret key"},
+    {~r/(?i)(AWS_SECRET_ACCESS_KEY[=: ]["']?)([A-Za-z0-9\/+=]{40})/, "AWS secret key",
+     "\\1[REDACTED]"},
     # GitHub tokens (classic and fine-grained)
     {~r/gh[pousr]_[A-Za-z0-9_]{36,}/, "GitHub token"},
     # Bearer tokens in header-like strings
     {~r/(?i)bearer\s+[A-Za-z0-9\-._~+\/]+=*/, "Bearer token"},
     # Connection strings with embedded passwords (postgres, mysql, redis, mongodb)
-    {~r/(?i)(postgres(?:ql)?|mysql|redis|mongodb(?:\+srv)?|amqp):\/\/[^:]+:([^@\s]{4,})@/,
-     "connection string password"},
+    {~r/(?i)((?:postgres(?:ql)?|mysql|redis|mongodb(?:\+srv)?|amqp):\/\/[^:]+:)([^@\s]{4,})(@)/,
+     "connection string password", "\\1[REDACTED]\\3"},
     # Generic "password" / "secret" / "token" / "api_key" assignments
-    {~r/(?i)(?:password|secret|token|api_key|apikey|api-key|access_key|secret_key)\s*[=:]\s*["']([^"']{8,})["']/,
-     "key-value secret"},
+    {~r/(?i)((?:password|secret|token|api_key|apikey|api-key|access_key|secret_key)\s*[=:]\s*["'])([^"']{8,})(["'])/,
+     "key-value secret", "\\1[REDACTED]\\3"},
     # Slack tokens
     {~r/xox[bpors]-[A-Za-z0-9\-]{10,}/, "Slack token"},
     # Private key blocks
@@ -89,34 +91,12 @@ defmodule Loomkin.Security.Redactor do
   defp do_redact(text, []), do: text
 
   defp do_redact(text, [{regex, _label} | rest]) do
-    text
-    |> apply_pattern(regex)
+    Regex.replace(regex, text, @replacement)
     |> do_redact(rest)
   end
 
-  # For patterns with capturing groups, redact only the captured group.
-  # For patterns without groups, redact the entire match.
-  defp apply_pattern(text, regex) do
-    case Regex.names(regex) do
-      [] ->
-        if Regex.source(regex) |> String.contains?("(") do
-          # Has unnamed capturing groups — redact the last group
-          Regex.replace(regex, text, fn full_match ->
-            case Regex.run(regex, full_match, capture: :all) do
-              [_full | groups] when groups != [] ->
-                secret = List.last(groups)
-                String.replace(full_match, secret, @replacement, global: false)
-
-              _ ->
-                @replacement
-            end
-          end)
-        else
-          Regex.replace(regex, text, @replacement)
-        end
-
-      _named ->
-        Regex.replace(regex, text, @replacement)
-    end
+  defp do_redact(text, [{regex, _label, replacement} | rest]) do
+    Regex.replace(regex, text, replacement)
+    |> do_redact(rest)
   end
 end

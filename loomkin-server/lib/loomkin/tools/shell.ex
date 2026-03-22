@@ -70,12 +70,16 @@ defmodule Loomkin.Tools.Shell do
       wrapped = ShellSession.wrap_command_for_cwd_tracking(command)
       session_env = session_env(agent_key)
 
+      project_root = String.trim_trailing(project_path, "/")
+
       case execute_via_port(wrapped, session_cwd, timeout, session_env) do
         {:ok, %{result: raw_result}} ->
           {cleaned, new_cwd} = ShellSession.extract_cwd_from_output(raw_result)
 
           if agent_key do
-            if new_cwd, do: ShellSession.update_cwd(agent_key, new_cwd)
+            if new_cwd && path_within?(new_cwd, project_root) do
+              ShellSession.update_cwd(agent_key, new_cwd)
+            end
 
             exports = ShellSession.extract_exports(command)
             ShellSession.merge_env(agent_key, exports)
@@ -86,7 +90,7 @@ defmodule Loomkin.Tools.Shell do
         {:error, raw_result} when is_binary(raw_result) ->
           {cleaned, new_cwd} = ShellSession.extract_cwd_from_output(raw_result)
 
-          if agent_key && new_cwd do
+          if agent_key && new_cwd && path_within?(new_cwd, project_root) do
             ShellSession.update_cwd(agent_key, new_cwd)
           end
 

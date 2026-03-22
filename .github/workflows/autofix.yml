@@ -4,6 +4,9 @@ on:
   merge_group:
   pull_request:
     types: [opened, synchronize]
+    paths:
+      - 'loomkin-server/**'
+      - '.github/workflows/autofix.yml'
 
 permissions:
   contents: write
@@ -11,6 +14,10 @@ permissions:
 env:
   ELIXIR_VERSION: "1.20.0-rc.3"
   OTP_VERSION: "28"
+
+defaults:
+  run:
+    working-directory: loomkin-server
 
 jobs:
   fix:
@@ -27,9 +34,9 @@ jobs:
       - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
         with:
           path: |
-            deps
-            _build
-          key: ${{ runner.os }}-mix-autofix-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-${{ hashFiles('mix.lock') }}
+            loomkin-server/deps
+            loomkin-server/_build
+          key: ${{ runner.os }}-mix-autofix-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-${{ hashFiles('loomkin-server/mix.lock') }}
 
       - run: mix deps.get
 
