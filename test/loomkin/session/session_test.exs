@@ -13,7 +13,19 @@ defmodule Loomkin.Session.SessionTest do
 
   setup do
     File.mkdir_p!(@project_path)
-    on_exit(fn -> File.rm_rf!(@project_path) end)
+
+    on_exit(fn ->
+      # Stop all lingering sessions to avoid sandbox ownership errors
+      # between tests. Without this, Session processes from a previous test
+      # survive in Loomkin.SessionSupervisor and crash when the sandbox
+      # owner is stopped, poisoning the connection pool for the next test.
+      for {_, pid, _, _} <- DynamicSupervisor.which_children(Loomkin.SessionSupervisor) do
+        DynamicSupervisor.terminate_child(Loomkin.SessionSupervisor, pid)
+      end
+
+      File.rm_rf!(@project_path)
+    end)
+
     :ok
   end
 
