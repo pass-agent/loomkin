@@ -13,8 +13,31 @@ defmodule LoomkinWeb.Router do
     plug :fetch_current_scope_for_user
   end
 
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
   scope "/api/webhooks" do
     post "/telegram", Loomkin.Channels.Telegram.Webhook, :handle
+  end
+
+  # REST API v1 — mobile client endpoints
+  scope "/api/v1", LoomkinWeb.API.V1 do
+    pipe_through :api
+
+    post "/auth/login", AuthController, :login
+
+    pipe_through LoomkinWeb.API.Auth
+
+    get "/auth/me", AuthController, :me
+    resources "/workspaces", WorkspaceController, only: [:index, :show]
+    resources "/sessions", SessionController, only: [:create, :show]
+    get "/sessions/:id/messages", SessionController, :messages
+    post "/sessions/:id/messages", SessionController, :send_message
+    post "/sessions/:id/cancel", SessionController, :cancel
+    get "/teams/:id/agents", AgentController, :index
+    post "/sessions/:session_id/approvals/approve", ApprovalController, :approve
+    post "/sessions/:session_id/approvals/deny", ApprovalController, :deny
   end
 
   # OAuth provider authentication routes — must be before the catch-all "/" scope
@@ -98,6 +121,18 @@ defmodule LoomkinWeb.Router do
       live "/orgs", OrgLive, :index
       live "/orgs/new", OrgLive, :new
       live "/orgs/:slug", OrgLive, :show
+    end
+  end
+
+  # Mobile web routes — gated by multi-tenant auth (passes through in local mode)
+  scope "/m", LoomkinWeb.Mobile do
+    pipe_through [:browser, :require_auth_if_multi_tenant]
+
+    live_session :mobile,
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_if_multi_tenant}] do
+      live "/", WorkspaceListLive, :index
+      live "/workspaces/:id", SessionListLive, :index
+      live "/sessions/:id", ChatLive, :show
     end
   end
 

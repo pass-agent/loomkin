@@ -8,6 +8,10 @@ defmodule LoomkinWeb.Endpoint do
     encryption_salt: "loom_encrypt"
   ]
 
+  socket "/relay", Loomkin.Relay.Server.Socket, websocket: true
+
+  socket "/api/socket", LoomkinWeb.API.ClientSocket, websocket: [connect_info: [:peer_data]]
+
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
