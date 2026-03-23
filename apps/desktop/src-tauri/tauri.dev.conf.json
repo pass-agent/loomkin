@@ -1,0 +1,5 @@
+{
+  "build": {
+    "devUrl": "http://loom.test:4200"
+  }
+}

@@ -1,0 +1,66 @@
+appId: com.loomkin.mobile
+name: "Auth: Register new account"
+tags:
+  - auth
+
+---
+
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 10000
+
+# Tap the register link (app uses login-register-link-button)
+- tapOn:
+    id: "login-register-link-button"
+
+# Verify register screen appears
+- extendedWaitUntil:
+    visible:
+      id: "register-screen"
+    timeout: 5000
+
+- assertVisible:
+    id: "register-email-input"
+
+- assertVisible:
+    id: "register-password-input"
+
+# Enter a new email
+- tapOn:
+    id: "register-email-input"
+- inputText: ${E2E_REGISTER_EMAIL}
+
+# Enter a password
+- tapOn:
+    id: "register-password-input"
+- inputText: "TestPassword123!"
+
+# Submit registration
+- tapOn:
+    id: "register-submit-button"
+
+# Wait for login to complete
+- waitForAnimationToEnd
+
+# Dismiss iOS "Save Password?" Keychain dialog if it appears
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# On success, the app calls login() and router.replace("/(tabs)")
+# So verify we land on the dashboard
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 10000
+
+# Dismiss again in case dialog appeared late
+- tapOn:
+    text: "Not Now"
+    optional: true

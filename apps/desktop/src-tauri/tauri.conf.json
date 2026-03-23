@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickelpack/tauri/refs/heads/dev/crates/tauri-config-schema/schema.json",
+  "productName": "Loomkin",
+  "version": "0.1.0",
+  "identifier": "com.loomkin.desktop",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Loomkin",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://loom.test:4200 ws://loom.test:4200 wss://loom.test:4200; frame-src http://loom.test:4200; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "plugins": {
+    "notification": {
+      "enabled": true
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
+  }
+}

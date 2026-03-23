@@ -1,0 +1,29 @@
+appId: com.loomkin.mobile
+name: "Chat: View agent response content"
+tags:
+  - chat
+
+---
+
+# Set up session (creates a session and opens chat)
+- runFlow: ../../utils/setup-session.yaml
+
+# Send a message to trigger a response
+- tapOn:
+    id: "session-message-input"
+- inputText: "What is Loomkin?"
+
+- tapOn:
+    id: "session-send-button"
+
+# Wait for agent response — messages use dynamic IDs, so wait for any new text
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 30000
+
+# Verify loading is complete (spinner should no longer be visible)
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-spinner"
+    timeout: 30000

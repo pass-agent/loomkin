@@ -12,6 +12,10 @@ defmodule LoomkinWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  socket "/socket", LoomkinWeb.UserSocket,
+    websocket: [connect_info: [:peer_data]],
+    longpoll: false
+
   plug Plug.Static,
     at: "/",
     from: :loomkin,

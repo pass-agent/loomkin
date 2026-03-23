@@ -1,0 +1,60 @@
+appId: com.loomkin.mobile
+name: "Sessions: Create session with model and project path"
+tags:
+  - sessions
+  - smoke
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to sessions tab
+- tapOn:
+    id: "tabs-sessions-button"
+
+# Wait for sessions screen
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Tap the new session button
+- tapOn:
+    id: "sessions-new-session-button"
+
+# Wait for new session modal to appear
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: "new-session-project-path-input"
+    timeout: 8000
+
+# Verify model selector trigger is visible
+- assertVisible:
+    id: "new-session-model-selector-trigger-button"
+
+# Enter project path
+- tapOn:
+    id: "new-session-project-path-input"
+- eraseText:
+    charactersToErase: 50
+- inputText: "/tmp/e2e-new-project"
+
+# Hide keyboard before tapping create
+- hideKeyboard
+- waitForAnimationToEnd
+
+# Create the session (model defaults if none available in API)
+- tapOn:
+    id: "new-session-create-button"
+
+# Verify we navigate to a chat view
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 10000
+
+# Verify chat input is ready
+- assertVisible:
+    id: "session-message-input"

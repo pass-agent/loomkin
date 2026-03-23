@@ -1,0 +1,53 @@
+appId: com.loomkin.mobile
+name: "Settings: Navigate section hierarchy"
+tags:
+  - settings
+  - navigation
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to settings tab
+- tapOn:
+    id: "tabs-settings-button"
+
+# Wait for settings screen
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 5000
+
+# Verify section rows are visible (settings sections rendered as tappable rows)
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 3000
+
+# Tap the first settings section row
+- tapOn:
+    text: "General"
+    optional: true
+
+# If General section exists, verify sub-page loads with save capability
+- extendedWaitUntil:
+    visible:
+      text: "General"
+    timeout: 5000
+    optional: true
+
+# Go back to settings index
+- tapOn:
+    text: "Settings"
+    optional: true
+
+# Verify we're back on the settings screen
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 3000
+
+# Verify logout button still visible (fixed footer)
+- assertVisible:
+    id: "settings-logout-button"

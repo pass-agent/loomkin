@@ -132,6 +132,7 @@ defmodule Loomkin.MixProject do
        app: false,
        compile: false,
        depth: 1},
+      {:cors_plug, "~> 3.0"},
       {:plug_cowboy, "~> 2.7"},
       {:jason, "~> 1.4"},
       {:dns_cluster, "~> 0.1"},
