@@ -155,6 +155,14 @@ defmodule Loomkin.LLM do
           _ -> :not_local
         end
 
+      ["vllm", model_id] ->
+        model = Loomkin.Providers.Vllm.build_model(model_id)
+
+        case ReqLLM.provider(:vllm) do
+          {:ok, provider_module} -> {:local, model, provider_module}
+          _ -> :not_local
+        end
+
       _ ->
         :not_local
     end

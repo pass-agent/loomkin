@@ -53,7 +53,7 @@ defmodule Loomkin.Models do
       end)
       |> Enum.reject(fn {_name, models} -> models == [] end)
 
-    local_models = fetch_ollama_models()
+    local_models = fetch_ollama_models() ++ fetch_vllm_models()
 
     (local_models ++ cloud_models)
     |> Enum.sort_by(fn {name, _} -> name end)
@@ -92,6 +92,9 @@ defmodule Loomkin.Models do
 
       nil when provider_atom == :ollama ->
         if Loomkin.Providers.Ollama.available?(), do: :local, else: :local_offline
+
+      nil when provider_atom == :vllm ->
+        if Loomkin.Providers.Vllm.available?(), do: :local, else: :local_offline
 
       nil ->
         {:missing, "UNKNOWN_API_KEY"}
@@ -135,7 +138,7 @@ defmodule Loomkin.Models do
       end)
       |> Enum.reject(fn {_name, models} -> models == [] end)
 
-    local_models = fetch_ollama_models_enriched()
+    local_models = fetch_ollama_models_enriched() ++ fetch_vllm_models_enriched()
 
     (local_models ++ cloud_models)
     |> Enum.sort_by(fn {name, _} -> name end)
@@ -164,8 +167,9 @@ defmodule Loomkin.Models do
       end)
 
     ollama_entry = build_ollama_provider_entry()
+    vllm_entry = build_vllm_provider_entry()
 
-    (ollama_entry ++ cloud_providers)
+    (ollama_entry ++ vllm_entry ++ cloud_providers)
     |> Enum.sort_by(fn {_p, name, status, _m} ->
       priority =
         case status do
@@ -285,6 +289,58 @@ defmodule Loomkin.Models do
 
       _ ->
         [{:ollama, "Ollama (Local)", :local_offline, []}]
+    end
+  end
+
+  # ── vLLM (local) helpers ─────────────────────────────────────────────
+
+  defp fetch_vllm_models do
+    case Loomkin.Providers.Vllm.list_models() do
+      {:ok, models} ->
+        entries =
+          models
+          |> Enum.map(fn m ->
+            name = m["id"] || m["model"]
+            {name, "vllm:#{name}"}
+          end)
+
+        if entries == [], do: [], else: [{"vLLM (Local)", entries}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp fetch_vllm_models_enriched do
+    case Loomkin.Providers.Vllm.list_models() do
+      {:ok, models} ->
+        entries =
+          models
+          |> Enum.map(fn m ->
+            name = m["id"] || m["model"]
+            {name, "vllm:#{name}", "local"}
+          end)
+
+        if entries == [], do: [], else: [{"vLLM (Local)", entries}]
+
+      _ ->
+        []
+    end
+  end
+
+  defp build_vllm_provider_entry do
+    case Loomkin.Providers.Vllm.list_models() do
+      {:ok, models} ->
+        entries =
+          Enum.map(models, fn m ->
+            name = m["id"] || m["model"]
+            {name, "vllm:#{name}", "local"}
+          end)
+
+        [{:vllm, "vLLM (Local)", :local, entries}]
+
+      _ ->
+        [{:vllm, "vLLM (Local)", :local_offline, []}]
     end
   end
 

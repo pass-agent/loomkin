@@ -139,11 +139,13 @@ defmodule Loomkin.Application do
       end
     end
 
-    # Register local providers (Ollama)
-    try do
-      Loomkin.Providers.Ollama.register!()
-    rescue
-      _e -> :ok
+    # Register local providers (Ollama, vLLM)
+    for module <- [Loomkin.Providers.Ollama, Loomkin.Providers.Vllm] do
+      try do
+        module.register!()
+      rescue
+        _e -> :ok
+      end
     end
   end
 end
