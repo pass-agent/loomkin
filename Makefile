@@ -1,11 +1,16 @@
 .DEFAULT_GOAL := help
 
 SERVER_DIR := loomkin-server
+MOBILE_DIR := apps/mobile
+DESKTOP_DIR := apps/desktop
 
-.PHONY: help setup dev self-edit test format db.up db.down db.reset dev.up dev.down
+.PHONY: help setup dev self-edit test format db.up db.down db.reset dev.up dev.down \
+	mobile.dev mobile.ios mobile.android mobile.test \
+	desktop.dev desktop.build \
+	mobile.e2e.build mobile.e2e.seed mobile.e2e.ios mobile.e2e.android
 
 help:          ## Show available targets
-	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 setup:         ## Install all dependencies and configure the project
 	brew bundle
@@ -47,3 +52,39 @@ dev.up:   ## Start the shared dev container
 
 dev.down: ## Stop the shared dev container
 	docker compose -f .devcontainer/docker-compose.yml down
+
+# ── Mobile ─────────────────────────────────────────────────────────────
+
+mobile.dev:    ## Start Expo dev server
+	cd $(MOBILE_DIR) && pnpm start
+
+mobile.ios:    ## Run mobile app on iOS simulator
+	cd $(MOBILE_DIR) && pnpm ios
+
+mobile.android: ## Run mobile app on Android emulator
+	cd $(MOBILE_DIR) && pnpm android
+
+mobile.test:   ## Run mobile unit tests
+	cd $(MOBILE_DIR) && pnpm test
+
+# ── Desktop ────────────────────────────────────────────────────────────
+
+desktop.dev:   ## Start Tauri desktop in dev mode
+	cd $(DESKTOP_DIR) && pnpm tauri:dev
+
+desktop.build: ## Build Tauri desktop app
+	cd $(DESKTOP_DIR) && pnpm tauri:build
+
+# ── E2E ────────────────────────────────────────────────────────────────
+
+mobile.e2e.build: ## Build Expo dev client for e2e
+	cd $(MOBILE_DIR) && bash e2e/scripts/build-dev-client.sh
+
+mobile.e2e.seed: ## Seed backend with e2e test data
+	cd $(SERVER_DIR) && mix run priv/repo/seeds/e2e_seeds.exs
+
+mobile.e2e.ios: ## Run Maestro e2e tests on iOS
+	cd $(MOBILE_DIR) && bash e2e/scripts/run-maestro-ios.sh
+
+mobile.e2e.android: ## Run Maestro e2e tests on Android
+	cd $(MOBILE_DIR) && bash e2e/scripts/run-maestro-android.sh

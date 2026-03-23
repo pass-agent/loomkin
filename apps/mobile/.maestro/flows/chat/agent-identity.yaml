@@ -1,0 +1,35 @@
+appId: com.loomkin.mobile
+name: "Chat: Agent identity in chat bubbles"
+tags:
+  - chat
+  - agents
+
+---
+
+# Set up an authenticated session with chat open
+- runFlow: ../../utils/setup-session.yaml
+
+# The seeded E2E Test Session has messages with agent_name set.
+# Wait for the chat to fully load
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 10000
+
+# Swipe up to see earlier messages (newer messages push older ones off screen)
+- swipe:
+    start: 50%, 30%
+    end: 50%, 70%
+
+# Verify an agent name label is displayed (seeded data has "Architect" as agent_name)
+# Note: textTransform uppercase is visual only — Maestro reads the raw text value
+- extendedWaitUntil:
+    visible:
+      text: "Architect"
+    timeout: 5000
+
+# Verify another agent name appears (seeded data has "Reviewer" as agent_name)
+- extendedWaitUntil:
+    visible:
+      text: "Reviewer"
+    timeout: 5000

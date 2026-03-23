@@ -1,0 +1,126 @@
+name: Mobile E2E Tests
+
+on:
+  push:
+    paths:
+      - 'apps/mobile/**'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+
+jobs:
+  e2e-ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Maestro
+        run: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
+
+      - name: Start Phoenix server
+        run: |
+          cd loomkin-server
+          mix deps.get
+          mix ecto.setup
+          mix run priv/repo/seeds/e2e_seeds.exs
+          mix phx.server &
+        env:
+          MIX_ENV: test
+
+      - name: Install mobile deps
+        run: cd apps/mobile && pnpm install
+
+      - name: Build e2e client (iOS)
+        run: cd apps/mobile && eas build --profile e2e --platform ios --local --non-interactive
+
+      - name: Run Maestro (iOS)
+        run: |
+          cd apps/mobile
+          $HOME/.maestro/bin/maestro test .maestro/flows/ \
+            --platform ios \
+            --format junit \
+            --output e2e/reports/ios-results.xml
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ios-results
+          path: apps/mobile/e2e/reports/
+
+  e2e-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Maestro
+        run: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18'
+          otp-version: '27'
+
+      - name: Start Phoenix server
+        run: |
+          cd loomkin-server
+          mix deps.get
+          mix ecto.setup
+          mix run priv/repo/seeds/e2e_seeds.exs
+          mix phx.server &
+        env:
+          MIX_ENV: test
+
+      - name: Install mobile deps
+        run: cd apps/mobile && pnpm install
+
+      - name: Build e2e client (Android)
+        run: cd apps/mobile && eas build --profile e2e --platform android --local --non-interactive
+
+      - name: Run Maestro (Android)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          script: |
+            cd apps/mobile
+            $HOME/.maestro/bin/maestro test .maestro/flows/ \
+              --platform android \
+              --format junit \
+              --output e2e/reports/android-results.xml
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-android-results
+          path: apps/mobile/e2e/reports/

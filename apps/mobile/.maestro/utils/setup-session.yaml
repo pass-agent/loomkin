@@ -1,0 +1,42 @@
+appId: com.loomkin.mobile
+name: "Utility: Open Existing Session Chat"
+tags:
+  - utility
+  - session
+
+---
+
+# First authenticate
+- runFlow: ../utils/setup-auth.yaml
+
+# Navigate to sessions tab
+- tapOn:
+    id: "tabs-sessions-button"
+
+# Wait for sessions screen to load
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Wait for session cards to load, then tap the first one
+- extendedWaitUntil:
+    visible:
+      id: "sessions-list-card-.*"
+    timeout: 10000
+
+- tapOn:
+    id: "sessions-list-card-.*"
+    index: 0
+
+# Verify chat view loads
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 10000
+
+# Verify the input is ready
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 5000

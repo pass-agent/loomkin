@@ -1,0 +1,52 @@
+appId: com.loomkin.mobile
+name: "Auth: Login with invalid input shows error"
+tags:
+  - auth
+  - error
+
+---
+
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 10000
+
+# Test 1: Submit with empty fields — app shows inline error text
+- tapOn:
+    id: "login-submit-button"
+
+# Verify inline error message appears
+- extendedWaitUntil:
+    visible:
+      id: "login-error-text"
+    timeout: 3000
+
+- assertVisible:
+    text: "Please fill in all fields."
+
+# Test 2: Enter invalid email format with a password
+- tapOn:
+    id: "login-email-input"
+- inputText: "not-an-email"
+
+- tapOn:
+    id: "login-password-input"
+- inputText: "somepassword"
+
+- tapOn:
+    id: "login-submit-button"
+
+# Verify inline error message for invalid login
+- extendedWaitUntil:
+    visible:
+      id: "login-error-text"
+    timeout: 10000
+
+# Verify we're still on login screen
+- assertVisible:
+    id: "login-screen"

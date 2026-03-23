@@ -1,0 +1,48 @@
+appId: com.loomkin.mobile
+name: "Navigation: Tab switching between all tabs"
+tags:
+  - navigation
+  - smoke
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Verify we start on dashboard
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 5000
+
+# Switch to Sessions tab
+- tapOn:
+    id: "tabs-sessions-button"
+- extendedWaitUntil:
+    visible:
+      id: "sessions-new-session-button"
+    timeout: 5000
+
+# Switch to Teams tab
+- tapOn:
+    id: "tabs-teams-button"
+- extendedWaitUntil:
+    visible:
+      text: "Teams"
+    timeout: 5000
+
+# Switch to Settings tab
+- tapOn:
+    id: "tabs-settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 5000
+
+# Switch back to Dashboard tab
+- tapOn:
+    id: "tabs-dashboard-button"
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 5000

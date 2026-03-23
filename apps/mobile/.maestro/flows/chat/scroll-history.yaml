@@ -1,0 +1,72 @@
+appId: com.loomkin.mobile
+name: "Chat: Scroll through message history"
+tags:
+  - chat
+
+---
+
+# Authenticate
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to sessions and open the first one (pre-seeded with many messages)
+- tapOn:
+    id: "tabs-sessions-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Wait for session cards to load, then tap the first one
+- extendedWaitUntil:
+    visible:
+      id: "sessions-list-card-.*"
+    timeout: 10000
+
+- tapOn:
+    id: "sessions-list-card-.*"
+    index: 0
+
+# Verify chat loaded
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 10000
+
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 5000
+
+# Scroll up to load older messages
+- swipe:
+    direction: UP
+    duration: 2000
+
+# Wait a moment for older messages to render
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 3000
+
+# Scroll up again to verify continuous scroll works
+- swipe:
+    direction: UP
+    duration: 2000
+
+# Verify the chat view is still visible (didn't crash)
+- extendedWaitUntil:
+    visible:
+      id: "chat-screen"
+    timeout: 3000
+
+# Scroll back down to latest messages
+- swipe:
+    direction: DOWN
+    duration: 2000
+
+# Verify message input is visible again
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 3000

@@ -1,0 +1,51 @@
+appId: com.loomkin.mobile
+name: "Auth: Login with valid email and password"
+tags:
+  - auth
+  - smoke
+
+---
+
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Verify login screen elements are visible
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 10000
+
+- assertVisible:
+    id: "login-email-input"
+
+- assertVisible:
+    id: "login-password-input"
+
+- assertVisible:
+    id: "login-submit-button"
+
+# Enter valid email
+- tapOn:
+    id: "login-email-input"
+- inputText: ${E2E_USER_EMAIL}
+
+# Enter password
+- tapOn:
+    id: "login-password-input"
+- inputText: ${E2E_USER_PASSWORD}
+
+# Submit
+- tapOn:
+    id: "login-submit-button"
+
+# Dismiss iOS "Save Password?" Keychain dialog if it appears
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# Password login returns a token directly — app navigates to dashboard
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 10000

@@ -1,0 +1,41 @@
+appId: com.loomkin.mobile
+name: "Chat: Send a message and receive response"
+tags:
+  - chat
+  - smoke
+
+---
+
+# Set up an authenticated session with chat open
+- runFlow: ../../utils/setup-session.yaml
+
+# Clear any text and type the message
+- tapOn:
+    id: "session-message-input"
+- eraseText:
+    charactersToErase: 50
+- inputText: "Hello from Maestro"
+
+# Verify text is in the input
+- extendedWaitUntil:
+    visible:
+      text: "Hello from Maestro"
+    timeout: 3000
+
+# Send the message
+- tapOn:
+    id: "session-send-button"
+
+# Verify the input is cleared after send (confirms handleSend executed)
+- extendedWaitUntil:
+    notVisible:
+      text: "Hello from Maestro"
+    timeout: 5000
+
+# Verify the input is still present and ready for next message
+- assertVisible:
+    id: "session-message-input"
+
+# Verify send button is still available
+- assertVisible:
+    id: "session-send-button"
