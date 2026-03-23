@@ -4,7 +4,6 @@ import Config
 # Environment variables can override compile-time config here
 
 # Multi-tenant mode: enable for deployed/hosted mode, disable for local single-user mode
-# Only override from env var if MULTI_TENANT is explicitly set, otherwise respect dev.exs/prod.exs
 if multi_tenant = System.get_env("MULTI_TENANT") do
   config :loomkin, :multi_tenant, multi_tenant == "true"
 end
@@ -13,20 +12,28 @@ if model = System.get_env("LOOMKIN_MODEL") do
   config :loomkin, default_model: model
 end
 
+# Database configuration - use DATABASE_URL directly
+if database_url = System.get_env("DATABASE_URL") do
+  config :loomkin, Loomkin.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+end
+
 # Ollama local LLM configuration
 # Default: http://localhost:11434
 if ollama_host = System.get_env("OLLAMA_HOST") do
   config :loomkin, ollama_host: ollama_host
 end
 
-if database_url = System.get_env("DATABASE_URL") do
-  config :loomkin, Loomkin.Repo,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
-else
-  # Inside the dev container, connect to the postgres service by hostname
-  if System.get_env("HOSTNAME") == "loomkin-dev" do
-    config :loomkin, Loomkin.Repo, hostname: "postgres", port: 5432
+# LOOMKIN_HOST: compose from TS_HOSTNAME and TS_NETWORK if not set
+if is_nil(System.get_env("LOOMKIN_HOST")) do
+  ts_hostname = System.get_env("TS_HOSTNAME")
+  ts_network = System.get_env("TS_NETWORK")
+
+  if ts_hostname && ts_network do
+    composed_host = "#{ts_hostname}.#{ts_network}"
+    config :loomkin, :loomkin_host, composed_host
+    System.put_env("LOOMKIN_HOST", composed_host)
   end
 end
 

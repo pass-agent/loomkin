@@ -3,8 +3,12 @@ import Config
 # Multi-tenant mode is enabled in development for testing social features
 config :loomkin, :multi_tenant, true
 
-# Use Docker Postgres port by default; override with DB_PORT for system-installed Postgres
-config :loomkin, Loomkin.Repo, port: String.to_integer(System.get_env("DB_PORT") || "5488")
+# Database configuration - use DATABASE_URL if set
+if database_url = System.get_env("DATABASE_URL") do
+  config :loomkin, Loomkin.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+end
 
 # Self-edit mode — set LOOMKIN_SELF_EDIT=1 when loomkin agents edit this codebase.
 # Disables code reloader, file watchers, and live reload to prevent restart loops
@@ -19,7 +23,12 @@ self_edit? = System.get_env("LOOMKIN_SELF_EDIT") == "1"
 
 # Development endpoint configuration
 config :loomkin, LoomkinWeb.Endpoint,
-  url: [host: "loom.test", port: 4200],
+  url: [
+    host:
+      System.get_env("LOOMKIN_HOST") || Application.get_env(:loomkin, :loomkin_host) ||
+        "loom.test",
+    port: 4200
+  ],
   http: [ip: {0, 0, 0, 0}, port: 4200],
   check_origin: false,
   code_reloader: not self_edit?,
