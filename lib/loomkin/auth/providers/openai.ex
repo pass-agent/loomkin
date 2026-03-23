@@ -3,8 +3,8 @@ defmodule Loomkin.Auth.Providers.OpenAI do
   OAuth provider adapter for OpenAI (ChatGPT Plus/Pro subscriptions via Codex backend).
 
   Implements OAuth 2.0 + PKCE against OpenAI's auth endpoints, ported from the
-  `opencode-openai-codex-auth` TypeScript plugin. Uses a standard localhost redirect
-  flow (not paste-back).
+  `opencode` Codex plugin. Uses the localhost callback redirect expected by the
+  shared Codex client (`http://localhost:1455/auth/callback`).
 
   ## How it works
 
@@ -17,7 +17,7 @@ defmodule Loomkin.Auth.Providers.OpenAI do
   - URL rewriting: `/responses` → `/codex/responses`
   - Extra required headers: `chatgpt-account-id`, `OpenAI-Beta`, `originator`
   - `store: false` is mandatory in request body
-  - Account ID extracted from JWT access token claims
+  - Account ID extracted from token claims (`id_token` first, then `access_token`)
 
   ## Configuration
 
@@ -39,6 +39,7 @@ defmodule Loomkin.Auth.Providers.OpenAI do
   # OAuth endpoints
   @default_authorize_url "https://auth.openai.com/oauth/authorize"
   @default_token_url "https://auth.openai.com/oauth/token"
+  @default_redirect_uri "http://localhost:1455/auth/callback"
 
   # Standard scopes
   @default_scopes ["openid", "profile", "email", "offline_access"]
@@ -74,9 +75,20 @@ defmodule Loomkin.Auth.Providers.OpenAI do
     get_config(:client_id, @default_client_id)
   end
 
+  @doc """
+  Redirect URI used for OpenAI Codex OAuth.
+
+  The shared Codex client expects `http://localhost:1455/auth/callback`.
+  """
+  @spec redirect_uri() :: String.t()
+  def redirect_uri do
+    @default_redirect_uri
+  end
+
   @impl true
   def build_authorize_url(params) do
-    %{state: state, code_verifier: code_verifier, redirect_uri: redirect_uri} = params
+    %{state: state, code_verifier: code_verifier} = params
+    redirect_uri = redirect_uri()
 
     query =
       [
@@ -90,7 +102,7 @@ defmodule Loomkin.Auth.Providers.OpenAI do
         # Codex-specific params
         {"id_token_add_organizations", "true"},
         {"codex_cli_simplified_flow", "true"},
-        {"originator", "codex_cli_rs"}
+        {"originator", "opencode"}
       ]
       |> URI.encode_query()
 
@@ -99,7 +111,8 @@ defmodule Loomkin.Auth.Providers.OpenAI do
 
   @impl true
   def exchange_code(params) do
-    %{code: code, code_verifier: code_verifier, redirect_uri: redirect_uri} = params
+    %{code: code, code_verifier: code_verifier} = params
+    redirect_uri = redirect_uri()
 
     # OpenAI uses standard form-encoded token exchange (NOT JSON like Anthropic)
     body =
@@ -119,7 +132,7 @@ defmodule Loomkin.Auth.Providers.OpenAI do
     case Req.post(token_url(), body: body, headers: headers) do
       {:ok, %Req.Response{status: 200, body: resp_body}} ->
         access_token = resp_body["access_token"]
-        account_id = extract_account_id(access_token)
+        account_id = extract_account_id(resp_body)
 
         token_data = %{
           access_token: access_token,
@@ -157,7 +170,7 @@ defmodule Loomkin.Auth.Providers.OpenAI do
     case Req.post(token_url(), body: body, headers: headers) do
       {:ok, %Req.Response{status: 200, body: resp_body}} ->
         access_token = resp_body["access_token"]
-        account_id = extract_account_id(access_token)
+        account_id = extract_account_id(resp_body)
 
         token_data = %{
           access_token: access_token,
@@ -225,13 +238,35 @@ defmodule Loomkin.Auth.Providers.OpenAI do
 
   Returns the account ID string or `nil` if not found.
   """
-  @spec extract_account_id(String.t() | nil) :: String.t() | nil
-  def extract_account_id(token) do
-    case decode_jwt_claims(token) do
-      %{@jwt_claim_path => %{"chatgpt_account_id" => id}} when is_binary(id) -> id
-      _ -> nil
+  @spec extract_account_id(String.t() | map() | nil) :: String.t() | nil
+  def extract_account_id(token_or_tokens)
+
+  def extract_account_id(token) when is_binary(token) do
+    token
+    |> decode_jwt_claims()
+    |> extract_account_id_from_claims()
+  end
+
+  def extract_account_id(tokens) when is_map(tokens) do
+    case extract_account_id(tokens["id_token"]) do
+      nil -> extract_account_id(tokens["access_token"])
+      account_id -> account_id
     end
   end
+
+  def extract_account_id(_), do: nil
+
+  defp extract_account_id_from_claims(%{"chatgpt_account_id" => id}) when is_binary(id), do: id
+
+  defp extract_account_id_from_claims(%{@jwt_claim_path => %{"chatgpt_account_id" => id}})
+       when is_binary(id),
+       do: id
+
+  defp extract_account_id_from_claims(%{"organizations" => [%{"id" => id} | _]})
+       when is_binary(id),
+       do: id
+
+  defp extract_account_id_from_claims(_), do: nil
 
   # ── Config helpers ──────────────────────────────────────────────────
 

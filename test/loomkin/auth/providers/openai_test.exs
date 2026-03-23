@@ -54,7 +54,7 @@ defmodule Loomkin.Auth.Providers.OpenAITest do
 
       assert query["response_type"] == "code"
       assert query["client_id"] == "app_EMoamEEZ73f0CkXaXp7hrann"
-      assert query["redirect_uri"] == "http://localhost:4000/auth/openai/callback"
+      assert query["redirect_uri"] == "http://localhost:1455/auth/callback"
       assert query["code_challenge_method"] == "S256"
       assert query["state"] == "test_state_abc123"
       assert query["scope"] != nil
@@ -72,7 +72,7 @@ defmodule Loomkin.Auth.Providers.OpenAITest do
 
       assert query["id_token_add_organizations"] == "true"
       assert query["codex_cli_simplified_flow"] == "true"
-      assert query["originator"] == "codex_cli_rs"
+      assert query["originator"] == "opencode"
     end
 
     test "code_challenge is derived from code_verifier (S256)", %{params: params} do
@@ -188,6 +188,39 @@ defmodule Loomkin.Auth.Providers.OpenAITest do
         })
 
       assert nil == OpenAI.extract_account_id(token)
+    end
+
+    test "extracts account id from id_token payload map" do
+      tokens = %{
+        "id_token" =>
+          build_test_jwt(%{
+            "https://api.openai.com/auth" => %{"chatgpt_account_id" => "acct_from_id_token"}
+          }),
+        "access_token" => build_test_jwt(%{"sub" => "user_123"})
+      }
+
+      assert "acct_from_id_token" == OpenAI.extract_account_id(tokens)
+    end
+
+    test "falls back to access_token when id_token is missing account id" do
+      tokens = %{
+        "id_token" => build_test_jwt(%{"sub" => "user_123"}),
+        "access_token" =>
+          build_test_jwt(%{
+            "https://api.openai.com/auth" => %{"chatgpt_account_id" => "acct_from_access_token"}
+          })
+      }
+
+      assert "acct_from_access_token" == OpenAI.extract_account_id(tokens)
+    end
+
+    test "falls back to first organization id claim" do
+      token =
+        build_test_jwt(%{
+          "organizations" => [%{"id" => "org_abc123"}]
+        })
+
+      assert "org_abc123" == OpenAI.extract_account_id(token)
     end
   end
 

@@ -198,7 +198,7 @@ defmodule Loomkin.Providers.OpenAIOAuth do
     |> Req.Request.put_header("authorization", "Bearer #{oauth_token}")
     |> Req.Request.put_header("chatgpt-account-id", account_id || "")
     |> Req.Request.put_header("openai-beta", "responses=experimental")
-    |> Req.Request.put_header("originator", "codex_cli_rs")
+    |> Req.Request.put_header("originator", "opencode")
     |> Req.Request.put_header("accept", "text/event-stream")
     |> Req.Request.merge_options([model: get_api_model_id(model)] ++ req_opts)
     |> Req.Request.put_private(:req_llm_model, model)
@@ -218,6 +218,7 @@ defmodule Loomkin.Providers.OpenAIOAuth do
       {:ok, body_map} ->
         patched =
           body_map
+          |> inject_instructions_from_input()
           |> Map.put("store", false)
           |> Map.put("stream", true)
 
@@ -286,7 +287,7 @@ defmodule Loomkin.Providers.OpenAIOAuth do
         {"Authorization", "Bearer #{oauth_token}"},
         {"chatgpt-account-id", account_id || ""},
         {"OpenAI-Beta", "responses=experimental"},
-        {"originator", "codex_cli_rs"}
+        {"originator", "opencode"}
       ]
 
       body = build_stream_body(model, context, translated_opts)
@@ -305,7 +306,30 @@ defmodule Loomkin.Providers.OpenAIOAuth do
 
   @impl ReqLLM.Provider
   def decode_stream_event(event, model) do
-    @openai.decode_stream_event(event, model)
+    @responses_api.decode_stream_event(event, model)
+  end
+
+  @doc false
+  def inject_instructions_from_input(body_map) when not is_map(body_map), do: body_map
+
+  def inject_instructions_from_input(body_map) do
+    input = Map.get(body_map, "input", [])
+
+    {system_items, non_system_items} =
+      Enum.split_with(input, fn item ->
+        is_map(item) and item["role"] == "system"
+      end)
+
+    instructions =
+      system_items
+      |> Enum.flat_map(fn item -> extract_system_text(item["content"]) end)
+      |> Enum.join("\n")
+      |> String.trim()
+
+    body_map
+    |> Map.delete("max_output_tokens")
+    |> Map.put("input", non_system_items)
+    |> maybe_put_instructions(instructions)
   end
 
   @impl ReqLLM.Provider
@@ -376,6 +400,7 @@ defmodule Loomkin.Providers.OpenAIOAuth do
     case Jason.decode(body_str) do
       {:ok, body_map} ->
         body_map
+        |> inject_instructions_from_input()
         |> Map.put("store", false)
         |> Map.put("stream", true)
         |> Jason.encode!()
@@ -384,4 +409,22 @@ defmodule Loomkin.Providers.OpenAIOAuth do
         body_str
     end
   end
+
+  defp maybe_put_instructions(body_map, ""), do: body_map
+
+  defp maybe_put_instructions(body_map, instructions),
+    do: Map.put(body_map, "instructions", instructions)
+
+  defp extract_system_text(content) when is_list(content) do
+    Enum.flat_map(content, fn
+      %{"type" => type, "text" => text}
+      when type in ["input_text", "text"] and is_binary(text) and text != "" ->
+        [text]
+
+      _ ->
+        []
+    end)
+  end
+
+  defp extract_system_text(_), do: []
 end

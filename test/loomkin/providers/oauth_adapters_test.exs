@@ -145,6 +145,61 @@ defmodule Loomkin.Providers.OAuthAdaptersTest do
     end
   end
 
+  describe "OpenAIOAuth codex request shaping" do
+    test "moves system input text into instructions" do
+      body = %{
+        "input" => [
+          %{
+            "role" => "system",
+            "content" => [%{"type" => "input_text", "text" => "be concise"}]
+          },
+          %{
+            "role" => "user",
+            "content" => [%{"type" => "input_text", "text" => "hello"}]
+          }
+        ]
+      }
+
+      patched = OpenAIOAuth.inject_instructions_from_input(body)
+
+      assert patched["instructions"] == "be concise"
+      assert Enum.all?(patched["input"], &(&1["role"] != "system"))
+    end
+
+    test "drops max_output_tokens for codex backend" do
+      body = %{
+        "input" => [
+          %{
+            "role" => "user",
+            "content" => [%{"type" => "input_text", "text" => "hello"}]
+          }
+        ],
+        "max_output_tokens" => 1024
+      }
+
+      patched = OpenAIOAuth.inject_instructions_from_input(body)
+
+      refute Map.has_key?(patched, "max_output_tokens")
+    end
+
+    test "decodes responses api stream deltas" do
+      {:ok, model} = ReqLLM.model("openai:gpt-5.3-codex")
+
+      event = %{
+        data: %{
+          "event" => "response.output_text.delta",
+          "delta" => "hello"
+        }
+      }
+
+      chunks = OpenAIOAuth.decode_stream_event(event, model)
+
+      assert Enum.any?(chunks, fn chunk ->
+               chunk.type == :content and chunk.text == "hello"
+             end)
+    end
+  end
+
   # ── Helpers ────────────────────────────────────────────────────────
 
   defp store_test_token(provider, access_token) do

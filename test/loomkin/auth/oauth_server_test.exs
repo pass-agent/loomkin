@@ -4,11 +4,22 @@ defmodule Loomkin.Auth.OAuthServerTest do
   # async: false because OAuthServer is a singleton GenServer.
 
   alias Loomkin.Auth.OAuthServer
+  alias Loomkin.Auth.OpenAICallbackServer
+
+  @openai_callback_test_port 14_557
 
   setup do
+    Application.put_env(:loomkin, :openai_callback_port, @openai_callback_test_port)
+    OpenAICallbackServer.stop()
+
     unless Process.whereis(OAuthServer) do
       flunk("OAuthServer GenServer is not running — cannot run integration tests")
     end
+
+    on_exit(fn ->
+      OpenAICallbackServer.stop()
+      Application.delete_env(:loomkin, :openai_callback_port)
+    end)
 
     :ok
   end
@@ -37,6 +48,21 @@ defmodule Loomkin.Auth.OAuthServerTest do
                  "Expected a meaningful error reason, got nil"
       end
     end
+
+    test "starts local openai callback bandit server on configured port" do
+      assert {:ok, _url, :redirect} =
+               OAuthServer.start_flow(:openai, "http://localhost:4000/auth/openai/callback")
+
+      assert {:ok, socket} =
+               :gen_tcp.connect(
+                 {127, 0, 0, 1},
+                 @openai_callback_test_port,
+                 [:binary, active: false],
+                 1_000
+               )
+
+      :gen_tcp.close(socket)
+    end
   end
 
   describe "flow_active?/1" do
@@ -46,10 +72,7 @@ defmodule Loomkin.Auth.OAuthServerTest do
     end
 
     test "returns false for provider with no active flow" do
-      # Start and complete/clear any stale anthropic flow, then check a different provider
-      # that we haven't started a flow for. We can't fully guarantee google has no flow,
-      # but if the previous test started one for anthropic only, google should be clean.
-      refute OAuthServer.flow_active?(:openai)
+      refute OAuthServer.flow_active?(:provider_without_flow)
     end
   end
 

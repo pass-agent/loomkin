@@ -106,28 +106,29 @@ defmodule Loomkin.Auth.OAuthServer do
     code_verifier = Provider.generate_code_verifier()
     state_token = Provider.generate_state()
 
-    case provider_mod.build_authorize_url(%{
-           state: state_token,
-           code_verifier: code_verifier,
-           redirect_uri: redirect_uri
-         }) do
-      {:ok, authorize_url} ->
-        # Schedule expiry cleanup
-        timer_ref = Process.send_after(self(), {:flow_expired, state_token}, @flow_timeout_ms)
+    with :ok <- maybe_ensure_openai_callback_server(provider),
+         {:ok, authorize_url} <-
+           provider_mod.build_authorize_url(%{
+             state: state_token,
+             code_verifier: code_verifier,
+             redirect_uri: redirect_uri
+           }) do
+      # Schedule expiry cleanup
+      timer_ref = Process.send_after(self(), {:flow_expired, state_token}, @flow_timeout_ms)
 
-        flow = %{
-          provider: provider,
-          code_verifier: code_verifier,
-          redirect_uri: redirect_uri,
-          state_token: state_token,
-          flow_type: flow_type,
-          timer_ref: timer_ref,
-          started_at: System.monotonic_time(:millisecond)
-        }
+      flow = %{
+        provider: provider,
+        code_verifier: code_verifier,
+        redirect_uri: redirect_uri,
+        state_token: state_token,
+        flow_type: flow_type,
+        timer_ref: timer_ref,
+        started_at: System.monotonic_time(:millisecond)
+      }
 
-        new_state = put_in(state.flows[state_token], flow)
-        {:reply, {:ok, authorize_url, flow_type}, new_state}
-
+      new_state = put_in(state.flows[state_token], flow)
+      {:reply, {:ok, authorize_url, flow_type}, new_state}
+    else
       {:error, reason} ->
         {:reply, {:error, {:authorize_url_failed, reason}}, state}
     end
@@ -257,4 +258,10 @@ defmodule Loomkin.Auth.OAuthServer do
   rescue
     ArgumentError -> :ok
   end
+
+  defp maybe_ensure_openai_callback_server(:openai) do
+    Loomkin.Auth.OpenAICallbackServer.ensure_started()
+  end
+
+  defp maybe_ensure_openai_callback_server(_provider), do: :ok
 end
