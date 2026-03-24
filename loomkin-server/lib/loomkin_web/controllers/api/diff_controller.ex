@@ -3,7 +3,7 @@ defmodule LoomkinWeb.Api.DiffController do
 
   @doc "GET /api/v1/diff?file=<path>&staged=<bool>"
   def index(conn, params) do
-    project_path = Loomkin.Config.project_path()
+    project_path = Loomkin.Config.get(:project_path)
     staged = params["staged"] == "true"
     file = params["file"]
 

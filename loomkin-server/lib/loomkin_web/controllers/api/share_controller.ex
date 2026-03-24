@@ -53,7 +53,7 @@ defmodule LoomkinWeb.Api.ShareController do
     }
   end
 
-  defp share_url(conn, token) do
+  defp share_url(_conn, token) do
     "#{LoomkinWeb.Endpoint.url()}/s/#{token}"
   end
 
