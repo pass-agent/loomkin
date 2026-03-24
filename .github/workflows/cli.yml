@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: oven-sh/setup-bun@735343b667d3e6a980af5e6a03acb6bd6a9e2a61 # v2.0.2
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
 
       - uses: pnpm/action-setup@fe02b34f77f8bc703c22d82ef19c587e31ddc8ee # v4.1.0
 
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: oven-sh/setup-bun@735343b667d3e6a980af5e6a03acb6bd6a9e2a61 # v2.0.2
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
 
       - uses: pnpm/action-setup@fe02b34f77f8bc703c22d82ef19c587e31ddc8ee # v4.1.0
 
@@ -56,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: oven-sh/setup-bun@735343b667d3e6a980af5e6a03acb6bd6a9e2a61 # v2.0.2
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
 
       - uses: pnpm/action-setup@fe02b34f77f8bc703c22d82ef19c587e31ddc8ee # v4.1.0
 

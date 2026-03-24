@@ -46,8 +46,7 @@ defmodule LoomkinWeb.Api.McpController do
     %{
       enabled: Server.enabled?(),
       tools:
-        Server.__mcp_config__()
-        |> get_in([:publish, :tools])
+        Server.tools()
         |> Enum.map(fn mod ->
           name =
             mod

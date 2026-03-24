@@ -87,8 +87,8 @@ defmodule LoomkinWeb.Api.FilesController do
 
   defp project_path(conn) do
     case conn.assigns[:current_scope] do
-      %{user: _user} -> Loomkin.Config.project_path()
-      _ -> Loomkin.Config.project_path()
+      %{user: _user} -> Loomkin.Config.get(:project_path)
+      _ -> Loomkin.Config.get(:project_path)
     end
   end
 

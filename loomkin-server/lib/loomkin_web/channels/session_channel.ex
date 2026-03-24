@@ -409,19 +409,6 @@ defmodule LoomkinWeb.SessionChannel do
       :error
   end
 
-  defp serialize_message(message) do
-    %{
-      id: message.id,
-      role: to_string(message.role),
-      content: message.content,
-      tool_calls: message.tool_calls,
-      tool_call_id: message.tool_call_id,
-      token_count: message.token_count,
-      agent_name: message.agent_name,
-      inserted_at: NaiveDateTime.to_iso8601(message.inserted_at)
-    }
-  end
-
   defp serialize_signal_message(msg) when is_map(msg) do
     %{
       id: msg[:id] || msg[:message_id] || Ecto.UUID.generate(),
