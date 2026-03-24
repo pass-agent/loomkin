@@ -20,7 +20,22 @@ Before you start, make sure you have:
 - **PostgreSQL 17** -- running locally or via Docker
 - **Node.js 22** -- for asset compilation
 
-You can verify your setup with:
+### Setup mise
+
+If you don't have mise installed, run:
+
+```bash
+curl https://mise.run | sh
+```
+
+Then activate it in your shell (add to `~/.zshrc` or `~/.bashrc`):
+
+```bash
+eval "$(mise activate zsh)"  # for zsh
+eval "$(mise activate bash)" # for bash
+```
+
+Verify your setup with:
 
 ```bash
 elixir --version
@@ -42,6 +57,8 @@ node --version
    ```bash
    make setup
    ```
+
+   This installs mise (if needed) and all dependencies pinned in `.mise.toml` and `mix.exs`.
 
 3. **Start the dev server:**
 
