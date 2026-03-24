@@ -25,6 +25,8 @@ defmodule LoomkinWeb.Api.SessionController do
       nil -> {:error, :not_found}
       session -> json(conn, %{session: serialize_session(session)})
     end
+  rescue
+    Ecto.Query.CastError -> {:error, :not_found}
   end
 
   @doc "POST /api/v1/sessions"
@@ -72,6 +74,22 @@ defmodule LoomkinWeb.Api.SessionController do
 
           {:error, changeset} ->
             {:error, changeset}
+        end
+    end
+  end
+
+  @doc "PATCH /api/v1/sessions/:id"
+  def update(conn, %{"id" => id, "session" => params}) do
+    case Persistence.get_session(id) do
+      nil ->
+        {:error, :not_found}
+
+      session ->
+        allowed = Map.take(params, ["title"])
+
+        case Persistence.update_session(session, allowed) do
+          {:ok, session} -> json(conn, %{session: serialize_session(session)})
+          {:error, changeset} -> {:error, changeset}
         end
     end
   end

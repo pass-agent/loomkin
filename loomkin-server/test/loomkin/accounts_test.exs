@@ -85,6 +85,36 @@ defmodule Loomkin.AccountsTest do
       assert is_nil(user.confirmed_at)
       assert is_nil(user.password)
     end
+
+    test "registers users with password" do
+      email = unique_user_email()
+
+      {:ok, user} =
+        Accounts.register_user(%{email: email, password: "valid_password_123"})
+
+      assert user.email == email
+      assert is_binary(user.hashed_password)
+      assert is_nil(user.password)
+    end
+
+    test "validates password min length on registration" do
+      email = unique_user_email()
+
+      {:error, changeset} =
+        Accounts.register_user(%{email: email, password: "short"})
+
+      assert "should be at least 12 character(s)" in errors_on(changeset).password
+    end
+
+    test "validates password max length on registration" do
+      email = unique_user_email()
+      too_long = String.duplicate("a", 73)
+
+      {:error, changeset} =
+        Accounts.register_user(%{email: email, password: too_long})
+
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
+    end
   end
 
   describe "sudo_mode?/2" do

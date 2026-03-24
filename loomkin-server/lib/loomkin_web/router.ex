@@ -28,6 +28,7 @@ defmodule LoomkinWeb.Router do
     post "/auth/register", AuthController, :register
     post "/auth/login", AuthController, :login
     post "/auth/login/confirm", AuthController, :confirm
+    post "/auth/anonymous", AuthController, :anonymous
   end
 
   # Authenticated API routes (bearer token required)
@@ -37,7 +38,7 @@ defmodule LoomkinWeb.Router do
     post "/auth/logout", AuthController, :logout
     get "/auth/me", AuthController, :me
 
-    resources "/sessions", SessionController, only: [:index, :show, :create]
+    resources "/sessions", SessionController, only: [:index, :show, :create, :update]
     get "/sessions/:id/messages", SessionController, :messages
     post "/sessions/:id/messages", SessionController, :send_message
     patch "/sessions/:id/archive", SessionController, :archive
@@ -51,7 +52,23 @@ defmodule LoomkinWeb.Router do
     get "/settings", SettingController, :index
     put "/settings", SettingController, :update
 
+    get "/mcp", McpController, :index
+    post "/mcp/refresh", McpController, :refresh
+
+    get "/diff", DiffController, :index
+
+    get "/files", FilesController, :index
+    get "/files/read", FilesController, :read
+    get "/files/search", FilesController, :search
+    get "/files/grep", FilesController, :grep
+
+    get "/decisions", DecisionController, :index
+
     resources "/backlog", BacklogController, except: [:new, :edit]
+
+    post "/sessions/:session_id/shares", ShareController, :create
+    get "/sessions/:session_id/shares", ShareController, :index
+    delete "/shares/:id", ShareController, :delete
   end
 
   # CORS preflight for API routes

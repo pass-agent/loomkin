@@ -27,6 +27,29 @@ defmodule LoomkinWeb.Api.AuthController do
   end
 
   @doc """
+  POST /api/v1/auth/anonymous
+  Creates an anonymous user account and returns a bearer token.
+  """
+  def anonymous(conn, _params) do
+    anon_email = "anon-#{Base.url_encode64(:crypto.strong_rand_bytes(12))}@anonymous.local"
+
+    case Accounts.register_user(%{email: anon_email}) do
+      {:ok, user} ->
+        token = Accounts.generate_user_session_token(user)
+
+        conn
+        |> put_status(:created)
+        |> json(%{
+          token: Base.url_encode64(token),
+          user: serialize_user(user)
+        })
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
   POST /api/v1/auth/login
   If `password` is provided and valid, returns a bearer token directly.
   Otherwise sends a magic link login email and returns 200 regardless of whether the email exists.

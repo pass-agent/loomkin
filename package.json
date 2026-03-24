@@ -1,8 +1,14 @@
 {
   "private": true,
   "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "lint:js": "oxlint apps/ packages/",
+    "fmt:js": "oxc format --write apps/ packages/",
+    "fmt:js:check": "oxc format --check apps/ packages/"
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.0.0",
-    "@commitlint/config-conventional": "^20.0.0"
+    "@commitlint/config-conventional": "^20.0.0",
+    "oxlint": "^1.1.0"
   }
 }

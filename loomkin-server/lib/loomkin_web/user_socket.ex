@@ -8,13 +8,12 @@ defmodule LoomkinWeb.UserSocket do
   channel "team:*", LoomkinWeb.TeamChannel
 
   @impl true
-  def connect(%{"token" => token}, socket, _connect_info) do
-    case Accounts.get_user_by_session_token(token) do
-      {user, _token_inserted_at} ->
-        {:ok, assign(socket, :current_scope, Scope.for_user(user))}
-
-      nil ->
-        :error
+  def connect(%{"token" => encoded_token}, socket, _connect_info) do
+    with {:ok, token} <- Base.url_decode64(encoded_token),
+         {user, _token_inserted_at} <- Accounts.get_user_by_session_token(token) do
+      {:ok, assign(socket, :current_scope, Scope.for_user(user))}
+    else
+      _ -> :error
     end
   end
 
