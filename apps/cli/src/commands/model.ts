@@ -3,7 +3,7 @@ import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { listModelProviders } from "../lib/api.js";
 import { extractErrorMessage } from "../lib/errors.js";
-import type { Model, ModelProvider } from "../lib/types.js";
+import type { ModelProvider } from "../lib/types.js";
 
 function isConfigured(provider: ModelProvider): boolean {
   const s = provider.status;
