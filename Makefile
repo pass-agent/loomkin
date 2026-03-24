@@ -3,10 +3,12 @@
 SERVER_DIR := loomkin-server
 MOBILE_DIR := apps/mobile
 DESKTOP_DIR := apps/desktop
+CLI_DIR := apps/cli
 
 .PHONY: help setup dev self-edit test format db.up db.down db.reset dev.up dev.down \
 	mobile.dev mobile.ios mobile.android mobile.test \
 	desktop.dev desktop.build \
+	cli.dev cli.build cli.test cli.type cli.lint cli.fmt \
 	mobile.e2e.build mobile.e2e.seed mobile.e2e.ios mobile.e2e.android
 
 help:          ## Show available targets
@@ -74,6 +76,26 @@ desktop.dev:   ## Start Tauri desktop in dev mode
 
 desktop.build: ## Build Tauri desktop app
 	cd $(DESKTOP_DIR) && pnpm tauri:build
+
+# ── CLI ────────────────────────────────────────────────────────────────
+
+cli.dev:       ## Start CLI TUI in dev mode
+	cd $(CLI_DIR) && bun run dev
+
+cli.build:     ## Build CLI for distribution
+	cd $(CLI_DIR) && bun run build
+
+cli.test:      ## Run CLI tests
+	cd $(CLI_DIR) && bun run test
+
+cli.type:      ## Type-check CLI source files
+	cd $(CLI_DIR) && pnpm typecheck
+
+cli.lint:      ## Lint CLI source files
+	cd $(CLI_DIR) && pnpm lint
+
+cli.fmt:       ## Format CLI source files
+	cd $(CLI_DIR) && pnpm fmt
 
 # ── E2E ────────────────────────────────────────────────────────────────
 

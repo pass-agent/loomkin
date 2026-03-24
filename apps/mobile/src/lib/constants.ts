@@ -14,13 +14,13 @@ const DEV_API_URL = Platform.select({
 
 export const API_BASE_URL = __DEV__
   ? DEV_API_URL
-  : "https://api.loomkin.com";
+  : "https://api.loomkin.dev";
 
 export const API_URL = `${API_BASE_URL}/api/v1`;
 
 export const WS_URL = __DEV__
   ? `ws://${DEV_API_URL?.replace(/^https?:\/\//, "")}/socket`
-  : "wss://api.loomkin.com/socket";
+  : "wss://api.loomkin.dev/socket";
 
 export const SECURE_STORE_KEYS = {
   AUTH_TOKEN: "loomkin_auth_token",

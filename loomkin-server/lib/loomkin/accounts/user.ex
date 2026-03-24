@@ -23,6 +23,19 @@ defmodule Loomkin.Accounts.User do
     |> cast(attrs, [:email, :username, :display_name, :avatar_url])
     |> validate_email(opts)
     |> validate_username(opts)
+    |> maybe_apply_password(attrs, opts)
+  end
+
+  defp maybe_apply_password(changeset, attrs, _opts) do
+    password = attrs[:password] || attrs["password"]
+
+    if is_binary(password) and password != "" do
+      changeset
+      |> cast(attrs, [:password])
+      |> validate_password([])
+    else
+      changeset
+    end
   end
 
   @doc """

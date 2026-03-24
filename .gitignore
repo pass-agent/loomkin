@@ -18,9 +18,10 @@ loomkin-server/priv/static/assets/
 loomkin-server/assets/node_modules/
 npm-debug.log
 
-# Root-level JS tooling
-/node_modules/
+# JS tooling
+node_modules/
 /package-lock.json
+dist/
 
 # Database files
 *.db
@@ -47,13 +48,11 @@ npm-debug.log
 apps/mobile/.expo/
 apps/mobile/ios/
 apps/mobile/android/
-apps/mobile/node_modules/
 apps/mobile/e2e/fixtures/test-user.json
 apps/mobile/e2e/reports/
 
 # Tauri (desktop app)
 apps/desktop/src-tauri/target/
-apps/desktop/node_modules/
 
 # Deciduous (local tooling, not part of the project)
 .deciduous/

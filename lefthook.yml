@@ -11,6 +11,10 @@ pre-commit:
       glob: "apps/desktop/src/**/*.{ts,tsx}"
       run: cd apps/desktop && pnpm tsc --noEmit 2>/dev/null || true
       fail_text: "Desktop TypeScript errors found"
+    cli-lint:
+      glob: "apps/cli/src/**/*.{ts,tsx}"
+      run: cd apps/cli && pnpm tsc --noEmit 2>/dev/null || true
+      fail_text: "CLI TypeScript errors found"
 
 commit-msg:
   commands:
