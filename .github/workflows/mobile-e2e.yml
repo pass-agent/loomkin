@@ -31,6 +31,12 @@ jobs:
           elixir-version: '1.20.0-rc.3'
           otp-version: '28'
 
+      - name: Start PostgreSQL
+        run: |
+          brew services start postgresql@14
+          sleep 3
+          /opt/homebrew/opt/postgresql@14/bin/createuser -s postgres || true
+
       - name: Start Phoenix server
         run: |
           cd loomkin-server
@@ -40,6 +46,7 @@ jobs:
           mix phx.server &
         env:
           MIX_ENV: test
+          DB_PORT: 5432
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
@@ -65,6 +72,21 @@ jobs:
   e2e-android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: loomkin_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +121,7 @@ jobs:
           mix phx.server &
         env:
           MIX_ENV: test
+          DB_PORT: 5432
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
