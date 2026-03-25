@@ -33,10 +33,11 @@ jobs:
 
       - name: Start PostgreSQL
         run: |
-          PG=$(brew list | grep "^postgresql@" | sort -V | tail -1)
-          brew services start "$PG"
+          PG=$(ls /opt/homebrew/opt/ | grep "^postgresql@" | sort -V | tail -1)
+          export PATH="/opt/homebrew/opt/${PG}/bin:$PATH"
+          pg_ctl -D "/opt/homebrew/var/${PG}" start
           sleep 3
-          /opt/homebrew/opt/${PG}/bin/createuser -s postgres || true
+          createuser -s postgres || true
 
       - name: Start Phoenix server
         run: |
@@ -48,6 +49,7 @@ jobs:
         env:
           MIX_ENV: test
           DB_PORT: 5432
+          PHX_PORT: 4200
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
@@ -128,6 +130,8 @@ jobs:
         env:
           MIX_ENV: test
           DB_PORT: 5432
+          PHX_PORT: 4200
+          PHX_IP: 0.0.0.0
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
