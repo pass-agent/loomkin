@@ -33,9 +33,10 @@ jobs:
 
       - name: Start PostgreSQL
         run: |
-          brew services start postgresql@14
+          PG=$(brew list | grep "^postgresql@" | sort -V | tail -1)
+          brew services start "$PG"
           sleep 3
-          /opt/homebrew/opt/postgresql@14/bin/createuser -s postgres || true
+          /opt/homebrew/opt/${PG}/bin/createuser -s postgres || true
 
       - name: Start Phoenix server
         run: |
@@ -50,6 +51,9 @@ jobs:
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Build e2e client (iOS)
         run: cd apps/mobile && eas build --profile e2e --platform ios --local --non-interactive
@@ -125,6 +129,9 @@ jobs:
 
       - name: Install mobile deps
         run: cd apps/mobile && pnpm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Build e2e client (Android)
         run: cd apps/mobile && eas build --profile e2e --platform android --local --non-interactive
