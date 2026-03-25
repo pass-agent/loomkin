@@ -15,6 +15,49 @@ enabled = true
 enforce_pre_edit = false
 auto_log_commits = true
 
+# ── Provider Endpoints ───────────────────────────────────────────────
+# Configure OpenAI-compatible endpoints (Ollama, vLLM, SGLang, etc.)
+# URLs must include the path segment (/v1, etc.)
+#
+# All providers support optional `auth_key` for API authentication:
+# - {url = "...", auth_key = "your-key"}
+#
+# Auth header handling is provider-specific:
+# - ollama:  `Authorization: Bearer ollama` (default, auth_key optional)
+# - vllm:    `x-api-key: <auth_key>`
+# - sglang:  `Authorization: Bearer <auth_key>`
+# - lms:     `Authorization: Bearer <key>` (LM Studio CLI)
+# - exo:     `Authorization: Bearer <key>`
+
+[provider.endpoints]
+# Ollama (local) - default, ready to use
+# ollama = { url = "http://localhost:11434/v1" }
+
+# vLLM (self-hosted)
+# vllm = {
+#   url = "http://localhost:8000/v1",
+#   auth_key = "your-api-key"  # optional, sent as x-api-key header
+# }
+
+# SGLang (self-hosted)
+# sglang = {
+#   url = "http://localhost:30000/v1",
+#   auth_key = "your-token"  # optional, sent as Bearer token
+# }
+
+# LM Studio (local, GUI or CLI on Linux)
+# lms = { url = "http://localhost:1234/v1" }
+
+# Exo (distributed inference)
+# exo = {
+#   url = "http://localhost:8080/v1",
+#   auth_key = "your-token"  # optional
+# }
+
+# LiteLLM (multi-provider proxy)
+# litellm = { url = "http://localhost:4000/v1" }
+
+
 # ── OAuth authentication ───────────────────────────────────────────
 # Use your existing provider subscriptions instead of API keys.
 # Visit the Settings page in the web UI to connect.
