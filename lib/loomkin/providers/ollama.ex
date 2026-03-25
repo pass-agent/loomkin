@@ -118,7 +118,16 @@ defmodule Loomkin.Providers.Ollama do
        )}
   end
 
+  # WORKAROUND: req_llm's default_decode_stream_event silently drops SSE events
+  # containing {"error": {...}} payloads (returns []). This intercepts error events
+  # and raises so call_llm's try/rescue can surface the error to the UI.
   @impl ReqLLM.Provider
+  def decode_stream_event(%{data: %{"error" => error_data}} = _event, _model)
+      when is_map(error_data) do
+    message = Map.get(error_data, "message", "Unknown streaming error from Ollama")
+    raise RuntimeError, message: "Ollama streaming error: #{message}"
+  end
+
   def decode_stream_event(event, model),
     do: ReqLLM.Providers.OpenAI.decode_stream_event(event, model)
 
