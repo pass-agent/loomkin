@@ -37,6 +37,11 @@ defmodule Loomkin.LLM do
           ReqLLM.Streaming.start_stream(provider_module, model, context, opts)
         end
 
+      {:endpoint, model, provider_module} ->
+        with {:ok, context} <- ReqLLM.Context.normalize(messages, opts) do
+          ReqLLM.Streaming.start_stream(provider_module, model, context, opts)
+        end
+
       :not_local ->
         case maybe_resolve_oauth(model_spec) do
           {:oauth, model, provider_module} ->
@@ -144,7 +149,7 @@ defmodule Loomkin.LLM do
 
   # Local providers (Ollama, etc.) bypass LLMDB entirely since their models
   # aren't cataloged. We intercept these before OAuth resolution.
-  @spec maybe_resolve_local(term()) :: {:local, struct(), module()} | :not_local
+  @spec maybe_resolve_local(term()) :: {:local | :endpoint, struct(), module()} | :not_local
   defp maybe_resolve_local(model_spec) when is_binary(model_spec) do
     case String.split(model_spec, ":", parts: 2) do
       ["ollama", model_id] ->
@@ -153,6 +158,17 @@ defmodule Loomkin.LLM do
         case ReqLLM.provider(:ollama) do
           {:ok, provider_module} -> {:local, model, provider_module}
           _ -> :not_local
+        end
+
+      [provider_name, model_id] ->
+        # Check for configured endpoint
+        if provider_module =
+             Loomkin.Providers.OpenAICompatibleProvider.get_endpoint_provider(provider_name) do
+          # Build model via the dynamically created provider module
+          model = provider_module.build_model(model_id)
+          {:endpoint, model, provider_module}
+        else
+          :not_local
         end
 
       _ ->

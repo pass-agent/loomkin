@@ -55,7 +55,11 @@ defmodule Loomkin.Models do
 
     local_models = fetch_ollama_models()
 
-    (local_models ++ cloud_models)
+    endpoint_models =
+      Loomkin.Providers.OpenAICompatibleProvider.get_all_endpoints()
+      |> Enum.flat_map(&fetch_endpoint_models/1)
+
+    (endpoint_models ++ local_models ++ cloud_models)
     |> Enum.sort_by(fn {name, _} -> name end)
   end
 
@@ -165,7 +169,9 @@ defmodule Loomkin.Models do
 
     ollama_entry = build_ollama_provider_entry()
 
-    (ollama_entry ++ cloud_providers)
+    endpoint_entries = build_endpoint_provider_entries()
+
+    (endpoint_entries ++ ollama_entry ++ cloud_providers)
     |> Enum.sort_by(fn {_p, name, status, _m} ->
       priority =
         case status do
@@ -236,7 +242,7 @@ defmodule Loomkin.Models do
 
   # ── Ollama (local) helpers ──────────────────────────────────────────
 
-  defp fetch_ollama_models do
+  defp fetch_ollama_models() do
     case Loomkin.Providers.Ollama.list_models() do
       {:ok, models} ->
         entries =
@@ -288,6 +294,42 @@ defmodule Loomkin.Models do
     end
   end
 
+  defp build_endpoint_provider_entries do
+    Loomkin.Providers.OpenAICompatibleProvider.get_all_endpoints()
+    |> Enum.reject(&(&1 == "ollama"))
+    |> Enum.flat_map(fn provider ->
+      base_url =
+        case Loomkin.Config.get_provider_endpoint(provider) do
+          %{url: url} when is_binary(url) and url != "" -> String.trim_trailing(url, "/")
+          %{"url" => url} when is_binary(url) and url != "" -> String.trim_trailing(url, "/")
+          _ -> nil
+        end
+
+      if base_url do
+        url = "#{base_url}/models"
+
+        case Req.get(url, receive_timeout: 5_000, retry: false) do
+          {:ok, %Req.Response{status: 200, body: %{"data" => data}}} ->
+            entries =
+              data
+              |> Enum.map(fn m ->
+                name = m["id"] || m["name"]
+                {name, "#{provider}:#{name}", "endpoint"}
+              end)
+
+            display_name = String.capitalize(to_string(provider))
+            [{String.to_atom(provider), "#{display_name} (Endpoint)", :local, entries}]
+
+          _ ->
+            display_name = String.capitalize(to_string(provider))
+            [{String.to_atom(provider), "#{display_name} (Endpoint)", :local_offline, []}]
+        end
+      else
+        []
+      end
+    end)
+  end
+
   defp format_ollama_size(nil), do: "local"
 
   defp format_ollama_size(bytes) when is_integer(bytes) and bytes >= 1_000_000_000 do
@@ -299,4 +341,45 @@ defmodule Loomkin.Models do
   end
 
   defp format_ollama_size(_), do: "local"
+
+  # ── Endpoint helpers ────────────────────────────────────────────────
+
+  defp fetch_endpoint_models(provider) do
+    case provider do
+      "ollama" -> fetch_ollama_models()
+      _ -> fetch_openai_compat_models(provider)
+    end
+  end
+
+  defp fetch_openai_compat_models(provider) do
+    base_url =
+      case Loomkin.Config.get_provider_endpoint(provider) do
+        %{url: url} when is_binary(url) and url != "" -> String.trim_trailing(url, "/")
+        %{"url" => url} when is_binary(url) and url != "" -> String.trim_trailing(url, "/")
+        _ -> nil
+      end
+
+    if base_url do
+      url = "#{base_url}/models"
+
+      case Req.get(url, receive_timeout: 5_000, retry: false) do
+        {:ok, %Req.Response{status: 200, body: %{"data" => data}}} ->
+          entries =
+            data
+            |> Enum.map(fn m ->
+              name = m["id"] || m["name"]
+              {name, "#{provider}:#{name}"}
+            end)
+
+          if entries == [],
+            do: [],
+            else: [{"#{String.capitalize(to_string(provider))}", entries}]
+
+        _ ->
+          []
+      end
+    else
+      []
+    end
+  end
 end
