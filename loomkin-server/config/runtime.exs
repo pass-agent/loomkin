@@ -13,12 +13,6 @@ if model = System.get_env("LOOMKIN_MODEL") do
   config :loomkin, default_model: model
 end
 
-# Ollama local LLM configuration
-# Default: http://localhost:11434
-if ollama_host = System.get_env("OLLAMA_HOST") do
-  config :loomkin, ollama_host: ollama_host
-end
-
 if database_url = System.get_env("DATABASE_URL") do
   config :loomkin, Loomkin.Repo,
     url: database_url,

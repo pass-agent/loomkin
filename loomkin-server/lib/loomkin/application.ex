@@ -86,6 +86,10 @@ defmodule Loomkin.Application do
         {Registry, keys: :unique, name: Loomkin.Conversations.Registry},
         {DynamicSupervisor, name: Loomkin.Conversations.Supervisor, strategy: :one_for_one},
 
+        # OpenAI-compatible endpoint provider registry
+        {Registry, keys: :duplicate, name: :endpoint_provider_registry},
+        Loomkin.Providers.OpenAICompatibleProvider,
+
         # Channel adapters (Telegram, Discord)
         Loomkin.Channels.Supervisor,
 

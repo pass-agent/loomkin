@@ -69,6 +69,16 @@ defmodule Loomkin.Config do
       default_max_rounds: 8,
       default_strategy: "round_robin"
     },
+    provider: %{
+      endpoints: %{
+        ollama: %{url: "http://localhost:11434/v1", auth_key: nil},
+        vllm: %{url: nil, auth_key: nil},
+        sglang: %{url: nil, auth_key: nil},
+        litellm: %{url: nil, auth_key: nil},
+        lms: %{url: "http://localhost:1234/v1", auth_key: nil},
+        exo: %{url: "http://localhost:8080/v1", auth_key: nil}
+      }
+    },
     teams: %{
       orchestrator_mode: true,
       consensus: %{
@@ -193,6 +203,34 @@ defmodule Loomkin.Config do
     @table
     |> :ets.tab2list()
     |> Map.new()
+  end
+
+  @doc """
+  Get endpoint configuration for a provider.
+  Returns: `%{url: String.t(), auth_key: String.t() | nil}`
+  """
+  def get_provider_endpoint(provider_name)
+      when is_binary(provider_name) or is_atom(provider_name) do
+    str_key = to_string(provider_name)
+
+    atom_key =
+      try do
+        String.to_existing_atom(str_key)
+      rescue
+        ArgumentError -> nil
+      end
+
+    case get(:provider, :endpoints) do
+      %{} = ep ->
+        cond do
+          atom_key != nil and Map.has_key?(ep, atom_key) -> Map.get(ep, atom_key)
+          Map.has_key?(ep, str_key) -> Map.get(ep, str_key)
+          true -> %{}
+        end
+
+      _ ->
+        %{}
+    end
   end
 
   def defaults, do: @defaults
@@ -324,6 +362,7 @@ defmodule Loomkin.Config do
     healing budget_usd max_attempts timeout_ms
     rebalancer_check_interval_ms stuck_threshold_ms max_nudges
     complexity_check_interval_ms complexity_threshold spawn_cooldown_ms
+    provider endpoints ollama vllm sglang litellm lms exo auth_key
     debate round_timeout_ms
     max_nesting_depth
     conversations inactivity_timeout_ms max_personas default_max_rounds default_strategy
