@@ -57,6 +57,8 @@ jobs:
 
       - name: Build e2e client (iOS)
         run: cd apps/mobile && eas build --profile e2e --platform ios --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Run Maestro (iOS)
         run: |
@@ -135,6 +137,8 @@ jobs:
 
       - name: Build e2e client (Android)
         run: cd apps/mobile && eas build --profile e2e --platform android --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Run Maestro (Android)
         uses: reactivecircus/android-emulator-runner@v2
