@@ -2,45 +2,38 @@ defmodule Loomkin.Providers.Ollama do
   @moduledoc """
   ReqLLM provider for Ollama local LLM inference.
 
-  Ollama exposes an OpenAI-compatible API at `http://localhost:11434/v1/`,
-  so this provider delegates body encoding/decoding to the stock OpenAI
-  ChatAPI driver. The key differences from stock OpenAI:
+  Delegates OpenAI-compatible request handling to `Loomkin.Providers.OpenAICompatibleProvider`
+  and adds Ollama-specific functionality:
 
-  - Base URL: `http://localhost:11434/v1` (configurable via `OLLAMA_HOST`)
-  - Auth: No API key required (sends `"ollama"` as a dummy bearer token)
-  - Model resolution: Builds synthetic `LLMDB.Model` structs since Ollama
-    models aren't in LLMDB
+  - Native `/api/tags` model discovery
+  - Availability checks
+  - Default `Bearer ollama` auth token
 
   ## Usage
 
-      # After registration, use "ollama:model_name" as the model spec:
       Loomkin.LLM.stream_text("ollama:qwen3:8b", messages, opts)
 
   ## Configuration
 
-      # Default: http://localhost:11434
-      export OLLAMA_HOST=http://192.168.1.10:11434
+      [provider.endpoints]
+      ollama = { url = "http://localhost:11434/v1" }
+      # ollama = { url = "http://localhost:11434/v1", auth_key = "custom-token" }
   """
 
   use ReqLLM.Provider,
     id: :ollama,
     default_base_url: "http://localhost:11434/v1"
 
-  @chat_api ReqLLM.Providers.OpenAI.ChatAPI
+  alias Loomkin.Providers.OpenAICompatibleProvider
 
   # ── Registration ────────────────────────────────────────────────────
 
-  def register! do
-    ReqLLM.Providers.register!(__MODULE__)
-  end
+  def register!, do: ReqLLM.Providers.register!(__MODULE__)
 
   # ── Model Resolution ────────────────────────────────────────────────
 
   @doc """
   Builds a synthetic LLMDB.Model struct for an Ollama model.
-
-  Since Ollama models aren't cataloged in LLMDB, we construct a minimal
-  model struct with sensible defaults.
   """
   def build_model(model_id) do
     LLMDB.Model.new!(%{
@@ -60,7 +53,7 @@ defmodule Loomkin.Providers.Ollama do
     })
   end
 
-  # ── Provider callbacks ──────────────────────────────────────────────
+  # ── Provider callbacks (delegated to OpenAICompat) ─────────────────
 
   @impl ReqLLM.Provider
   def prepare_request(:chat, model_spec, prompt, opts) do
@@ -68,50 +61,9 @@ defmodule Loomkin.Providers.Ollama do
 
     with {:ok, context} <- ReqLLM.Context.normalize(prompt, opts) do
       opts_with_context = Keyword.put(opts, :context, context)
-      http_opts = Keyword.get(opts, :req_http_options, [])
-      timeout = Keyword.get(opts, :receive_timeout, 120_000)
-
-      req_keys =
-        supported_provider_options() ++
-          [
-            :context,
-            :operation,
-            :model,
-            :provider_options,
-            :api_key,
-            :tools,
-            :tool_choice,
-            :stream,
-            :temperature,
-            :max_tokens,
-            :n,
-            :fixture,
-            :on_unsupported,
-            :receive_timeout,
-            :req_http_options,
-            :base_url,
-            :api_mod
-          ]
 
       request =
-        Req.new(
-          [
-            url: "/chat/completions",
-            method: :post,
-            receive_timeout: timeout,
-            pool_timeout: timeout,
-            connect_options: [timeout: timeout]
-          ] ++ http_opts
-        )
-        |> Req.Request.register_options(req_keys)
-        |> Req.Request.merge_options(
-          Keyword.take(opts_with_context, req_keys) ++
-            [
-              model: model.provider_model_id || model.id,
-              base_url: ollama_base_url(),
-              api_mod: @chat_api
-            ]
-        )
+        OpenAICompatibleProvider.build_chat_request(model, ollama_base_url(), opts_with_context)
         |> attach(model, opts_with_context)
 
       {:ok, request}
@@ -128,70 +80,36 @@ defmodule Loomkin.Providers.Ollama do
 
   @impl ReqLLM.Provider
   def attach(request, model, user_opts) do
-    extra_option_keys = [
-      :model,
-      :temperature,
-      :max_tokens,
-      :api_key,
-      :tools,
-      :tool_choice,
-      :stream,
-      :provider_options,
-      :fixture,
-      :on_unsupported,
-      :n,
-      :receive_timeout,
-      :req_http_options,
-      :base_url,
-      :context,
-      :api_mod
-    ]
-
     request
-    |> Req.Request.register_options(extra_option_keys)
-    |> Req.Request.put_header("content-type", "application/json")
-    |> Req.Request.put_header("authorization", "Bearer ollama")
-    |> Req.Request.merge_options(user_opts)
-    |> Req.Request.put_private(:req_llm_model, model)
-    |> ReqLLM.Step.Error.attach()
-    |> Req.Request.append_request_steps(llm_encode_body: &encode_body/1)
-    |> Req.Request.append_response_steps(llm_decode_response: &decode_response/1)
+    |> maybe_add_auth_header()
+    |> OpenAICompatibleProvider.attach_openai_compat(model, user_opts)
   end
 
   @impl ReqLLM.Provider
-  def encode_body(request) do
-    @chat_api.encode_body(request)
-  end
+  def encode_body(request), do: ReqLLM.Providers.OpenAI.ChatAPI.encode_body(request)
 
   @impl ReqLLM.Provider
-  def decode_response({request, response}) do
-    @chat_api.decode_response({request, response})
-  end
+  def decode_response(pair), do: ReqLLM.Providers.OpenAI.ChatAPI.decode_response(pair)
 
   @impl ReqLLM.Provider
-  def extract_usage(body, model) do
-    ReqLLM.Providers.OpenAI.extract_usage(body, model)
-  end
+  def extract_usage(body, model), do: ReqLLM.Providers.OpenAI.extract_usage(body, model)
 
   @impl ReqLLM.Provider
   def attach_stream(model, context, opts, _finch_name) do
     headers = [
       {"Accept", "text/event-stream"},
       {"Content-Type", "application/json"},
-      {"Authorization", "Bearer ollama"}
+      auth_header()
     ]
 
-    cleaned_opts =
-      opts
-      |> Keyword.delete(:finch_name)
-      |> Keyword.delete(:compiled_schema)
-      |> Keyword.put(:stream, true)
-      |> Keyword.put(:base_url, ollama_base_url())
-
-    body = build_stream_body(model, context, cleaned_opts)
-    url = "#{ollama_base_url()}/chat/completions"
-
-    {:ok, Finch.build(:post, url, headers, Jason.encode!(body))}
+    {:ok,
+     OpenAICompatibleProvider.build_stream_request(
+       model,
+       context,
+       ollama_base_url(),
+       headers,
+       opts
+     )}
   rescue
     error ->
       {:error,
@@ -201,41 +119,35 @@ defmodule Loomkin.Providers.Ollama do
   end
 
   @impl ReqLLM.Provider
-  def decode_stream_event(event, model) do
-    ReqLLM.Providers.OpenAI.decode_stream_event(event, model)
-  end
+  def decode_stream_event(event, model),
+    do: ReqLLM.Providers.OpenAI.decode_stream_event(event, model)
 
   @impl ReqLLM.Provider
-  def translate_options(_operation, _model, opts) do
-    {opts, []}
-  end
+  def translate_options(_operation, _model, opts), do: {opts, []}
 
-  # ── Public helpers ──────────────────────────────────────────────────
+  # ── Ollama-specific public API ─────────────────────────────────────
 
-  @doc """
-  Returns the configured Ollama base URL (OpenAI-compat endpoint).
-  """
+  @doc "Returns the Ollama OpenAI-compat base URL."
   def ollama_base_url do
-    host = System.get_env("OLLAMA_HOST") || "http://localhost:11434"
+    case Loomkin.Config.get_provider_endpoint(:ollama) do
+      %{url: url} when is_binary(url) and url != "" ->
+        String.trim_trailing(url, "/")
 
-    host
-    |> String.trim_trailing("/")
-    |> Kernel.<>("/v1")
+      _ ->
+        "http://localhost:11434/v1"
+    end
   end
 
-  @doc """
-  Returns the Ollama native API base URL (for model discovery).
-  """
+  @doc "Returns the Ollama native API base URL (for /api/tags)."
   def ollama_api_url do
-    host = System.get_env("OLLAMA_HOST") || "http://localhost:11434"
-    String.trim_trailing(host, "/")
+    ollama_base_url()
+    |> String.split("/")
+    |> Enum.slice(0..2)
+    |> Enum.join("/")
   end
 
   @doc """
-  Fetches the list of locally available Ollama models.
-
-  Calls Ollama's native `/api/tags` endpoint.
-  Returns `{:ok, [model_info]}` or `{:error, reason}`.
+  Fetches the list of locally available Ollama models via `/api/tags`.
   """
   def list_models do
     url = "#{ollama_api_url()}/api/tags"
@@ -255,9 +167,7 @@ defmodule Loomkin.Providers.Ollama do
     end
   end
 
-  @doc """
-  Returns true if Ollama is reachable.
-  """
+  @doc "Returns true if Ollama is reachable."
   def available? do
     case list_models() do
       {:ok, _} -> true
@@ -274,31 +184,18 @@ defmodule Loomkin.Providers.Ollama do
     build_model(model_id)
   end
 
-  defp build_stream_body(model, context, opts) do
-    temp_request =
-      Req.new(method: :post, url: URI.parse("https://example.com/temp"))
-      |> Map.put(:body, {:json, %{}})
-      |> Map.put(
-        :options,
-        Map.new(
-          [
-            model: model.provider_model_id || model.id,
-            context: context,
-            stream: true,
-            api_mod: @chat_api
-          ] ++ Keyword.delete(opts, :finch_name)
-        )
-      )
-
-    encoded = @chat_api.encode_body(temp_request)
-
-    case Jason.decode(encoded.body) do
-      {:ok, body_map} ->
-        body_map
-        |> Map.put("stream", true)
+  defp auth_header do
+    case Loomkin.Config.get_provider_endpoint(:ollama) do
+      %{auth_key: key} when is_binary(key) and key != "" ->
+        {"Authorization", "Bearer " <> key}
 
       _ ->
-        %{"model" => model.id, "stream" => true}
+        {"Authorization", "Bearer ollama"}
     end
+  end
+
+  defp maybe_add_auth_header(request) do
+    {name, value} = auth_header()
+    Req.Request.put_header(request, name, value)
   end
 end
