@@ -17,7 +17,14 @@ config :loomkin, Loomkin.Repo,
 
 # We don't start the web server during test
 config :loomkin, LoomkinWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4202],
+  http: [
+    ip:
+      System.get_env("PHX_IP", "127.0.0.1")
+      |> String.split(".")
+      |> Enum.map(&String.to_integer/1)
+      |> List.to_tuple(),
+    port: String.to_integer(System.get_env("PHX_PORT") || "4202")
+  ],
   secret_key_base:
     "test_only_secret_key_base_that_is_at_least_64_bytes_long_for_testing_purposes_only!!",
   server: false

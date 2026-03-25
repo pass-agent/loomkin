@@ -47,6 +47,26 @@ defmodule Loomkin.MCP.Server do
   end
 
   @doc """
+  Returns the list of tool modules published by the MCP server.
+  """
+  @spec tools() :: [module()]
+  def tools do
+    [
+      Loomkin.Tools.FileRead,
+      Loomkin.Tools.FileWrite,
+      Loomkin.Tools.FileEdit,
+      Loomkin.Tools.FileSearch,
+      Loomkin.Tools.ContentSearch,
+      Loomkin.Tools.DirectoryList,
+      Loomkin.Tools.Shell,
+      Loomkin.Tools.Git,
+      Loomkin.Tools.DecisionLog,
+      Loomkin.Tools.DecisionQuery,
+      Loomkin.Tools.SubAgent
+    ]
+  end
+
+  @doc """
   Returns true if the MCP server should be started based on config.
   """
   @spec enabled?() :: boolean()

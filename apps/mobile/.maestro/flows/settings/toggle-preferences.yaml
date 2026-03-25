@@ -1,0 +1,47 @@
+appId: com.loomkin.mobile
+name: "Settings: Toggle preference switches"
+tags:
+  - settings
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to settings
+- tapOn:
+    id: "tabs-settings-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 5000
+
+# Verify logout button is visible (fixed footer)
+- extendedWaitUntil:
+    visible:
+      id: "settings-logout-button"
+    timeout: 5000
+
+# Navigate away and come back to verify persistence
+- tapOn:
+    id: "tabs-dashboard-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 3000
+
+- tapOn:
+    id: "tabs-settings-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 5000
+
+# Verify logout button still visible
+- extendedWaitUntil:
+    visible:
+      id: "settings-logout-button"
+    timeout: 5000

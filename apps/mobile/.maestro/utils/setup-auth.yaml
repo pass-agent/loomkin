@@ -1,0 +1,50 @@
+appId: com.loomkin.mobile
+name: "Utility: Authenticate E2E User"
+tags:
+  - utility
+  - auth
+
+---
+
+# Launch the app fresh
+- launchApp:
+    clearState: true
+
+# Wait for login screen to appear
+- extendedWaitUntil:
+    visible:
+      id: "login-email-input"
+    timeout: 10000
+
+# Enter test user email
+- tapOn:
+    id: "login-email-input"
+- inputText: ${E2E_USER_EMAIL}
+
+# Enter test user password
+- tapOn:
+    id: "login-password-input"
+- inputText: ${E2E_USER_PASSWORD}
+
+# Submit login form
+- tapOn:
+    id: "login-submit-button"
+
+# Wait for login to complete — either dashboard appears or Save Password dialog
+- waitForAnimationToEnd
+
+# Dismiss iOS "Save Password?" Keychain dialog if it appears
+- tapOn:
+    text: "Not Now"
+    optional: true
+
+# Password login returns a token directly — app navigates straight to dashboard
+- extendedWaitUntil:
+    visible:
+      id: "dashboard-profile-button"
+    timeout: 15000
+
+# Dismiss again in case dialog appeared late
+- tapOn:
+    text: "Not Now"
+    optional: true

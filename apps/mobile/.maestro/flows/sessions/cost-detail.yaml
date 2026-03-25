@@ -1,0 +1,42 @@
+appId: com.loomkin.mobile
+name: "Sessions: View cost detail modal"
+tags:
+  - sessions
+  - cost
+
+---
+
+# Set up an authenticated session with chat open
+- runFlow: ../../utils/setup-session.yaml
+
+# Wait for the session to fully load (cost badge is in the header)
+- extendedWaitUntil:
+    visible:
+      id: "session-header-cost-badge"
+    timeout: 10000
+
+# Tap the cost badge to open detail modal
+- tapOn:
+    id: "session-header-cost-badge"
+
+# Wait for modal animation
+- waitForAnimationToEnd
+
+# Verify cost detail modal appears with title
+- extendedWaitUntil:
+    visible:
+      id: "cost-detail-modal-title"
+    timeout: 5000
+
+# Close the modal
+- tapOn:
+    id: "cost-detail-modal-close-button"
+
+# Wait for modal to dismiss
+- waitForAnimationToEnd
+
+# Verify chat is visible again
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 3000

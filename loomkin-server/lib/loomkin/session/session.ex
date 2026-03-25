@@ -290,10 +290,10 @@ defmodule Loomkin.Session do
     case result do
       {:routed, concierge_pid} ->
         # Persist and broadcast the user message
-        {:ok, _} =
+        {:ok, saved_user} =
           Persistence.save_message(%{session_id: state.id, role: :user, content: text})
 
-        user_msg = %{role: :user, content: text}
+        user_msg = %{role: :user, content: text, id: saved_user.id}
         state = %{state | messages: state.messages ++ [user_msg]}
         broadcast(state.id, {:new_message, state.id, user_msg})
 
@@ -307,14 +307,20 @@ defmodule Loomkin.Session do
             case Loomkin.Teams.Agent.send_message(concierge_pid, text) do
               {:ok, response_text} ->
                 # Persist and broadcast the assistant response
-                {:ok, _} =
+                {:ok, saved_assistant} =
                   Persistence.save_message(%{
                     session_id: session_id,
                     role: :assistant,
                     content: response_text
                   })
 
-                assistant_msg = %{role: :assistant, content: response_text, from: "concierge"}
+                assistant_msg = %{
+                  role: :assistant,
+                  content: response_text,
+                  from: "concierge",
+                  id: saved_assistant.id
+                }
+
                 broadcast(session_id, {:new_message, session_id, assistant_msg})
                 {:ok, response_text, assistant_msg}
 

@@ -1,0 +1,23 @@
+[package]
+name = "loomkin-desktop"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "loomkin_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.10", features = ["tray-icon", "image-png"] }
+tauri-plugin-notification = "2.3"
+tauri-plugin-global-shortcut = "2.3"
+tauri-plugin-deep-link = "2.4"
+tauri-plugin-updater = "2.10"
+tauri-plugin-log = "2.8"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

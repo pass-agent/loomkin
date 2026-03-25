@@ -2,6 +2,7 @@ defmodule LoomkinWeb.Router do
   use LoomkinWeb, :router
 
   import LoomkinWeb.UserAuth
+  import LoomkinWeb.ApiAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -12,6 +13,66 @@ defmodule LoomkinWeb.Router do
     plug :put_secure_browser_headers
     plug :fetch_current_scope_for_user
   end
+
+  pipeline :api do
+    plug :accepts, ["json"]
+    plug CORSPlug
+    plug :fetch_api_user
+  end
+
+  # ── JSON API v1 ─────────────────────────────────────────────────────
+  # Public API routes (no auth required)
+  scope "/api/v1", LoomkinWeb.Api, as: :api do
+    pipe_through :api
+
+    post "/auth/register", AuthController, :register
+    post "/auth/login", AuthController, :login
+    post "/auth/login/confirm", AuthController, :confirm
+    post "/auth/anonymous", AuthController, :anonymous
+  end
+
+  # Authenticated API routes (bearer token required)
+  scope "/api/v1", LoomkinWeb.Api, as: :api do
+    pipe_through [:api, :require_api_auth]
+
+    post "/auth/logout", AuthController, :logout
+    get "/auth/me", AuthController, :me
+
+    resources "/sessions", SessionController, only: [:index, :show, :create, :update]
+    get "/sessions/:id/messages", SessionController, :messages
+    post "/sessions/:id/messages", SessionController, :send_message
+    patch "/sessions/:id/archive", SessionController, :archive
+
+    get "/teams/:team_id", TeamController, :show
+    get "/teams/:team_id/agents", TeamController, :agents
+
+    get "/models", ModelController, :index
+    get "/models/providers", ModelController, :providers
+
+    get "/settings", SettingController, :index
+    put "/settings", SettingController, :update
+
+    get "/mcp", McpController, :index
+    post "/mcp/refresh", McpController, :refresh
+
+    get "/diff", DiffController, :index
+
+    get "/files", FilesController, :index
+    get "/files/read", FilesController, :read
+    get "/files/search", FilesController, :search
+    get "/files/grep", FilesController, :grep
+
+    get "/decisions", DecisionController, :index
+
+    resources "/backlog", BacklogController, except: [:new, :edit]
+
+    post "/sessions/:session_id/shares", ShareController, :create
+    get "/sessions/:session_id/shares", ShareController, :index
+    delete "/shares/:id", ShareController, :delete
+  end
+
+  # CORS preflight for API routes
+  options "/api/v1/*path", LoomkinWeb.Api.FallbackController, :options
 
   scope "/api/webhooks" do
     post "/telegram", Loomkin.Channels.Telegram.Webhook, :handle

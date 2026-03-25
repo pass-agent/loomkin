@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickelpack/tauri/refs/heads/dev/crates/tauri-config-schema/schema.json",
+  "identifier": "default",
+  "description": "Default permissions for the Loomkin desktop app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "notification:default",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "global-shortcut:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "deep-link:default",
+    "updater:default",
+    "log:default"
+  ]
+}
