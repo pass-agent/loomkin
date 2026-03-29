@@ -215,6 +215,15 @@ defmodule Loomkin.Models do
   end
 
   defp chat_capable?(%{capabilities: %{chat: true}}), do: true
+
+  defp chat_capable?(%{capabilities: nil, extra: extra}) when is_map(extra) do
+    methods =
+      Map.get(extra, :supported_generation_methods) ||
+        Map.get(extra, "supported_generation_methods") || []
+
+    "generateContent" in methods
+  end
+
   defp chat_capable?(_), do: false
 
   defp model_sort_key(model) do

@@ -22,11 +22,20 @@ export function useSessionChannel() {
     if (!sessionId || !isConnected) return;
 
     const topic = `session:${sessionId}`;
-    const channel = joinChannel(topic);
+    const channel = joinChannel(topic, {}, (resp) => {
+      if (resp.model && typeof resp.model === "string") {
+        useAppStore.getState().setModel(resp.model);
+      }
+    });
     currentChannel = channel;
 
     channel.on("new_message", (payload: { message: Message }) => {
       const store = useSessionStore.getState();
+      // A completed assistant message means the response cycle is done
+      if (payload.message.role === "assistant") {
+        store.setPendingResponse(false);
+        store.setStreaming(false);
+      }
       const existing = store.messages.find(
         (m) => m.id === payload.message.id,
       );
@@ -47,6 +56,7 @@ export function useSessionChannel() {
       "stream_start",
       (payload: { message_id?: string }) => {
         const store = useSessionStore.getState();
+        store.setPendingResponse(false);
         store.setStreaming(true);
         if (payload.message_id) {
           store.startStreamingMessage(payload.message_id);
@@ -72,7 +82,9 @@ export function useSessionChannel() {
     );
 
     channel.on("stream_end", () => {
-      useSessionStore.getState().setStreaming(false);
+      const store = useSessionStore.getState();
+      store.setPendingResponse(false);
+      store.setStreaming(false);
     });
 
     channel.on(
@@ -107,18 +119,42 @@ export function useSessionChannel() {
       },
     );
 
+    // LLM error — clear pending state so the UI doesn't get stuck
+    channel.on("llm_error", (payload: { error: string }) => {
+      const store = useSessionStore.getState();
+      store.setPendingResponse(false);
+      store.setStreaming(false);
+      store.addMessage({
+        id: `llm-error-${Date.now()}`,
+        role: "system",
+        content: `Error: ${payload.error}`,
+        tool_calls: null,
+        tool_call_id: null,
+        token_count: null,
+        agent_name: null,
+        inserted_at: new Date().toISOString(),
+      });
+    });
+
     return () => {
       currentChannel = null;
       leaveChannel(topic);
     };
   }, [sessionId, isConnected]);
 
-  const sendMessage = useCallback((content: string) => {
+  const sendMessage = useCallback((content: string, targetAgent?: string) => {
     if (!currentChannel) return;
 
+    const payload: Record<string, string> = { content };
+    if (targetAgent) payload.target_agent = targetAgent;
+
     currentChannel
-      .push("send_message", { content })
+      .push("send_message", payload)
+      .receive("ok", () => {
+        useSessionStore.getState().setPendingResponse(true);
+      })
       .receive("error", (resp: Record<string, unknown>) => {
+        useSessionStore.getState().setPendingResponse(false);
         useAppStore.getState().addError({
           type: "api",
           message: `Failed to send message: ${JSON.stringify(resp)}`,
@@ -135,6 +171,11 @@ export function useSessionChannel() {
           inserted_at: new Date().toISOString(),
         });
       });
+  }, []);
+
+  const setModel = useCallback((model: string) => {
+    if (!currentChannel) return;
+    currentChannel.push("set_model", { model });
   }, []);
 
   const respondPermission = useCallback(
@@ -196,6 +237,7 @@ export function useSessionChannel() {
     pendingPermissions,
     pendingQuestions,
     sendMessage,
+    setModel,
     respondPermission,
     answerQuestion,
   };

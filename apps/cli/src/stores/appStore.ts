@@ -21,6 +21,8 @@ export interface AppState {
   token: string | null;
   mode: Mode;
   model: string;
+  modelProviderStatus: "idle" | "loading" | "loaded" | "error";
+  configuredProviderIds: Set<string>;
   connectionState: ConnectionState;
   isConnected: boolean;
   reconnectAttempts: number;
@@ -38,6 +40,10 @@ export interface AppState {
   keybindMode: KeybindMode;
   vimMode: VimMode;
 
+  // Show model picker once after first connect (set on startup)
+  showModelPickerOnConnect: boolean;
+  setShowModelPickerOnConnect: (show: boolean) => void;
+
   setConnectionState: (state: ConnectionState) => void;
   incrementReconnectAttempts: () => void;
   setMode: (mode: Mode) => void;
@@ -54,6 +60,8 @@ export interface AppState {
   setMaxTurns: (turns: number | null) => void;
   setKeybindMode: (mode: KeybindMode) => void;
   setVimMode: (mode: VimMode) => void;
+  setModelProviderStatus: (status: "idle" | "loading" | "loaded" | "error") => void;
+  setConfiguredProviderIds: (ids: Set<string>) => void;
 }
 
 const config = getConfig();
@@ -62,7 +70,9 @@ export const appStore = createStore<AppState>((set) => ({
   serverUrl: config.serverUrl,
   token: config.token,
   mode: (config.defaultMode as Mode) || "code",
-  model: config.defaultModel || "anthropic:claude-opus-4",
+  model: config.defaultModel || "",
+  modelProviderStatus: "idle" as const,
+  configuredProviderIds: new Set<string>(),
   connectionState: "disconnected",
   isConnected: false,
   reconnectAttempts: 0,
@@ -77,6 +87,9 @@ export const appStore = createStore<AppState>((set) => ({
 
   keybindMode: (config.keybindMode as KeybindMode) || "default",
   vimMode: "normal" as VimMode,
+
+  showModelPickerOnConnect: false,
+  setShowModelPickerOnConnect: (show) => set({ showModelPickerOnConnect: show }),
 
   setConnectionState: (connectionState) =>
     set((state) => ({
@@ -117,6 +130,8 @@ export const appStore = createStore<AppState>((set) => ({
   setKeybindMode: (keybindMode) =>
     set({ keybindMode, vimMode: keybindMode === "vim" ? "normal" : "normal" }),
   setVimMode: (vimMode) => set({ vimMode }),
+  setModelProviderStatus: (modelProviderStatus) => set({ modelProviderStatus }),
+  setConfiguredProviderIds: (configuredProviderIds) => set({ configuredProviderIds }),
 }));
 
 export const useAppStore = appStore;

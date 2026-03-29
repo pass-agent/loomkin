@@ -1,4 +1,4 @@
-import { getApiUrl } from "./constants.js";
+import { getApiUrl } from "./urls.js";
 import { getConfig } from "./config.js";
 import { useAppStore } from "../stores/appStore.js";
 import type {
@@ -15,6 +15,8 @@ import type {
   DecisionNode,
   BacklogItem,
   Setting,
+  OAuthStartResponse,
+  OAuthStatusResponse,
 } from "./types.js";
 
 export class ApiError extends Error {
@@ -373,4 +375,35 @@ export async function updateSettings(
       body: JSON.stringify({ settings: values }),
     },
   );
+}
+
+// --- OAuth Providers ---
+
+export async function startOAuthFlow(
+  provider: string,
+): Promise<OAuthStartResponse> {
+  return request<OAuthStartResponse>(`/providers/oauth/${provider}/start`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export async function getOAuthStatus(
+  provider: string,
+): Promise<OAuthStatusResponse> {
+  return request<OAuthStatusResponse>(`/providers/oauth/${provider}/status`);
+}
+
+export async function submitOAuthPaste(
+  provider: string,
+  codeState: string,
+): Promise<void> {
+  await request(`/providers/oauth/${provider}/paste`, {
+    method: "POST",
+    body: JSON.stringify({ code_state: codeState }),
+  });
+}
+
+export async function disconnectOAuth(provider: string): Promise<void> {
+  await request(`/providers/oauth/${provider}`, { method: "DELETE" });
 }

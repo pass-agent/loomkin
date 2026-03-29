@@ -8,7 +8,7 @@ import {
   listSessions,
   ApiError,
 } from "../lib/api.js";
-import { getApiBaseUrl } from "../lib/constants.js";
+import { getApiBaseUrl } from "../lib/urls.js";
 import type { ModelProvider, Session } from "../lib/types.js";
 
 function connectionDot(state: string): string {

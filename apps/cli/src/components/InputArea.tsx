@@ -1,19 +1,25 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { useStore } from "zustand";
 import { CommandPalette } from "./CommandPalette.js";
+import { ModelPicker } from "./ModelPicker.js";
+import { ListPicker } from "./ListPicker.js";
 import { resolve, getCompletions } from "../commands/registry.js";
-import type { CommandContext } from "../commands/registry.js";
+import type { CommandContext, ListPickerOptions } from "../commands/registry.js";
 import { useAppStore } from "../stores/appStore.js";
+import { usePaneStore } from "../stores/paneStore.js";
+import { listModelProviders } from "../lib/api.js";
+import { runOAuthFlowInApp } from "../lib/oauth.js";
 import {
   findAction,
   defaultKeymap,
   getVimKeymap,
 } from "../lib/keymap.js";
+import type { ModelProvider } from "../lib/types.js";
 
 interface Props {
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string, targetAgent?: string) => void;
   commandContext: CommandContext;
 }
 
@@ -23,18 +29,49 @@ export function InputArea({ onSubmit, commandContext }: Props) {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [cursor, setCursor] = useState(0);
+  const [modelPickerProviders, setModelPickerProviders] = useState<ModelProvider[] | null>(null);
+  const [listPickerOptions, setListPickerOptions] = useState<ListPickerOptions | null>(null);
+  const [awaitingCapture, setAwaitingCapture] = useState(false);
+  const modelPickerAutoRef = useRef(false);
   const undoStack = useRef<string[]>([]);
+  const skipSubmitRef = useRef(false);
+  const pendingInputCaptureRef = useRef<((input: string) => void) | null>(null);
 
   const keybindMode = useStore(useAppStore, (s) => s.keybindMode);
   const vimMode = useStore(useAppStore, (s) => s.vimMode);
   const setVimMode = useStore(useAppStore, (s) => s.setVimMode);
+  const focusedTarget = useStore(usePaneStore, (s) => s.focusedTarget);
+  const connectionState = useStore(useAppStore, (s) => s.connectionState);
+  const showModelPickerOnConnect = useStore(useAppStore, (s) => s.showModelPickerOnConnect);
+  const autoShownRef = useRef(false);
+
+  // Auto-show model picker once after first connect
+  useEffect(() => {
+    if (!showModelPickerOnConnect || connectionState !== "connected" || autoShownRef.current) return;
+    autoShownRef.current = true;
+    useAppStore.getState().setShowModelPickerOnConnect(false);
+    listModelProviders()
+      .then(({ providers }) => {
+        modelPickerAutoRef.current = true;
+        setModelPickerProviders(providers);
+      })
+      .catch(() => {});
+  }, [showModelPickerOnConnect, connectionState]);
 
   const isVim = keybindMode === "vim";
   const isNormal = isVim && vimMode === "normal";
   const isInsert = isVim && vimMode === "insert";
 
-  const showPalette = value.startsWith("/") && value.indexOf(" ") === -1;
-  const completions = showPalette ? getCompletions(value) : [];
+  const commandWord = value.split(" ")[0];
+  const hasArgs = value.includes(" ");
+  const showPalette =
+    value.startsWith("/") &&
+    (!hasArgs || getCompletions(commandWord).some((c) => `/${c.name}` === commandWord));
+  const completions = showPalette
+    ? hasArgs
+      ? getCompletions(commandWord).filter((c) => `/${c.name}` === commandWord)
+      : getCompletions(value)
+    : [];
 
   // Vim helper: find next word boundary
   const nextWordBoundary = (str: string, pos: number): number => {
@@ -154,6 +191,10 @@ export function InputArea({ onSubmit, commandContext }: Props) {
   );
 
   useInput((input, key) => {
+    // Pickers own all input while open
+    if (modelPickerProviders) return;
+    if (listPickerOptions) return;
+
     // Command palette navigation (works in all modes)
     if (showPalette) {
       if (key.upArrow) {
@@ -163,6 +204,20 @@ export function InputArea({ onSubmit, commandContext }: Props) {
       if (key.downArrow) {
         setPaletteIndex((i) => Math.min(completions.length - 1, i + 1));
         return;
+      }
+      if (key.return) {
+        if (!hasArgs) {
+          const selected = completions[paletteIndex];
+          const isExactMatch = selected && value.toLowerCase() === `/${selected.name}`;
+          if (selected && !isExactMatch) {
+            // Partial match — dispatch immediately, block TextInput's duplicate onSubmit
+            handleSubmit(`/${selected.name}`);
+            skipSubmitRef.current = true;
+            return;
+          }
+          // Exact match or nothing — fall through to submit
+        }
+        // Has args or exact match — fall through to normal submit
       }
       if (key.tab) {
         const selected = completions[paletteIndex];
@@ -252,10 +307,39 @@ export function InputArea({ onSubmit, commandContext }: Props) {
     }
   });
 
+  // Enrich commandContext with model picker callback and input capture (InputArea owns this state)
+  const enrichedContext: CommandContext = {
+    ...commandContext,
+    showModelPicker: (providers) => {
+      modelPickerAutoRef.current = false;
+      setModelPickerProviders(providers);
+    },
+    captureNextInput: (callback) => {
+      pendingInputCaptureRef.current = callback;
+      setAwaitingCapture(true);
+    },
+    showListPicker: (options) => setListPickerOptions(options),
+  };
+
   const handleSubmit = useCallback(
     (text: string) => {
+      if (skipSubmitRef.current) {
+        skipSubmitRef.current = false;
+        return;
+      }
       const trimmed = text.trim();
       if (!trimmed) return;
+
+      // Route to pending input capture (e.g. OAuth paste-back) before anything else
+      if (pendingInputCaptureRef.current) {
+        const capture = pendingInputCaptureRef.current;
+        pendingInputCaptureRef.current = null;
+        setAwaitingCapture(false);
+        setValue("");
+        setCursor(0);
+        capture(trimmed);
+        return;
+      }
 
       // Save undo state
       undoStack.current = [];
@@ -273,13 +357,23 @@ export function InputArea({ onSubmit, commandContext }: Props) {
       // Check if it's a slash command
       const result = resolve(trimmed);
       if (result) {
-        result.command.handler(result.args, commandContext);
+        result.command.handler(result.args, enrichedContext);
         return;
       }
 
-      onSubmit(trimmed);
+      // Parse @mention prefix: "@agent-name rest of message"
+      const mentionMatch = trimmed.match(/^@(\S+)\s+([\s\S]+)$/);
+      if (mentionMatch) {
+        const [, mentionTarget, rest] = mentionMatch as [string, string, string];
+        onSubmit(rest, mentionTarget);
+        setValue("");
+        setHistory((h) => [trimmed, ...h.slice(0, 99)]);
+        setHistoryIndex(-1);
+        return;
+      }
+      onSubmit(trimmed, focusedTarget ?? undefined);
     },
-    [onSubmit, commandContext, isVim, setVimMode],
+    [onSubmit, enrichedContext, isVim, setVimMode, focusedTarget],
   );
 
   // Prompt indicator
@@ -307,53 +401,112 @@ export function InputArea({ onSubmit, commandContext }: Props) {
         : " COMMAND"
     : "";
 
-  const placeholder = isNormal
-    ? "Press i to type, : for commands, Enter to send..."
-    : "Send a message or type / for commands...";
+  const placeholder = awaitingCapture
+    ? "Paste the OAuth code (code#state)..."
+    : isNormal
+      ? "Press i to type, : for commands, Enter to send..."
+      : "Send a message, @agent to target, or / for commands...";
+
+  const wasAuto = modelPickerAutoRef.current;
 
   return (
-    <Box flexDirection="column">
-      {showPalette && completions.length > 0 && (
-        <CommandPalette input={value} selectedIndex={paletteIndex} />
-      )}
-      <Box borderStyle="single" borderColor={promptColor} paddingX={1}>
-        <Text color={promptColor} bold>
-          {promptChar}{" "}
-        </Text>
-        {isNormal ? (
-          // In normal mode, show value as static text with cursor highlight
-          <Box flexGrow={1}>
-            <Text>
-              {value.length > 0 ? (
-                <>
-                  {value.slice(0, cursor)}
-                  <Text inverse>{value[cursor] ?? " "}</Text>
-                  {value.slice(cursor + 1)}
-                </>
-              ) : (
-                <Text dimColor>{placeholder}</Text>
-              )}
+    <Box flexDirection="column" flexShrink={0}>
+      {listPickerOptions ? (
+        <ListPicker
+          {...listPickerOptions}
+          onSelect={(value, label) => {
+            listPickerOptions.onSelect(value, label);
+            setListPickerOptions(null);
+          }}
+          onCancel={() => {
+            listPickerOptions.onCancel();
+            setListPickerOptions(null);
+          }}
+        />
+      ) : modelPickerProviders ? (
+        <ModelPicker
+          providers={modelPickerProviders}
+          currentModel={commandContext.appStore.model}
+          onSelect={(id, label) => {
+            commandContext.appStore.setModel(id);
+            commandContext.setSessionModel?.(id);
+            commandContext.addSystemMessage(`Switched to model ${label} (${id}).`);
+            modelPickerAutoRef.current = false;
+            setModelPickerProviders(null);
+          }}
+          onCancel={() => {
+            if (!wasAuto) {
+              commandContext.addSystemMessage("Model selection cancelled.");
+            }
+            modelPickerAutoRef.current = false;
+            setModelPickerProviders(null);
+          }}
+          onOAuth={async (id, name) => {
+            modelPickerAutoRef.current = false;
+            setModelPickerProviders(null);
+            const ok = await runOAuthFlowInApp(
+              id,
+              name,
+              commandContext.addSystemMessage,
+              enrichedContext.captureNextInput,
+            );
+            if (ok) {
+              commandContext.addSystemMessage(`${name} connected. Refreshing model list...`);
+              try {
+                const { providers } = await listModelProviders();
+                setModelPickerProviders(providers);
+              } catch {}
+            }
+          }}
+        />
+      ) : (
+        <>
+          <Box borderStyle="single" borderColor={promptColor} paddingX={1}>
+            <Text color={promptColor} bold>
+              {promptChar}{" "}
             </Text>
+            {focusedTarget && !isNormal && (
+              <Text color="cyan" dimColor>@{focusedTarget}{" "}</Text>
+            )}
+            {isNormal ? (
+              // In normal mode, show value as static text with cursor highlight
+              <Box flexGrow={1}>
+                <Text>
+                  {value.length > 0 ? (
+                    <>
+                      {value.slice(0, cursor)}
+                      <Text inverse>{value[cursor] ?? " "}</Text>
+                      {value.slice(cursor + 1)}
+                    </>
+                  ) : (
+                    <Text dimColor>{placeholder}</Text>
+                  )}
+                </Text>
+              </Box>
+            ) : (
+              <TextInput
+                value={value}
+                onChange={(v) => {
+                  if (isVim && value.length > 0) undoStack.current.push(value);
+                  setValue(v);
+                  setCursor(v.length);
+                  setPaletteIndex(0);
+                }}
+                onSubmit={handleSubmit}
+                placeholder={placeholder}
+              />
+            )}
+            {modeHint && (
+              <Text color={promptColor} dimColor>
+                {modeHint}
+              </Text>
+            )}
           </Box>
-        ) : (
-          <TextInput
-            value={value}
-            onChange={(v) => {
-              if (isVim && value.length > 0) undoStack.current.push(value);
-              setValue(v);
-              setCursor(v.length);
-              setPaletteIndex(0);
-            }}
-            onSubmit={handleSubmit}
-            placeholder={placeholder}
-          />
-        )}
-        {modeHint && (
-          <Text color={promptColor} dimColor>
-            {modeHint}
-          </Text>
-        )}
-      </Box>
+          {showPalette && completions.length > 0 && (
+            <CommandPalette input={value} selectedIndex={paletteIndex} />
+          )}
+        </>
+      )}
     </Box>
   );
 }

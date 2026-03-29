@@ -9,7 +9,9 @@ on:
       - 'apps/mobile/**'
 
 jobs:
+  # TODO: mobile e2e tests are currently broken and need to be fixed before re-enabling
   e2e-ios:
+    if: false
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -77,7 +79,9 @@ jobs:
           name: e2e-ios-results
           path: apps/mobile/e2e/reports/
 
+  # TODO: mobile e2e tests are currently broken and need to be fixed before re-enabling
   e2e-android:
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:

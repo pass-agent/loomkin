@@ -11,9 +11,20 @@ register({
     const requested = args.trim().toLowerCase();
 
     if (!requested) {
-      ctx.addSystemMessage(
-        `Current mode: ${pc.bold(ctx.appStore.mode)}\nAvailable: ${MODES.join(", ")}`,
-      );
+      ctx.showListPicker?.({
+        title: "Select mode",
+        items: [
+          { value: "code", label: "Code", hint: "write and edit code" },
+          { value: "plan", label: "Plan", hint: "plan and design solutions" },
+          { value: "chat", label: "Chat", hint: "general conversation" },
+        ],
+        currentValue: ctx.appStore.mode,
+        onSelect: (mode) => {
+          ctx.appStore.setMode(mode as Mode);
+          ctx.addSystemMessage(`Switched to ${pc.bold(mode)} mode.`);
+        },
+        onCancel: () => {},
+      });
       return;
     }
 

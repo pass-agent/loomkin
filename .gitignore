@@ -40,7 +40,7 @@ dist/
 /.specstory
 /.history
 /.expert
-/.claude
+**/.claude/settings.local.json
 /.cursorindexingignore
 /.loomkin.toml
 
@@ -53,6 +53,9 @@ apps/mobile/e2e/reports/
 
 # Tauri (desktop app)
 apps/desktop/src-tauri/target/
+
+# Local Claude instructions (machine-specific, not committed)
+CLAUDE.local.md
 
 # Deciduous (local tooling, not part of the project)
 .deciduous/

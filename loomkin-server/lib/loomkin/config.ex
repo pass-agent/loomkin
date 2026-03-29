@@ -224,8 +224,22 @@ defmodule Loomkin.Config do
 
     # Auto-load .loomkin.toml from the working directory so auth credentials
     # (and other settings) are available before any explicit Config.load/1 call.
+    # Falls back to the parent directory to support monorepo layouts where the
+    # server lives in a subdirectory (e.g. loomkin-server/) but .loomkin.toml
+    # sits at the repo root.
     project_path = File.cwd!()
-    toml_path = Path.join(project_path, ".loomkin.toml")
+
+    toml_path =
+      cond do
+        File.exists?(Path.join(project_path, ".loomkin.toml")) ->
+          Path.join(project_path, ".loomkin.toml")
+
+        File.exists?(Path.join([project_path, "..", ".loomkin.toml"])) ->
+          Path.expand(Path.join([project_path, "..", ".loomkin.toml"]))
+
+        true ->
+          Path.join(project_path, ".loomkin.toml")
+      end
 
     config =
       case Toml.decode_file(toml_path) do

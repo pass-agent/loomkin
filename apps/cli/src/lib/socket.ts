@@ -1,5 +1,5 @@
 import { Socket, Channel } from "phoenix";
-import { getWsUrl } from "./constants.js";
+import { getWsUrl } from "./urls.js";
 import { useAppStore } from "../stores/appStore.js";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -90,6 +90,7 @@ function clearChannels(): void {
 export function joinChannel(
   topic: string,
   params: Record<string, unknown> = {},
+  onJoin?: (resp: Record<string, unknown>) => void,
 ): Channel {
   const existing = activeChannels.get(topic);
   if (existing) return existing;
@@ -99,8 +100,9 @@ export function joinChannel(
 
   channel
     .join()
-    .receive("ok", () => {
+    .receive("ok", (resp: Record<string, unknown>) => {
       log("joined", topic);
+      onJoin?.(resp);
     })
     .receive("error", (resp: Record<string, unknown>) => {
       activeChannels.delete(topic);

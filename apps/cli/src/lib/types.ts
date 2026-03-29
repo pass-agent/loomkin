@@ -221,3 +221,13 @@ export interface PaginatedResponse<T> {
     per_page: number;
   };
 }
+
+export interface OAuthStartResponse {
+  url: string;
+  flow_type: "redirect" | "paste_back";
+}
+
+export interface OAuthStatusResponse {
+  connected: boolean;
+  flow_active: boolean;
+}
