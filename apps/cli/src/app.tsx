@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { Box, useApp, useInput } from "ink";
+import { Box, useApp, useInput, useStdout } from "ink";
 import { useStore } from "zustand";
 import { StatusBar } from "./components/StatusBar.js";
 import { MessageList } from "./components/MessageList.js";
@@ -8,6 +8,7 @@ import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
 import { InputArea } from "./components/InputArea.js";
+import { ProcessingStatus } from "./components/ProcessingStatus.js";
 import { useConnection } from "./hooks/useConnection.js";
 import { useSessionChannel } from "./hooks/useSessionChannel.js";
 import { useAgentChannel } from "./hooks/useAgentChannel.js";
@@ -41,11 +42,20 @@ import "./commands/export.js";
 import "./commands/theme.js";
 import "./commands/prompt.js";
 import "./commands/keybinds.js";
+import "./commands/focus.js";
+import "./commands/provider.js";
+import "./commands/dashboard.js";
 
 let messageCounter = 0;
 
 export function App() {
   const { exit } = useApp();
+  const { stdout } = useStdout();
+  // Use concrete terminal height so yoga can properly constrain the layout.
+  // "100%" is unreliable in Ink because percentage resolution requires the
+  // yoga root to have a fixed size first.
+  const termHeight = stdout?.rows ?? 24;
+  const termWidth = stdout?.columns ?? 80;
   const { isConnected } = useConnection();
   const {
     messages,
@@ -54,6 +64,7 @@ export function App() {
     pendingPermissions,
     pendingQuestions,
     sendMessage,
+    setModel,
     respondPermission,
     answerQuestion,
   } = useSessionChannel();
@@ -149,12 +160,13 @@ export function App() {
       sendMessage,
       clearMessages,
       exit,
+      setSessionModel: setModel,
     }),
-    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit],
+    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel],
   );
 
   const handleSubmit = useCallback(
-    (text: string) => {
+    (text: string, targetAgent?: string) => {
       // Guard against sending while disconnected
       if (!isConnected) {
         addSystemMessage("Not connected. Message not sent.");
@@ -162,14 +174,13 @@ export function App() {
       }
 
       // Send to server — the broadcast will add the message to the list
-      sendMessage(text);
+      sendMessage(text, targetAgent);
     },
     [sendMessage, isConnected, addSystemMessage],
   );
 
   return (
-    <Box flexDirection="column" height="100%">
-      <StatusBar />
+    <Box flexDirection="column" height={termHeight} width={termWidth}>
       {splitMode ? (
         <SplitPaneLayout
           messages={messages}
@@ -181,6 +192,7 @@ export function App() {
           messages={messages}
           pendingToolCalls={pendingToolCalls}
           isStreaming={isStreaming}
+          maxLines={termHeight - 6}
         />
       )}
       {latestError && <ErrorBanner error={latestError} />}
@@ -197,6 +209,8 @@ export function App() {
         />
       )}
       <InputArea onSubmit={handleSubmit} commandContext={commandContext} />
+      <ProcessingStatus />
+      <StatusBar />
     </Box>
   );
 }

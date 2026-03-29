@@ -15,12 +15,10 @@ vi.mock("../../lib/api.js", () => ({
 }));
 
 vi.mock("../../lib/constants.js", () => ({
-  getApiBaseUrl: () => "https://loom.test",
-  getApiUrl: () => "https://loom.test/api/v1",
-  getWsUrl: () => "wss://loom.test/socket",
   DEFAULT_SERVER_URL: "https://loom.test",
+  DEV_FALLBACK_URL: null,
   DEFAULT_MODE: "code",
-  DEFAULT_MODEL: "anthropic:claude-opus-4",
+  DEFAULT_MODEL: "",
   MODES: ["code", "plan", "chat"],
 }));
 
@@ -84,7 +82,7 @@ test("alias 'd' resolves to diff", () => {
 });
 
 test("shows colorized diff output", async () => {
-  vi.mocked(getDiff).mockResolvedValue({ diff: sampleDiff });
+  (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
   const ctx = createMockContext();
   await resolve("/diff")!.command.handler("", ctx);
@@ -96,7 +94,7 @@ test("shows colorized diff output", async () => {
 });
 
 test("passes file argument to API", async () => {
-  vi.mocked(getDiff).mockResolvedValue({ diff: sampleDiff });
+  (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
   const ctx = createMockContext();
   await resolve("/diff")!.command.handler("src/app.ts", ctx);
@@ -105,7 +103,7 @@ test("passes file argument to API", async () => {
 });
 
 test("passes --staged flag", async () => {
-  vi.mocked(getDiff).mockResolvedValue({ diff: sampleDiff });
+  (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
   const ctx = createMockContext();
   await resolve("/diff")!.command.handler("--staged", ctx);
@@ -114,7 +112,7 @@ test("passes --staged flag", async () => {
 });
 
 test("passes file and staged together", async () => {
-  vi.mocked(getDiff).mockResolvedValue({ diff: sampleDiff });
+  (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
   const ctx = createMockContext();
   await resolve("/diff")!.command.handler("src/app.ts --staged", ctx);
@@ -125,7 +123,7 @@ test("passes file and staged together", async () => {
 test.each(["staged", "-s", "--staged"])(
   "recognizes '%s' as staged flag",
   async (flag) => {
-    vi.mocked(getDiff).mockResolvedValue({ diff: sampleDiff });
+    (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
     const ctx = createMockContext();
     await resolve("/diff")!.command.handler(flag, ctx);
@@ -135,7 +133,7 @@ test.each(["staged", "-s", "--staged"])(
 );
 
 test("shows no changes message", async () => {
-  vi.mocked(getDiff).mockResolvedValue({
+  (getDiff as any).mockResolvedValue({
     diff: "No differences found.",
   });
 
@@ -146,7 +144,7 @@ test("shows no changes message", async () => {
 });
 
 test("shows no staged changes message", async () => {
-  vi.mocked(getDiff).mockResolvedValue({
+  (getDiff as any).mockResolvedValue({
     diff: "No differences found.",
   });
 
@@ -157,7 +155,7 @@ test("shows no staged changes message", async () => {
 });
 
 test("handles API error gracefully", async () => {
-  vi.mocked(getDiff).mockRejectedValue(new Error("network error"));
+  (getDiff as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   await resolve("/diff")!.command.handler("", ctx);

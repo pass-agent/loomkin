@@ -11,9 +11,9 @@ export function StatusBar() {
   const reconnectAttempts = useStore(useAppStore, (s) => s.reconnectAttempts);
   const mode = useStore(useAppStore, (s) => s.mode);
   const model = useStore(useAppStore, (s) => s.model);
+  const modelProviderStatus = useStore(useAppStore, (s) => s.modelProviderStatus);
+  const configuredProviderIds = useStore(useAppStore, (s) => s.configuredProviderIds);
   const sessionId = useStore(useSessionStore, (s) => s.sessionId);
-  const isStreaming = useStore(useSessionStore, (s) => s.isStreaming);
-  const messages = useStore(useSessionStore, (s) => s.messages);
   const agentCount = useStore(useAgentStore, (s) => s.agents.size);
   const workingCount = useStore(useAgentStore, (s) => {
     let count = 0;
@@ -24,6 +24,7 @@ export function StatusBar() {
   });
   const splitMode = useStore(usePaneStore, (s) => s.splitMode);
   const selectedAgent = useStore(usePaneStore, (s) => s.selectedAgent);
+  const focusedTarget = useStore(usePaneStore, (s) => s.focusedTarget);
   const keybindMode = useStore(useAppStore, (s) => s.keybindMode);
   const vimMode = useStore(useAppStore, (s) => s.vimMode);
 
@@ -31,22 +32,26 @@ export function StatusBar() {
   const isReconnecting =
     connectionState === "reconnecting" || connectionState === "connecting";
 
-  // Determine streaming status text
-  const lastMessage = messages[messages.length - 1];
-  const hasStreamingContent =
-    isStreaming &&
-    lastMessage?.role === "assistant" &&
-    (lastMessage.content?.length ?? 0) > 0;
-
   const dotColor = isConnected ? "green" : isReconnecting ? "yellow" : "red";
   const dotChar = isConnected ? "●" : isReconnecting ? "◐" : "○";
 
+  // Model display: strip provider prefix for brevity
+  const displayModel = model ? model.replace(/^[^:]+:/, "") : null;
+
+  // Determine if model provider is actually configured
+  const modelProviderPart = model?.split(":")[0] ?? "";
+  const isModelConfigured =
+    !model ||
+    modelProviderStatus !== "loaded" ||
+    configuredProviderIds.has(modelProviderPart);
+
+  const hasActivityGroup = agentCount > 0 || keybindMode === "vim" || splitMode || !!focusedTarget;
+
   return (
     <Box
-      borderStyle="single"
-      borderColor="gray"
       paddingX={1}
       justifyContent="space-between"
+      flexShrink={0}
     >
       <Box gap={2}>
         <Text color={dotColor}>{dotChar}</Text>
@@ -61,14 +66,23 @@ export function StatusBar() {
         <Text dimColor>
           mode:<Text bold>{mode}</Text>
         </Text>
-        <Text dimColor>
-          model:<Text bold>{model}</Text>
-        </Text>
+        {!model ? (
+          <Text color="yellow">model:<Text bold>none</Text></Text>
+        ) : isModelConfigured ? (
+          <Text dimColor>
+            model:<Text bold>{displayModel}</Text>
+          </Text>
+        ) : (
+          <Text color="yellow">
+            ⚠ model:<Text bold>{displayModel}</Text>
+          </Text>
+        )}
         {sessionId && (
           <Text dimColor>
             session:<Text bold>{sessionId.slice(0, 8)}</Text>
           </Text>
         )}
+        {hasActivityGroup && <Text dimColor>│</Text>}
         {agentCount > 0 && (
           <Text dimColor>
             agents:<Text bold color={workingCount > 0 ? "green" : undefined}>
@@ -76,6 +90,15 @@ export function StatusBar() {
             </Text>
           </Text>
         )}
+        {focusedTarget ? (
+          <Text color="cyan">
+            to:<Text bold>@{focusedTarget}</Text>
+          </Text>
+        ) : agentCount > 0 ? (
+          <Text dimColor>
+            to:<Text bold color="green">broadcast</Text>
+          </Text>
+        ) : null}
         {keybindMode === "vim" && (
           <Text dimColor>
             vim:<Text bold color={vimMode === "normal" ? "yellow" : "green"}>
@@ -87,14 +110,6 @@ export function StatusBar() {
           <Text dimColor>
             split:<Text bold color="cyan">{selectedAgent}</Text>
           </Text>
-        )}
-      </Box>
-      <Box>
-        {isStreaming && !hasStreamingContent && (
-          <Text color="yellow">thinking...</Text>
-        )}
-        {hasStreamingContent && (
-          <Text color="yellow">streaming...</Text>
         )}
       </Box>
     </Box>

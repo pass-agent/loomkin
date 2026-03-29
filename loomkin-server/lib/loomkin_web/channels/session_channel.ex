@@ -33,22 +33,26 @@ defmodule LoomkinWeb.SessionChannel do
         Loomkin.Signals.subscribe("team.**")
         Loomkin.Signals.subscribe("agent.**")
 
-        {:ok, assign(socket, :session_id, session_id)}
+        {:ok, %{model: session.model},
+         socket
+         |> assign(:session_id, session_id)
+         |> assign(:team_id, session.team_id)}
     end
   end
 
   # --- Client messages ---
 
   @impl true
-  def handle_in("send_message", %{"content" => content}, socket) do
+  def handle_in("send_message", %{"content" => content} = params, socket) do
     session_id = socket.assigns.session_id
+    target_agent = params["target_agent"]
 
     # Dispatch to the Session GenServer asynchronously.
     # The GenServer saves the user message, broadcasts it via the signal bus,
     # and triggers the AI agent loop. All events (user echo, stream tokens,
     # assistant response) flow back through handle_info signal handlers.
     Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
-      case Session.send_message(session_id, content) do
+      case Session.send_message(session_id, content, target_agent: target_agent) do
         {:ok, _response} ->
           :ok
 
@@ -121,6 +125,15 @@ defmodule LoomkinWeb.SessionChannel do
       end
     else
       {:reply, {:error, %{reason: "failed to create team"}}, socket}
+    end
+  end
+
+  def handle_in("set_model", %{"model" => model}, socket) do
+    session_id = socket.assigns.session_id
+
+    case Session.update_model(session_id, model) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
     end
   end
 
@@ -379,6 +392,51 @@ defmodule LoomkinWeb.SessionChannel do
     {:noreply, socket}
   end
 
+  def handle_info(%Jido.Signal{type: "session.llm.error"} = sig, socket) do
+    if sig.data[:session_id] == socket.assigns.session_id do
+      push(socket, "llm_error", %{error: to_string(sig.data[:error] || "unknown error")})
+    end
+
+    {:noreply, socket}
+  end
+
+  # --- Team available — update team_id in assigns for agent signal filtering ---
+
+  def handle_info(%Jido.Signal{type: "session.team.available"} = sig, socket) do
+    if sig.data[:session_id] == socket.assigns.session_id do
+      {:noreply, assign(socket, :team_id, sig.data[:team_id])}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # --- Agent streaming signals — forwarded to CLI/mobile clients ---
+
+  def handle_info(%Jido.Signal{type: "agent.stream.start"} = sig, socket) do
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "stream_start", %{})
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "agent.stream.delta"} = sig, socket) do
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      token = get_in(sig.data, [:payload, :text]) || ""
+      if token != "", do: push(socket, "stream_token", %{token: token})
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "agent.stream.end"} = sig, socket) do
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "stream_end", %{})
+    end
+
+    {:noreply, socket}
+  end
+
   # Catch-all for unhandled signals
   def handle_info(%Jido.Signal{}, socket), do: {:noreply, socket}
 
@@ -417,7 +475,7 @@ defmodule LoomkinWeb.SessionChannel do
       tool_calls: msg[:tool_calls],
       tool_call_id: msg[:tool_call_id],
       token_count: msg[:token_count],
-      agent_name: msg[:agent_name],
+      agent_name: msg[:agent_name] || msg[:from],
       inserted_at: msg[:inserted_at] || DateTime.utc_now() |> DateTime.to_iso8601()
     }
   end

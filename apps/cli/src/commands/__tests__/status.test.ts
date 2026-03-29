@@ -18,12 +18,10 @@ vi.mock("../../lib/api.js", () => ({
 }));
 
 vi.mock("../../lib/constants.js", () => ({
-  getApiBaseUrl: () => "https://loom.test",
-  getApiUrl: () => "https://loom.test/api/v1",
-  getWsUrl: () => "wss://loom.test/socket",
   DEFAULT_SERVER_URL: "https://loom.test",
+  DEV_FALLBACK_URL: null,
   DEFAULT_MODE: "code",
-  DEFAULT_MODEL: "anthropic:claude-opus-4",
+  DEFAULT_MODEL: "",
   MODES: ["code", "plan", "chat"],
 }));
 
@@ -143,10 +141,10 @@ test.each([
     expected: "reconnecting",
   },
 ])("$name", async ({ connectionState, expected }) => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "test@loomkin.dev" },
   });
-  vi.mocked(getSession).mockResolvedValue({
+  (getSession as any).mockResolvedValue({
     session: {
       id: "abc-123-def",
       title: "Test Session",
@@ -162,8 +160,8 @@ test.each([
       updated_at: "2026-01-01T00:00:00",
     },
   });
-  vi.mocked(listModelProviders).mockResolvedValue({ providers: [] });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (listModelProviders as any).mockResolvedValue({ providers: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext({ connectionState });
   const result = resolve("/status");
@@ -174,10 +172,10 @@ test.each([
 });
 
 test("shows user email", async () => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "dev@loomkin.dev" },
   });
-  vi.mocked(getSession).mockResolvedValue({
+  (getSession as any).mockResolvedValue({
     session: {
       id: "abc-123-def",
       title: null,
@@ -193,8 +191,8 @@ test("shows user email", async () => {
       updated_at: "2026-01-01T00:00:00",
     },
   });
-  vi.mocked(listModelProviders).mockResolvedValue({ providers: [] });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (listModelProviders as any).mockResolvedValue({ providers: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext();
   const result = resolve("/status");
@@ -204,11 +202,11 @@ test("shows user email", async () => {
 });
 
 test("shows provider status", async () => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "test@loomkin.dev" },
   });
-  vi.mocked(getSession).mockRejectedValue(new Error("skip"));
-  vi.mocked(listModelProviders).mockResolvedValue({
+  (getSession as any).mockRejectedValue(new Error("skip"));
+  (listModelProviders as any).mockResolvedValue({
     providers: [
       {
         id: "anthropic",
@@ -224,7 +222,7 @@ test("shows provider status", async () => {
       },
     ],
   });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext();
   const result = resolve("/status");
@@ -237,12 +235,12 @@ test("shows provider status", async () => {
 });
 
 test("shows errors when present", async () => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "test@loomkin.dev" },
   });
-  vi.mocked(getSession).mockRejectedValue(new Error("skip"));
-  vi.mocked(listModelProviders).mockResolvedValue({ providers: [] });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (getSession as any).mockRejectedValue(new Error("skip"));
+  (listModelProviders as any).mockResolvedValue({ providers: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext({
     errors: [
@@ -256,11 +254,11 @@ test("shows errors when present", async () => {
 });
 
 test("shows no active session when sessionId is null", async () => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "test@loomkin.dev" },
   });
-  vi.mocked(listModelProviders).mockResolvedValue({ providers: [] });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (listModelProviders as any).mockResolvedValue({ providers: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext({ sessionId: null });
   const result = resolve("/status");
@@ -274,10 +272,10 @@ test.each([
   { tokens: 2500, expected: "2.5k" },
   { tokens: 500, expected: "500" },
 ])("formats $tokens tokens as $expected", async ({ tokens, expected }) => {
-  vi.mocked(getMe).mockResolvedValue({
+  (getMe as any).mockResolvedValue({
     user: { id: "u1", email: "test@loomkin.dev" },
   });
-  vi.mocked(getSession).mockResolvedValue({
+  (getSession as any).mockResolvedValue({
     session: {
       id: "abc-123-def",
       title: "Test",
@@ -293,8 +291,8 @@ test.each([
       updated_at: "2026-01-01T00:00:00",
     },
   });
-  vi.mocked(listModelProviders).mockResolvedValue({ providers: [] });
-  vi.mocked(listSessions).mockResolvedValue({ sessions: [] });
+  (listModelProviders as any).mockResolvedValue({ providers: [] });
+  (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext();
   const result = resolve("/status");
@@ -304,10 +302,10 @@ test.each([
 });
 
 test("handles API failure gracefully", async () => {
-  vi.mocked(getMe).mockRejectedValue(new Error("network error"));
-  vi.mocked(getSession).mockRejectedValue(new Error("network error"));
-  vi.mocked(listModelProviders).mockRejectedValue(new Error("network error"));
-  vi.mocked(listSessions).mockRejectedValue(new Error("network error"));
+  (getMe as any).mockRejectedValue(new Error("network error"));
+  (getSession as any).mockRejectedValue(new Error("network error"));
+  (listModelProviders as any).mockRejectedValue(new Error("network error"));
+  (listSessions as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   const result = resolve("/status");

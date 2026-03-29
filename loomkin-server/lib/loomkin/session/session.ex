@@ -42,14 +42,17 @@ defmodule Loomkin.Session do
   end
 
   @doc "Send a user message and get back the assistant's response."
-  @spec send_message(pid() | String.t(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def send_message(pid, text) when is_pid(pid) do
-    GenServer.call(pid, {:send_message, text}, :infinity)
+  @spec send_message(pid() | String.t(), String.t(), keyword()) ::
+          {:ok, String.t()} | {:error, term()}
+  def send_message(session_or_id, text, opts \\ [])
+
+  def send_message(pid, text, opts) when is_pid(pid) do
+    GenServer.call(pid, {:send_message, text, opts}, :infinity)
   end
 
-  def send_message(session_id, text) when is_binary(session_id) do
+  def send_message(session_id, text, opts) when is_binary(session_id) do
     case Loomkin.Session.Manager.find_session(session_id) do
-      {:ok, pid} -> send_message(pid, text)
+      {:ok, pid} -> send_message(pid, text, opts)
       :error -> {:error, :not_found}
     end
   end
@@ -276,16 +279,36 @@ defmodule Loomkin.Session do
   end
 
   @impl true
-  def handle_call({:send_message, text}, from, state) do
+  def handle_call({:send_message, text, opts}, from, state) do
     # Auto-title session from first user message if still using default timestamp title
     state = maybe_auto_title(state, text)
 
     # Spawn bootstrap agents on first message (deferred from session start)
     state = maybe_spawn_bootstrap_agents(state)
 
-    # Try routing to Concierge first (bootstrap agent pattern)
-    result = maybe_route_to_concierge(state, text)
-    Logger.info("[Kin:session] new_message routing=#{inspect(result)}")
+    target_agent = Keyword.get(opts, :target_agent)
+
+    # Route directly to a named agent if requested, otherwise try concierge
+    result =
+      if target_agent && state.team_id do
+        case Loomkin.Session.Manager.find_agent(state.team_id, target_agent) do
+          {:ok, pid} ->
+            {:routed, pid}
+
+          :error ->
+            Logger.warning(
+              "[Kin:session] target_agent=#{target_agent} not found, falling back to concierge"
+            )
+
+            maybe_route_to_concierge(state, text)
+        end
+      else
+        maybe_route_to_concierge(state, text)
+      end
+
+    Logger.info(
+      "[Kin:session] new_message routing=#{inspect(result)} target_agent=#{inspect(target_agent)}"
+    )
 
     case result do
       {:routed, concierge_pid} ->
@@ -353,6 +376,11 @@ defmodule Loomkin.Session do
   @impl true
   def handle_call({:update_model, model}, _from, state) do
     Persistence.update_session(state.db_session, %{model: model})
+
+    if state.team_id do
+      Loomkin.Teams.Manager.update_all_models(state.team_id, model)
+    end
+
     {:reply, :ok, %{state | model: model}}
   end
 

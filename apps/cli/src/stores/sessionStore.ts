@@ -5,6 +5,7 @@ export interface SessionState {
   sessionId: string | null;
   messages: Message[];
   isStreaming: boolean;
+  isPendingResponse: boolean;
   pendingToolCalls: ToolCall[];
   pendingPermissions: PermissionRequest[];
   pendingQuestions: AskUserQuestion[];
@@ -16,6 +17,7 @@ export interface SessionState {
   loadMessages: (messages: Message[]) => void;
   clearMessages: () => void;
   setStreaming: (streaming: boolean) => void;
+  setPendingResponse: (pending: boolean) => void;
   startStreamingMessage: (id: string) => void;
   appendStreamContent: (id: string, token: string) => void;
   addPendingToolCall: (toolCall: ToolCall) => void;
@@ -34,6 +36,7 @@ export const sessionStore = createStore<SessionState>((set) => ({
   sessionId: null,
   messages: [],
   isStreaming: false,
+  isPendingResponse: false,
   pendingToolCalls: [],
   pendingPermissions: [],
   pendingQuestions: [],
@@ -56,6 +59,8 @@ export const sessionStore = createStore<SessionState>((set) => ({
   clearMessages: () => set({ messages: [], scrollOffset: 0 }),
 
   setStreaming: (isStreaming) => set({ isStreaming }),
+
+  setPendingResponse: (isPendingResponse) => set({ isPendingResponse }),
 
   startStreamingMessage: (id) =>
     set((state) => ({

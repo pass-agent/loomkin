@@ -18,8 +18,12 @@ import {
   getSession,
   getSessionMessages,
   sendMessageRest,
+  listModelProviders,
   ApiError,
 } from "./lib/api.js";
+import { getApiBaseUrl } from "./lib/urls.js";
+import { DEV_FALLBACK_URL } from "./lib/constants.js";
+import { isProviderConfigured } from "./lib/modelUtils.js";
 import { runPrintMode } from "./lib/print.js";
 
 const cli = meow(
@@ -31,7 +35,7 @@ const cli = meow(
 
   Options
     --server, -s                    Server URL (env: LOOMKIN_SERVER_URL)
-    --model, -m                     Model to use (default: anthropic:claude-opus-4)
+    --model, -m                     Model to use (default: first configured provider)
     --mode                          Interaction mode: code, plan, chat (default: code)
     --session                       Resume a specific session by ID
     --new, -n                       Force a new session (ignore last session)
@@ -83,12 +87,35 @@ const cli = meow(
   },
 );
 
+async function detectServerUrl(): Promise<void> {
+  if (!DEV_FALLBACK_URL) return;
+  if (cli.flags.server || process.env.LOOMKIN_SERVER_URL) return;
+
+  const url = getApiBaseUrl();
+  if (url === DEV_FALLBACK_URL) return;
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    await fetch(`${url}/api/v1`, { method: "HEAD", signal: controller.signal });
+    clearTimeout(timer);
+  } catch {
+    console.error(pc.yellow(`Cannot reach ${url}, falling back to ${DEV_FALLBACK_URL}`));
+    process.env.LOOMKIN_SERVER_URL = DEV_FALLBACK_URL;
+  }
+}
+
 async function resumeSession(sessionId: string): Promise<boolean> {
   console.error(pc.dim(`Resuming session ${sessionId.slice(0, 8)}…`));
 
   try {
-    await getSession(sessionId);
+    const { session } = await getSession(sessionId);
     useSessionStore.getState().setSessionId(sessionId);
+
+    // Sync server-persisted model before the React app renders
+    if (session.model) {
+      useAppStore.getState().setModel(session.model);
+    }
 
     const { messages } = await getSessionMessages(sessionId);
     if (messages.length > 0) {
@@ -181,6 +208,9 @@ async function main() {
     store.setMaxTurns(cli.flags.maxTurns);
   }
 
+  // Auto-detect server URL — fall back to localhost if primary is unreachable
+  await detectServerUrl();
+
   // Check auth — run setup wizard if needed
   if (!isAuthenticated()) {
     const success = await runSetupWizard();
@@ -239,6 +269,10 @@ async function main() {
   // Interactive mode — create or resume session
   try {
     await resolveSessionId();
+    // Only show model picker if no model is already set (e.g. from a resumed session or --model flag)
+    if (!useAppStore.getState().model) {
+      useAppStore.getState().setShowModelPickerOnConnect(true);
+    }
 
     // Send system prompt if provided
     const sessionId = useSessionStore.getState().sessionId;
@@ -276,6 +310,19 @@ async function main() {
       action: err instanceof ApiError && err.isAuth ? "reauth" : "retry",
     });
   }
+
+  // Fire-and-forget: load provider status for honest status bar display
+  void (async () => {
+    useAppStore.getState().setModelProviderStatus("loading");
+    try {
+      const { providers } = await listModelProviders();
+      const ids = new Set(providers.filter(isProviderConfigured).map((p) => p.id));
+      useAppStore.getState().setConfiguredProviderIds(ids);
+      useAppStore.getState().setModelProviderStatus("loaded");
+    } catch {
+      useAppStore.getState().setModelProviderStatus("error");
+    }
+  })();
 
   // Render the TUI
   const { waitUntilExit } = render(<App />, {

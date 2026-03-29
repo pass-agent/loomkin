@@ -1,11 +1,14 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { setConfig } from "../lib/config.js";
-import { login, register, anonymousLogin, ApiError } from "../lib/api.js";
+import { login, register, anonymousLogin, ApiError, listModelProviders } from "../lib/api.js";
 import { DEFAULT_SERVER_URL } from "../lib/constants.js";
 import { themeList, getTheme } from "../lib/themes.js";
 import { useThemeStore } from "../stores/themeStore.js";
 import type { AuthResponse } from "../lib/types.js";
+import { runOAuthFlow } from "../lib/oauth.js";
+import { isProviderConfigured } from "../lib/modelUtils.js";
+import { useAppStore } from "../stores/appStore.js";
 
 async function selectTheme(): Promise<void> {
   const themeChoice = await p.select({
@@ -192,6 +195,78 @@ function formatErrors(errors?: Record<string, string[]>): string {
     .join("; ");
 }
 
+async function selectModel(): Promise<void> {
+  const spinner = p.spinner();
+  spinner.start("Checking available providers...");
+
+  let providers;
+  try {
+    const result = await listModelProviders();
+    providers = result.providers;
+    spinner.stop("Providers loaded.");
+  } catch {
+    spinner.stop("");
+    p.log.warn("Could not load providers — you can configure a model later with /model");
+    return;
+  }
+
+  const configured = providers.filter(isProviderConfigured);
+
+  if (configured.length > 0) {
+    // Build model options from configured providers
+    const options: { value: string; label: string; hint?: string }[] = [];
+    for (const provider of configured) {
+      if (provider.models.length === 0) continue;
+      options.push({
+        value: `__sep_${provider.id}`,
+        label: pc.dim(`── ${provider.name} ──`),
+      });
+      for (const model of provider.models) {
+        options.push({
+          value: model.id,
+          label: model.label,
+          hint: model.context ? pc.dim(model.context) : undefined,
+        });
+      }
+    }
+    options.push({ value: "__skip", label: pc.dim("Skip for now") });
+
+    const selected = await p.select({
+      message: "Select a default model",
+      options,
+    });
+
+    if (p.isCancel(selected) || selected === "__skip" || (selected as string).startsWith("__sep_")) {
+      p.log.info(pc.dim("You can configure a model anytime with /model"));
+      return;
+    }
+
+    const modelId = selected as string;
+    setConfig({ defaultModel: modelId });
+    useAppStore.getState().setModel(modelId);
+    p.log.success(`Default model set to ${pc.bold(modelId.replace(/^[^:]+:/, ""))}`);
+  } else {
+    // No providers configured — show env var guidance
+    const lines = [
+      pc.yellow("No model providers are configured yet."),
+      pc.dim("To configure a provider, set the appropriate environment variable on the server:"),
+      "",
+    ];
+    const envVars: Record<string, string> = {
+      Anthropic: "ANTHROPIC_API_KEY",
+      OpenAI: "OPENAI_API_KEY",
+      Google: "GOOGLE_API_KEY",
+      Groq: "GROQ_API_KEY",
+      "x.AI": "XAI_API_KEY",
+    };
+    for (const [name, envVar] of Object.entries(envVars)) {
+      lines.push(`  ${name.padEnd(12)} → ${pc.cyan(envVar)}`);
+    }
+    p.log.message(lines.join("\n"));
+    p.log.info(pc.dim("You can also connect via OAuth with /provider after launching."));
+  }
+}
+
 export async function runSetupWizard(): Promise<boolean> {
   p.intro(pc.bold("Welcome to Loomkin CLI"));
 
@@ -264,7 +339,35 @@ export async function runSetupWizard(): Promise<boolean> {
     // Success — save token and proceed
     setConfig({ token: result.token });
 
+    await selectModel();
+
     await selectTheme();
+
+    const connectProvider = await p.confirm({
+      message: "Would you like to connect an OAuth provider now? (Anthropic, Google, or OpenAI)",
+      initialValue: false,
+    });
+
+    if (!p.isCancel(connectProvider) && connectProvider) {
+      const choice = await p.select({
+        message: "Which provider?",
+        options: [
+          { value: "anthropic", label: "Anthropic", hint: "Claude models via OAuth" },
+          { value: "google", label: "Google", hint: "Gemini models via OAuth" },
+          { value: "openai", label: "OpenAI", hint: "GPT/Codex models via OAuth" },
+          { value: "skip", label: "Skip for now", hint: "Connect later with /provider" },
+        ],
+      });
+
+      if (!p.isCancel(choice) && choice !== "skip") {
+        const providerNames: Record<string, string> = {
+          anthropic: "Anthropic",
+          google: "Google",
+          openai: "OpenAI",
+        };
+        await runOAuthFlow(choice as string, providerNames[choice as string]);
+      }
+    }
 
     p.outro(pc.green("You're all set! Launching Loomkin TUI..."));
     return true;

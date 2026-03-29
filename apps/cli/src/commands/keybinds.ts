@@ -32,7 +32,28 @@ register({
     const arg = args.trim().toLowerCase();
     const store = useAppStore.getState();
 
-    if (!arg || arg === "show") {
+    if (!arg) {
+      ctx.showListPicker?.({
+        title: "Select keybind mode",
+        items: [
+          { value: "default", label: "Default", hint: "standard terminal keybindings" },
+          { value: "vim", label: "Vim", hint: "normal/insert mode navigation" },
+        ],
+        currentValue: store.keybindMode,
+        onSelect: (mode) => {
+          const km = mode as KeybindMode;
+          store.setKeybindMode(km);
+          setConfig({ keybindMode: km });
+          ctx.addSystemMessage(
+            `Keybinding mode set to "${km}". ${km === "vim" ? "Press i to enter insert mode, Escape for normal mode." : "Standard keybindings active."}`,
+          );
+        },
+        onCancel: () => {},
+      });
+      return;
+    }
+
+    if (arg === "show") {
       const current = store.keybindMode;
       const lines = [`Keybinding mode: ${current}`];
 

@@ -1,5 +1,20 @@
 import type { AppState } from "../stores/appStore.js";
 import type { SessionState } from "../stores/sessionStore.js";
+import type { ModelProvider } from "../lib/types.js";
+
+export interface ListPickerItem {
+  value: string;
+  label: string;
+  hint?: string;
+}
+
+export interface ListPickerOptions {
+  title: string;
+  items: ListPickerItem[];
+  currentValue?: string;
+  onSelect: (value: string, label: string) => void;
+  onCancel: () => void;
+}
 
 export interface CommandContext {
   appStore: AppState;
@@ -8,6 +23,10 @@ export interface CommandContext {
   sendMessage: (content: string) => void;
   clearMessages: () => void;
   exit: () => void;
+  showModelPicker?: (providers: ModelProvider[]) => void;
+  setSessionModel?: (model: string) => void;
+  captureNextInput?: (callback: (input: string) => void) => void;
+  showListPicker?: (options: ListPickerOptions) => void;
 }
 
 export interface SlashCommand {

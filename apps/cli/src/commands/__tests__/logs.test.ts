@@ -15,12 +15,10 @@ vi.mock("../../lib/api.js", () => ({
 }));
 
 vi.mock("../../lib/constants.js", () => ({
-  getApiBaseUrl: () => "https://loom.test",
-  getApiUrl: () => "https://loom.test/api/v1",
-  getWsUrl: () => "wss://loom.test/socket",
   DEFAULT_SERVER_URL: "https://loom.test",
+  DEV_FALLBACK_URL: null,
   DEFAULT_MODE: "code",
-  DEFAULT_MODEL: "anthropic:claude-opus-4",
+  DEFAULT_MODEL: "",
   MODES: ["code", "plan", "chat"],
 }));
 
@@ -97,7 +95,7 @@ test.each(["log", "decisions"])("alias '%s' resolves to logs", (alias) => {
 });
 
 test("shows recent decisions by default", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "recent_decisions",
     nodes: mockNodes,
   });
@@ -112,7 +110,7 @@ test("shows recent decisions by default", async () => {
 });
 
 test("goals subcommand fetches active goals", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "active_goals",
     nodes: [mockNodes[0]],
   });
@@ -126,7 +124,7 @@ test("goals subcommand fetches active goals", async () => {
 });
 
 test("pulse subcommand shows health score", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "pulse",
     summary: "Project is healthy and on track.",
     health_score: 82,
@@ -143,7 +141,7 @@ test("pulse subcommand shows health score", async () => {
 });
 
 test("search subcommand searches by term", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "search",
     query: "ink",
     nodes: [mockNodes[1]],
@@ -164,7 +162,7 @@ test("search with no query shows usage", async () => {
 });
 
 test("shows empty state for no decisions", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "recent_decisions",
     nodes: [],
   });
@@ -176,7 +174,7 @@ test("shows empty state for no decisions", async () => {
 });
 
 test("shows empty state for no goals", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "active_goals",
     nodes: [],
   });
@@ -188,7 +186,7 @@ test("shows empty state for no goals", async () => {
 });
 
 test("handles API error gracefully", async () => {
-  vi.mocked(getDecisions).mockRejectedValue(new Error("network error"));
+  (getDecisions as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   await resolve("/logs")!.command.handler("", ctx);
@@ -203,7 +201,7 @@ test.each([
   { node_type: "outcome", icon: "✅" },
   { node_type: "observation", icon: "👁" },
 ])("node type '$node_type' shows icon '$icon'", async ({ node_type, icon }) => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "recent_decisions",
     nodes: [{ ...mockNodes[0], node_type }],
   });
@@ -215,7 +213,7 @@ test.each([
 });
 
 test("shows confidence and agent name when present", async () => {
-  vi.mocked(getDecisions).mockResolvedValue({
+  (getDecisions as any).mockResolvedValue({
     type: "recent_decisions",
     nodes: [mockNodes[0]],
   });

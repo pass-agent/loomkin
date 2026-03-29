@@ -17,12 +17,10 @@ vi.mock("../../lib/api.js", () => ({
 }));
 
 vi.mock("../../lib/constants.js", () => ({
-  getApiBaseUrl: () => "https://loom.test",
-  getApiUrl: () => "https://loom.test/api/v1",
-  getWsUrl: () => "wss://loom.test/socket",
   DEFAULT_SERVER_URL: "https://loom.test",
+  DEV_FALLBACK_URL: null,
   DEFAULT_MODE: "code",
-  DEFAULT_MODEL: "anthropic:claude-opus-4",
+  DEFAULT_MODEL: "",
   MODES: ["code", "plan", "chat"],
 }));
 
@@ -117,7 +115,7 @@ test.each([
     expected: ["MCP Server", "enabled", "file_read", "shell"],
   },
 ])("$name", async ({ args, expected }) => {
-  vi.mocked(getMcpStatus).mockResolvedValue(mockStatus);
+  (getMcpStatus as any).mockResolvedValue(mockStatus);
 
   const ctx = createMockContext();
   await resolve("/mcp")!.command.handler(args, ctx);
@@ -129,7 +127,7 @@ test.each([
 });
 
 test("overview shows config hint when no clients", async () => {
-  vi.mocked(getMcpStatus).mockResolvedValue({
+  (getMcpStatus as any).mockResolvedValue({
     server: { enabled: false, tools: [] },
     clients: [],
   });
@@ -143,7 +141,7 @@ test("overview shows config hint when no clients", async () => {
 });
 
 test("server subcommand shows disabled hint", async () => {
-  vi.mocked(getMcpStatus).mockResolvedValue({
+  (getMcpStatus as any).mockResolvedValue({
     server: { enabled: false, tools: [] },
     clients: [],
   });
@@ -157,7 +155,7 @@ test("server subcommand shows disabled hint", async () => {
 });
 
 test("refresh calls API and shows success", async () => {
-  vi.mocked(refreshMcp).mockResolvedValue({
+  (refreshMcp as any).mockResolvedValue({
     message: "refresh requested for all endpoints",
   });
 
@@ -169,7 +167,7 @@ test("refresh calls API and shows success", async () => {
 });
 
 test("refresh with name calls API for specific endpoint", async () => {
-  vi.mocked(refreshMcp).mockResolvedValue({
+  (refreshMcp as any).mockResolvedValue({
     message: "refresh requested",
   });
 
@@ -180,7 +178,7 @@ test("refresh with name calls API for specific endpoint", async () => {
 });
 
 test("handles API failure gracefully", async () => {
-  vi.mocked(getMcpStatus).mockRejectedValue(new Error("network error"));
+  (getMcpStatus as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   await resolve("/mcp")!.command.handler("", ctx);
@@ -189,7 +187,7 @@ test("handles API failure gracefully", async () => {
 });
 
 test("handles refresh failure gracefully", async () => {
-  vi.mocked(refreshMcp).mockRejectedValue(new Error("network error"));
+  (refreshMcp as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   await resolve("/mcp")!.command.handler("refresh", ctx);
@@ -201,7 +199,7 @@ test.each([
   { status: "connected", expected: "●" },
   { status: "error: :not_connected", expected: "●" },
 ])("client with status '$status' shows status dot", async ({ status }) => {
-  vi.mocked(getMcpStatus).mockResolvedValue({
+  (getMcpStatus as any).mockResolvedValue({
     server: { enabled: false, tools: [] },
     clients: [
       {
