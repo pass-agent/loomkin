@@ -1,5 +1,8 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
+
+// eslint-disable-next-line no-control-regex
+const stripAnsi = (str: string) => str.replace(/\x1B\[[0-9;]*m/g, "");
 import { useAgentStore } from "../stores/agentStore.js";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAppStore } from "../stores/appStore.js";
@@ -19,16 +22,16 @@ async function renderDashboard(ctx: CommandContext) {
 
   // Connection & Session Info
   const statusLine = `  ${connectionState === "connected" ? pc.green("●") : pc.red("○")} ${connectionState}  ${pc.dim("│")}  Mode: ${pc.bold(mode)}  ${pc.dim("│")}  Model: ${pc.bold(model)}`;
-  lines.push(pc.bold(pc.cyan("┃")) + statusLine + " ".repeat(78 - pc.stripAnsi(statusLine).length) + pc.bold(pc.cyan("┃")));
+  lines.push(pc.bold(pc.cyan("┃")) + statusLine + " ".repeat(78 - stripAnsi(statusLine).length) + pc.bold(pc.cyan("┃")));
 
   if (sessionId) {
     try {
       const { session } = await getSession(sessionId);
       const sessionLine = `  Session: ${pc.cyan(sessionId.slice(0, 8))}  ${pc.dim("│")}  Tokens: ${pc.yellow(formatTokens(session.prompt_tokens + session.completion_tokens))}  ${pc.dim("│")}  Cost: ${pc.green(formatCost(session.cost_usd))}`;
-      lines.push(pc.bold(pc.cyan("┃")) + sessionLine + " ".repeat(78 - pc.stripAnsi(sessionLine).length) + pc.bold(pc.cyan("┃")));
+      lines.push(pc.bold(pc.cyan("┃")) + sessionLine + " ".repeat(78 - stripAnsi(sessionLine).length) + pc.bold(pc.cyan("┃")));
     } catch {
       const sessionLine = `  Session: ${pc.cyan(sessionId.slice(0, 8))} ${pc.dim("(details unavailable)")}`;
-      lines.push(pc.bold(pc.cyan("┃")) + sessionLine + " ".repeat(78 - pc.stripAnsi(sessionLine).length) + pc.bold(pc.cyan("┃")));
+      lines.push(pc.bold(pc.cyan("┃")) + sessionLine + " ".repeat(78 - stripAnsi(sessionLine).length) + pc.bold(pc.cyan("┃")));
     }
   }
 
@@ -37,11 +40,11 @@ async function renderDashboard(ctx: CommandContext) {
 
   if (agents.size === 0) {
     const noAgentsLine = `  ${pc.dim("No agents active. Spawn agents with /spawn <role>")}`;
-    lines.push(pc.bold(pc.cyan("┃")) + noAgentsLine + " ".repeat(78 - pc.stripAnsi(noAgentsLine).length) + pc.bold(pc.cyan("┃")));
+    lines.push(pc.bold(pc.cyan("┃")) + noAgentsLine + " ".repeat(78 - stripAnsi(noAgentsLine).length) + pc.bold(pc.cyan("┃")));
   } else {
     Array.from(agents.values()).forEach(agent => {
       const agentLine = `  ${agent.status === 'working' ? pc.green('●') : pc.dim('○')} ${pc.bold(agent.name)} ${pc.cyan(`[${agent.role}]`)} ${pc.dim(agent.currentTask ? `— ${agent.currentTask.slice(0, 40)}...` : 'Idle')}`;
-      lines.push(pc.bold(pc.cyan("┃")) + agentLine + " ".repeat(78 - pc.stripAnsi(agentLine).length) + pc.bold(pc.cyan("┃")));
+      lines.push(pc.bold(pc.cyan("┃")) + agentLine + " ".repeat(78 - stripAnsi(agentLine).length) + pc.bold(pc.cyan("┃")));
     });
   }
 
