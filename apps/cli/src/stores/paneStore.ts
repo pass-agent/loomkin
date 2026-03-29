@@ -5,6 +5,7 @@ export interface PaneState {
   splitMode: boolean;
   focusedPane: "left" | "right";
   selectedAgent: string | null;
+  focusedTarget: string | null;
   rightScrollOffset: number;
 
   toggleSplitMode: () => void;
@@ -12,12 +13,14 @@ export interface PaneState {
   selectAgent: (name: string | null) => void;
   cycleAgent: (direction: 1 | -1) => void;
   setRightScrollOffset: (offset: number) => void;
+  setFocusedTarget: (name: string | null) => void;
 }
 
 export const paneStore = createStore<PaneState>((set) => ({
   splitMode: false,
   focusedPane: "left",
   selectedAgent: null,
+  focusedTarget: null,
   rightScrollOffset: 0,
 
   toggleSplitMode: () =>
@@ -57,6 +60,8 @@ export const paneStore = createStore<PaneState>((set) => ({
 
   setRightScrollOffset: (offset) =>
     set({ rightScrollOffset: Math.max(0, offset) }),
+
+  setFocusedTarget: (focusedTarget) => set({ focusedTarget }),
 }));
 
 export const usePaneStore = paneStore;

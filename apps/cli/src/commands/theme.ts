@@ -21,17 +21,22 @@ register({
     const arg = _args.trim();
     const current = useThemeStore.getState().theme;
 
-    // /theme — show current + list
+    // /theme — open picker
     if (!arg || arg === "list") {
-      const lines = themeList.map((t) => {
-        const marker = t.name === current.name ? t.success("▸ ") : "  ";
-        const cb = t.colorblind ? t.dim(" [colorblind-friendly]") : "";
-        return `${marker}${t.bold(t.name)}  ${t.dim(t.description)}${cb}`;
+      ctx.showListPicker?.({
+        title: "Select a theme",
+        items: themeList.map((t) => ({
+          value: t.name,
+          label: t.label,
+          hint: `${t.success("✔")} ${t.error("✖")} ${t.warning("⚠")} ${t.info("ℹ")} ${t.agentWorking("●")} ${t.agentIdle("○")}  ${t.dim(t.description)}${t.colorblind ? " [colorblind-friendly]" : ""}`,
+        })),
+        currentValue: current.name,
+        onSelect: (name, label) => {
+          useThemeStore.getState().setTheme(name);
+          ctx.addSystemMessage(`Switched to ${label} theme.`);
+        },
+        onCancel: () => {},
       });
-
-      const header = current.bold(`Current theme: ${current.name}`);
-      const hint = current.dim("  Switch with: /theme <name>");
-      ctx.addSystemMessage(`${header}\n\n${lines.join("\n")}\n\n${hint}`);
       return;
     }
 

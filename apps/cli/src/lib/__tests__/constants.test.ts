@@ -9,7 +9,7 @@ import {
 test.each([
   { name: "DEFAULT_SERVER_URL", value: DEFAULT_SERVER_URL, expected: "https://api.loomkin.dev" },
   { name: "DEFAULT_MODE", value: DEFAULT_MODE, expected: "code" },
-  { name: "DEFAULT_MODEL", value: DEFAULT_MODEL, expected: "anthropic:claude-opus-4" },
+  { name: "DEFAULT_MODEL", value: DEFAULT_MODEL, expected: "" },
 ])("$name equals $expected", ({ value, expected }) => {
   expect(value).toBe(expected);
 });

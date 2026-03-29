@@ -21,12 +21,10 @@ vi.mock("../../lib/api.js", () => ({
 }));
 
 vi.mock("../../lib/constants.js", () => ({
-  getApiBaseUrl: () => "https://loom.test",
-  getApiUrl: () => "https://loom.test/api/v1",
-  getWsUrl: () => "wss://loom.test/socket",
   DEFAULT_SERVER_URL: "https://loom.test",
+  DEV_FALLBACK_URL: null,
   DEFAULT_MODE: "code",
-  DEFAULT_MODEL: "anthropic:claude-opus-4",
+  DEFAULT_MODEL: "",
   MODES: ["code", "plan", "chat"],
 }));
 
@@ -77,7 +75,7 @@ test.each(["f", "ls"])("alias '%s' resolves to files", (alias) => {
 });
 
 test("lists current directory by default", async () => {
-  vi.mocked(listFiles).mockResolvedValue({
+  (listFiles as any).mockResolvedValue({
     path: ".",
     entries: [
       { name: "src", type: "dir", size: "160B", modified: "2026-03-23", is_dir: true },
@@ -95,7 +93,7 @@ test("lists current directory by default", async () => {
 });
 
 test("lists specific directory", async () => {
-  vi.mocked(listFiles).mockResolvedValue({
+  (listFiles as any).mockResolvedValue({
     path: "src",
     entries: [
       { name: "index.ts", type: "file", size: "500B", modified: "2026-03-23", is_dir: false },
@@ -110,7 +108,7 @@ test("lists specific directory", async () => {
 });
 
 test("shows empty directory message", async () => {
-  vi.mocked(listFiles).mockResolvedValue({ path: "empty", entries: [] });
+  (listFiles as any).mockResolvedValue({ path: "empty", entries: [] });
 
   const ctx = createMockContext();
   await resolve("/files")!.command.handler("empty", ctx);
@@ -119,7 +117,7 @@ test("shows empty directory message", async () => {
 });
 
 test("search subcommand calls searchFiles", async () => {
-  vi.mocked(searchFiles).mockResolvedValue({
+  (searchFiles as any).mockResolvedValue({
     pattern: "**/*.ts",
     files: ["src/index.ts", "src/app.ts"],
   });
@@ -141,7 +139,7 @@ test("search with no pattern shows usage", async () => {
 });
 
 test("read subcommand calls readFile", async () => {
-  vi.mocked(readFile).mockResolvedValue({
+  (readFile as any).mockResolvedValue({
     content: "line 1\nline 2\nline 3",
   });
 
@@ -156,7 +154,7 @@ test("read subcommand calls readFile", async () => {
 });
 
 test("read with offset and limit", async () => {
-  vi.mocked(readFile).mockResolvedValue({ content: "line 10" });
+  (readFile as any).mockResolvedValue({ content: "line 10" });
 
   const ctx = createMockContext();
   await resolve("/files")!.command.handler("read src/index.ts 10 20", ctx);
@@ -175,7 +173,7 @@ test("read with no path shows usage", async () => {
 });
 
 test("grep subcommand calls grepFiles", async () => {
-  vi.mocked(grepFiles).mockResolvedValue({
+  (grepFiles as any).mockResolvedValue({
     pattern: "TODO",
     matches: [
       { file: "src/app.ts", line: 5, content: "// TODO: fix this" },
@@ -193,7 +191,7 @@ test("grep subcommand calls grepFiles", async () => {
 });
 
 test("grep with glob filter", async () => {
-  vi.mocked(grepFiles).mockResolvedValue({
+  (grepFiles as any).mockResolvedValue({
     pattern: "TODO",
     matches: [],
   });
@@ -212,7 +210,7 @@ test("grep with no pattern shows usage", async () => {
 });
 
 test("handles API errors gracefully", async () => {
-  vi.mocked(listFiles).mockRejectedValue(new Error("network error"));
+  (listFiles as any).mockRejectedValue(new Error("network error"));
 
   const ctx = createMockContext();
   await resolve("/files")!.command.handler("", ctx);
@@ -224,12 +222,12 @@ test.each(["find", "cat"])(
   "alias '%s' works for subcommands",
   async (alias) => {
     if (alias === "find") {
-      vi.mocked(searchFiles).mockResolvedValue({
+      (searchFiles as any).mockResolvedValue({
         pattern: "*.ts",
         files: ["a.ts"],
       });
     } else {
-      vi.mocked(readFile).mockResolvedValue({ content: "test" });
+      (readFile as any).mockResolvedValue({ content: "test" });
     }
 
     const ctx = createMockContext();

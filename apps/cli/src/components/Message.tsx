@@ -57,10 +57,12 @@ export function Message({
       )}
 
       {role === "system" && (
-        <Box>
-          <Text italic dimColor>
-            {content}
-          </Text>
+        <Box flexDirection="column">
+          {(content ?? "").split("\n").map((line, i) => (
+            <Text key={i} italic dimColor>
+              {line}
+            </Text>
+          ))}
         </Box>
       )}
 

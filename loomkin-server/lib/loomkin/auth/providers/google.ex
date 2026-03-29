@@ -75,6 +75,15 @@ defmodule Loomkin.Auth.Providers.Google do
 
   @impl true
   def build_authorize_url(params) do
+    case {client_id(), client_secret()} do
+      {nil, _} -> {:error, :missing_credentials}
+      {_, nil} -> {:error, :missing_credentials}
+      {id, _} when not is_binary(id) or id == "" -> {:error, :missing_credentials}
+      _ -> do_build_authorize_url(params)
+    end
+  end
+
+  defp do_build_authorize_url(params) do
     %{state: state_token, redirect_uri: redirect_uri} = params
 
     config = assent_config(redirect_uri, state_token)

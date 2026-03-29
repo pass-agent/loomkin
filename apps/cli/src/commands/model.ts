@@ -1,46 +1,15 @@
-import * as p from "@clack/prompts";
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { listModelProviders } from "../lib/api.js";
 import { extractErrorMessage } from "../lib/errors.js";
+import { isProviderConfigured } from "../lib/modelUtils.js";
 import type { ModelProvider } from "../lib/types.js";
 
-function isConfigured(provider: ModelProvider): boolean {
-  const s = provider.status;
-  return (
-    (s.type === "api_key" && s.status === "set") ||
-    (s.type === "oauth" && s.status === "connected") ||
-    (s.type === "local" && s.status === "available")
-  );
-}
-
-function buildOptions(providers: ModelProvider[]) {
-  const options: { value: string; label: string; hint?: string }[] = [];
-
-  for (const provider of providers) {
-    if (provider.models.length === 0) continue;
-
-    options.push({
-      value: `__separator_${provider.id}`,
-      label: pc.dim(`── ${provider.name} ──`),
-    });
-
-    for (const model of provider.models) {
-      options.push({
-        value: model.id,
-        label: model.label,
-        hint: model.context ? pc.dim(model.context) : undefined,
-      });
-    }
-  }
-
-  return options;
-}
 
 function formatProviderStatus(providers: ModelProvider[]): string {
-  const configured = providers.filter(isConfigured);
+  const configured = providers.filter(isProviderConfigured);
   const unconfigured = providers.filter(
-    (p) => !isConfigured(p) && p.status.env_var,
+    (p) => !isProviderConfigured(p) && p.status.env_var,
   );
 
   const lines: string[] = [];
@@ -65,7 +34,7 @@ function formatProviderStatus(providers: ModelProvider[]): string {
 
 register({
   name: "model",
-  description: "Switch the active model",
+  description: "Browse and switch models (e.g. /model google:gemini-2.5-pro)",
   args: "[model-id]",
   handler: async (args: string, ctx: CommandContext) => {
     const requested = args.trim();
@@ -81,6 +50,7 @@ register({
           // Could be a valid provider:model string not in the catalog
           if (requested.includes(":")) {
             ctx.appStore.setModel(requested);
+            ctx.setSessionModel?.(requested);
             ctx.addSystemMessage(
               `Switched to model ${pc.bold(requested)}. ${pc.dim("(not in catalog — verify the ID is correct)")}`,
             );
@@ -99,6 +69,7 @@ register({
         }
 
         ctx.appStore.setModel(match.id);
+        ctx.setSessionModel?.(match.id);
         ctx.addSystemMessage(`Switched to model ${pc.bold(match.label)} (${pc.dim(match.id)}).`);
       } catch (error) {
         const msg = extractErrorMessage(error);
@@ -124,32 +95,21 @@ register({
         return;
       }
 
-      const options = buildOptions(providers);
-      const currentModel = ctx.appStore.model;
-
-      const selected = await p.select({
-        message: `Select a model ${pc.dim(`(current: ${currentModel})`)}`,
-        options,
-        initialValue: currentModel,
-      });
-
-      if (p.isCancel(selected)) {
-        ctx.addSystemMessage(pc.dim("Model selection cancelled."));
+      if (ctx.showModelPicker) {
+        ctx.showModelPicker(providers);
         return;
       }
 
-      const modelId = selected as string;
-
-      // Ignore separator selections
-      if (modelId.startsWith("__separator_")) {
-        ctx.addSystemMessage(pc.dim("Model selection cancelled."));
-        return;
-      }
-
-      const match = allModels.find((m) => m.id === modelId);
-      ctx.appStore.setModel(modelId);
+      // Fallback for non-interactive contexts (tests, piped input)
       ctx.addSystemMessage(
-        `Switched to model ${pc.bold(match?.label ?? modelId)} (${pc.dim(modelId)}).`,
+        [
+          pc.bold("Available models:"),
+          ...providers.flatMap((prov) =>
+            prov.models.map((m) => `  ${pc.cyan(m.id)}  ${pc.dim(m.label)}`),
+          ),
+          "",
+          pc.dim("Use /model <id> to switch."),
+        ].join("\n"),
       );
     } catch (error) {
       const msg = extractErrorMessage(error);

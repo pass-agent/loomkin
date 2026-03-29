@@ -27,6 +27,10 @@ vi.mock("../../lib/api.js", () => ({
   },
 }));
 
+// Static imports after vi.mock — vi.mock is hoisted so these receive the mocked module
+import { resolve } from "../registry.js";
+import { getSettings, updateSettings, ApiError } from "../../lib/api.js";
+
 function makeSetting(overrides: Partial<Setting> = {}): Setting {
   return {
     key: "teams.orchestrator_mode",
@@ -110,18 +114,10 @@ function getMessage(ctx: CommandContext, callIndex = 0): string {
     .calls[callIndex][0] as string;
 }
 
-let resolve: typeof import("../registry.js")["resolve"];
-let getSettings: ReturnType<typeof vi.fn>;
-let updateSettings: ReturnType<typeof vi.fn>;
-
 beforeEach(async () => {
   vi.clearAllMocks();
-  ({ resolve } = await import("../registry.js"));
-  const api = await import("../../lib/api.js");
-  getSettings = api.getSettings as ReturnType<typeof vi.fn>;
-  updateSettings = api.updateSettings as ReturnType<typeof vi.fn>;
-  getSettings.mockResolvedValue({ settings: mockSettings });
-  updateSettings.mockResolvedValue({ message: "settings updated", values: {} });
+  (getSettings as any).mockResolvedValue({ settings: mockSettings });
+  (updateSettings as any).mockResolvedValue({ message: "settings updated", values: {} });
   await import("../settings.js");
 });
 
@@ -238,8 +234,7 @@ test("update with invalid select option shows error", async () => {
 });
 
 test("update 422 shows validation error", async () => {
-  const { ApiError } = await import("../../lib/api.js");
-  updateSettings.mockRejectedValueOnce(
+  (updateSettings as any).mockRejectedValueOnce(
     new ApiError(422, JSON.stringify({ errors: { key: "must be positive" } })),
   );
   const ctx = createMockContext();
@@ -267,8 +262,7 @@ test("search matches across key, label, and description", async () => {
 // -- API fetch error --
 
 test("API error on fetch shows error message", async () => {
-  const { ApiError } = await import("../../lib/api.js");
-  getSettings.mockRejectedValueOnce(new ApiError(500, "Internal server error"));
+  (getSettings as any).mockRejectedValueOnce(new ApiError(500, "Internal server error"));
   const ctx = createMockContext();
   await resolve("/settings")!.command.handler("", ctx);
   expect(getMessage(ctx)).toContain("Failed to fetch settings");

@@ -69,6 +69,11 @@ defmodule LoomkinWeb.Router do
     post "/sessions/:session_id/shares", ShareController, :create
     get "/sessions/:session_id/shares", ShareController, :index
     delete "/shares/:id", ShareController, :delete
+
+    post "/providers/oauth/:provider/start", OAuthController, :start
+    get "/providers/oauth/:provider/status", OAuthController, :status
+    post "/providers/oauth/:provider/paste", OAuthController, :paste
+    delete "/providers/oauth/:provider", OAuthController, :disconnect
   end
 
   # CORS preflight for API routes

@@ -5,7 +5,11 @@ import type { SessionState } from "../../stores/sessionStore.js";
 
 vi.mock("../../lib/api.js", () => ({
   listSessions: vi.fn().mockResolvedValue({ sessions: [] }),
+  getSession: vi.fn().mockResolvedValue({ session: { id: "abc-123", title: "Test", model: "anthropic:claude-opus-4", prompt_tokens: 0, completion_tokens: 0, status: "active", fast_model: null, project_path: "/tmp", cost_usd: null, team_id: null, inserted_at: "", updated_at: "" } }),
   getSessionMessages: vi.fn().mockResolvedValue({ messages: [] }),
+  createSession: vi.fn().mockResolvedValue({ session: { id: "new-session" } }),
+  updateSession: vi.fn().mockResolvedValue({ session: {} }),
+  archiveSession: vi.fn().mockResolvedValue({}),
   listModelProviders: vi.fn().mockResolvedValue({
     providers: [
       {
@@ -19,6 +23,8 @@ vi.mock("../../lib/api.js", () => ({
       },
     ],
   }),
+  getMcpStatus: vi.fn().mockResolvedValue({ servers: [] }),
+  refreshMcp: vi.fn().mockResolvedValue({ servers: [] }),
   ApiError: class ApiError extends Error {
     constructor(public status: number, public body: string) {
       super(`API ${status}: ${body}`);
@@ -26,14 +32,10 @@ vi.mock("../../lib/api.js", () => ({
   },
 }));
 
-vi.mock("@clack/prompts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clack/prompts")>();
-  return {
-    ...actual,
-    select: vi.fn().mockResolvedValue("anthropic:claude-opus-4"),
-    isCancel: vi.fn().mockReturnValue(false),
-  };
-});
+vi.mock("@clack/prompts", () => ({
+  select: vi.fn().mockResolvedValue("anthropic:claude-opus-4"),
+  isCancel: vi.fn().mockReturnValue(false),
+}));
 
 function createMockContext(
   overrides: { mode?: string; model?: string; sessionId?: string | null } = {},
@@ -161,12 +163,12 @@ test("/model switches to requested model", async () => {
 test.each([
   { sessionId: "abc-123", args: "", expected: "abc-123", label: "shows current session" },
   { sessionId: null as string | null, args: "", expected: "No active session", label: "shows no session when null" },
-])("/session $label", ({ sessionId, args, expected }) => {
+])("/session $label", async ({ sessionId, args, expected }) => {
   const ctx = createMockContext({ sessionId });
   if (sessionId === null) {
     (ctx.sessionStore as unknown as Record<string, unknown>).sessionId = null;
   }
-  resolve("/session")!.command.handler(args, ctx);
+  await resolve("/session")!.command.handler(args, ctx);
   expect(getMessage(ctx)).toContain(expected);
 });
 
