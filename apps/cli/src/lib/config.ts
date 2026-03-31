@@ -1,4 +1,6 @@
 import Conf from "conf";
+import { join } from "path";
+import { homedir } from "os";
 import { DEFAULT_MODE, DEFAULT_MODEL, DEFAULT_SERVER_URL } from "./constants.js";
 
 export interface LoomkinConfig {
@@ -48,4 +50,8 @@ export function getLastSessionId(): string | null {
 
 export function setLastSessionId(sessionId: string | null): void {
   config.set("lastSessionId", sessionId);
+}
+
+export function getHistoryPath(): string {
+  return join(homedir(), ".loomkin", "history.json");
 }
