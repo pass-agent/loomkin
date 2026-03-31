@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "strict": true,
-    "types": ["node"],
+    "types": ["node", "bun-types"],
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",

@@ -17,6 +17,7 @@ import {
   getVimKeymap,
 } from "../lib/keymap.js";
 import type { ModelProvider } from "../lib/types.js";
+import { loadHistory, saveHistory, appendHistory } from "../lib/history.js";
 
 interface Props {
   onSubmit: (text: string, targetAgent?: string) => void;
@@ -25,13 +26,17 @@ interface Props {
 
 export function InputArea({ onSubmit, commandContext }: Props) {
   const [value, setValue] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(() => loadHistory());
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [cursor, setCursor] = useState(0);
   const [modelPickerProviders, setModelPickerProviders] = useState<ModelProvider[] | null>(null);
   const [listPickerOptions, setListPickerOptions] = useState<ListPickerOptions | null>(null);
   const [awaitingCapture, setAwaitingCapture] = useState(false);
+  // Ctrl+R reverse-search state
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResultIndex, setSearchResultIndex] = useState(0);
   const modelPickerAutoRef = useRef(false);
   const undoStack = useRef<string[]>([]);
   const skipSubmitRef = useRef(false);
@@ -199,10 +204,69 @@ export function InputArea({ onSubmit, commandContext }: Props) {
     [value, cursor, history, historyIndex, setVimMode],
   );
 
+  // Search mode: compute filtered results reactively
+  const searchResults = searchMode
+    ? history.filter((h) => h.includes(searchQuery)).reverse()
+    : [];
+  const selectedResult = searchResults[searchResultIndex] ?? null;
+
   useInput((input, key) => {
     // Pickers own all input while open
     if (modelPickerProviders) return;
     if (listPickerOptions) return;
+
+    // Ctrl+R: enter or navigate reverse search mode
+    if (key.ctrl && input === "r") {
+      if (!searchMode) {
+        setSearchMode(true);
+        setSearchQuery("");
+        setSearchResultIndex(0);
+      } else {
+        // Cycle to next result while already in search mode
+        setSearchResultIndex((i) => Math.min(i + 1, searchResults.length - 1));
+      }
+      return;
+    }
+
+    // Search mode: handle navigation and selection
+    if (searchMode) {
+      if (key.escape) {
+        setSearchMode(false);
+        setSearchQuery("");
+        setSearchResultIndex(0);
+        return;
+      }
+      if (key.return) {
+        if (selectedResult) {
+          setValue(selectedResult);
+          setCursor(selectedResult.length);
+        }
+        setSearchMode(false);
+        setSearchQuery("");
+        setSearchResultIndex(0);
+        return;
+      }
+      if (key.upArrow) {
+        setSearchResultIndex((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (key.downArrow) {
+        setSearchResultIndex((i) => Math.min(i + 1, searchResults.length - 1));
+        return;
+      }
+      if (key.backspace || key.delete) {
+        setSearchQuery((q) => q.slice(0, -1));
+        setSearchResultIndex(0);
+        return;
+      }
+      // Printable character: append to search query
+      if (input && !key.ctrl && !key.meta && input.length === 1) {
+        setSearchQuery((q) => q + input);
+        setSearchResultIndex(0);
+        return;
+      }
+      return;
+    }
 
     // Command palette navigation (works in all modes)
     if (showPalette) {
@@ -353,8 +417,12 @@ export function InputArea({ onSubmit, commandContext }: Props) {
       // Save undo state
       undoStack.current = [];
 
-      // Add to history
-      setHistory((prev) => [...prev.slice(-100), trimmed]);
+      // Add to in-memory history and persist to disk (fire-and-forget)
+      setHistory((prev) => {
+        const updated = appendHistory(prev, trimmed);
+        saveHistory(updated);
+        return updated;
+      });
       setHistoryIndex(-1);
       setValue("");
       setCursor(0);
@@ -376,7 +444,7 @@ export function InputArea({ onSubmit, commandContext }: Props) {
         const [, mentionTarget, rest] = mentionMatch as [string, string, string];
         onSubmit(rest, mentionTarget);
         setValue("");
-        setHistory((h) => [trimmed, ...h.slice(0, 99)]);
+        // history already added above; no duplicate needed
         setHistoryIndex(-1);
         return;
       }
@@ -511,7 +579,20 @@ export function InputArea({ onSubmit, commandContext }: Props) {
               </Text>
             )}
           </Box>
-          {showPalette && completions.length > 0 && (
+          {searchMode && (
+            <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1}>
+              <Text color="cyan" bold>reverse-i-search: <Text color="white">{searchQuery}</Text><Text color="cyan" inverse> </Text></Text>
+              {searchResults.slice(0, 10).map((entry, i) => (
+                <Text key={entry + i} color={i === searchResultIndex ? "black" : undefined} backgroundColor={i === searchResultIndex ? "cyan" : undefined}>
+                  {entry}
+                </Text>
+              ))}
+              {searchResults.length === 0 && (
+                <Text dimColor>(no matches)</Text>
+              )}
+            </Box>
+          )}
+          {!searchMode && showPalette && completions.length > 0 && (
             <CommandPalette input={value} selectedIndex={paletteIndex} />
           )}
         </>
