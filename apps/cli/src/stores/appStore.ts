@@ -71,6 +71,9 @@ export interface AppState {
   // Plan mode
   planMode: boolean;
 
+  // Extended thinking budget (null = disabled)
+  thinkingBudget: number | null;
+
   // Show model picker once after first connect (set on startup)
   showModelPickerOnConnect: boolean;
   setShowModelPickerOnConnect: (show: boolean) => void;
@@ -114,6 +117,7 @@ export interface AppState {
   setCustomKeybindings: (keybindings: Record<string, string>) => void;
   setUpdateAvailable: (version: string | null) => void;
   setPlanMode: (enabled: boolean) => void;
+  setThinkingBudget: (budget: number | null) => void;
 }
 
 const config = getConfig();
@@ -159,6 +163,8 @@ export const appStore = createStore<AppState>((set, get) => ({
   updateAvailable: null,
 
   planMode: false,
+
+  thinkingBudget: null,
 
   showModelPickerOnConnect: false,
   setShowModelPickerOnConnect: (show) => set({ showModelPickerOnConnect: show }),
@@ -229,6 +235,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   setCustomKeybindings: (customKeybindings) => set({ customKeybindings }),
   setUpdateAvailable: (updateAvailable) => set({ updateAvailable }),
   setPlanMode: (planMode) => set({ planMode }),
+  setThinkingBudget: (thinkingBudget) => set({ thinkingBudget }),
 }));
 
 export const useAppStore = appStore;
