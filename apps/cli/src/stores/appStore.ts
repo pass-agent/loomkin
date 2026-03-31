@@ -2,6 +2,7 @@ import { createStore } from "zustand";
 import type { Mode } from "../lib/constants.js";
 import { getConfig } from "../lib/config.js";
 import type { KeybindMode, VimMode } from "../lib/keymap.js";
+import type { Immutable } from "../lib/types/immutable.js";
 
 export type ConnectionState =
   | "disconnected"
@@ -122,7 +123,7 @@ export interface AppState {
 
 const config = getConfig();
 
-export const appStore = createStore<AppState>((set, get) => ({
+export const appStore = createStore<Immutable<AppState>>((set, get) => ({
   serverUrl: config.serverUrl,
   token: config.token,
   mode: (config.defaultMode as Mode) || "code",

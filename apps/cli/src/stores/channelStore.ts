@@ -2,6 +2,7 @@ import { createStore } from "zustand";
 import { joinChannel, leaveChannel } from "../lib/socket.js";
 import { useAppStore } from "./appStore.js";
 import type { Channel } from "phoenix";
+import type { Immutable } from "../lib/types/immutable.js";
 
 export interface ChannelStoreState {
   channel: Channel | null;
@@ -12,7 +13,7 @@ export interface ChannelStoreState {
   getChannel: () => Channel | null;
 }
 
-export const channelStore = createStore<ChannelStoreState>((set, get) => ({
+export const channelStore = createStore<Immutable<ChannelStoreState>>((set, get) => ({
   channel: null,
   topic: null,
 

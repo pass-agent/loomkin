@@ -1,5 +1,6 @@
 import { createStore } from "zustand";
 import { agentStore } from "./agentStore.js";
+import type { Immutable } from "../lib/types/immutable.js";
 
 export interface PaneState {
   splitMode: boolean;
@@ -16,7 +17,7 @@ export interface PaneState {
   setFocusedTarget: (name: string | null) => void;
 }
 
-export const paneStore = createStore<PaneState>((set) => ({
+export const paneStore = createStore<Immutable<PaneState>>((set) => ({
   splitMode: false,
   focusedPane: "left",
   selectedAgent: null,

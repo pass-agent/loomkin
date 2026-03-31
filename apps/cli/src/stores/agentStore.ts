@@ -1,4 +1,5 @@
 import { createStore } from "zustand";
+import type { Immutable } from "../lib/types/immutable.js";
 
 export interface AgentInfo {
   name: string;
@@ -25,7 +26,7 @@ export interface AgentStoreState {
   getAgentList: () => AgentInfo[];
 }
 
-export const agentStore = createStore<AgentStoreState>((set, get) => ({
+export const agentStore = createStore<Immutable<AgentStoreState>>((set, get) => ({
   agents: new Map(),
 
   upsertAgent: (name, partial) =>

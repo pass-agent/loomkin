@@ -1,4 +1,5 @@
 import { createStore } from "zustand";
+import type { Immutable } from "../lib/types/immutable.js";
 import type { ConversationInfo, ConversationTurn } from "../lib/types.js";
 
 const MAX_COMPLETED = 20;
@@ -79,7 +80,7 @@ export interface ConversationStoreState {
   getList: () => ConversationInfo[];
 }
 
-export const conversationStore = createStore<ConversationStoreState>(
+export const conversationStore = createStore<Immutable<ConversationStoreState>>(
   (set, get) => ({
     conversations: new Map(),
     activeConversationId: null,
