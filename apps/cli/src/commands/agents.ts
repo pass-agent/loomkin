@@ -41,7 +41,12 @@ function formatAgent(agent: AgentInfo): string {
     cost = pc.dim(` $${agent.costUsd.toFixed(4)}`);
   }
 
-  return `  ${icon} ${name} ${role} ${pc.dim(`[${status}]`)}${detail}${cost}`;
+  let worktree = "";
+  if (agent.worktreePath) {
+    worktree = pc.dim(` [wt:${agent.worktreePath}]`);
+  }
+
+  return `  ${icon} ${name} ${role} ${pc.dim(`[${status}]`)}${detail}${cost}${worktree}`;
 }
 
 register({

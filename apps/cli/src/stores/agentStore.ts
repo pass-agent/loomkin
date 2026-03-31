@@ -12,6 +12,7 @@ export interface AgentInfo {
   costUsd?: number;
   lastError?: string;
   pauseQueued?: boolean;
+  worktreePath?: string;
   updatedAt: string;
 }
 

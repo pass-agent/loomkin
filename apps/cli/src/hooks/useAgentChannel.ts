@@ -97,11 +97,12 @@ export function useAgentChannel() {
       },
     );
 
-    on<{ agent_name: string; role: string; team_id: string }>("agent_spawned", (payload) => {
+    on<{ agent_name: string; role: string; team_id: string; worktree_path?: string }>("agent_spawned", (payload) => {
       useAgentStore.getState().upsertAgent(payload.agent_name, {
         role: payload.role,
         teamId: payload.team_id,
         status: "idle",
+        ...(payload.worktree_path ? { worktreePath: payload.worktree_path } : {}),
       });
       notify(`🤖 Agent ${payload.agent_name} (${payload.role}) joined the team`);
     });
