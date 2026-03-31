@@ -61,6 +61,7 @@ function createMockContext(
     sendMessage: vi.fn(),
     clearMessages: vi.fn(),
     exit: vi.fn(),
+    showListPicker: vi.fn(),
   };
 }
 
@@ -121,12 +122,11 @@ test.each([
   assertion(ctx);
 });
 
-test.each([
-  { args: "", mode: "code", label: "shows current mode when no args" },
-])("/mode $label", ({ args, mode }) => {
-  const ctx = createMockContext({ mode });
-  resolve("/mode")!.command.handler(args, ctx);
-  expect(getMessage(ctx)).toContain(mode);
+test("/mode shows list picker when no args", () => {
+  const ctx = createMockContext({ mode: "code" });
+  resolve("/mode")!.command.handler("", ctx);
+  expect(ctx.showListPicker).toHaveBeenCalledOnce();
+  expect(ctx.addSystemMessage).not.toHaveBeenCalled();
 });
 
 test.each([
