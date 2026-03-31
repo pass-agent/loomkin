@@ -1,6 +1,5 @@
 import { createStore } from "zustand";
 import { agentStore } from "./agentStore.js";
-import type { Immutable } from "../lib/types/immutable.js";
 
 export interface PaneState {
   splitMode: boolean;

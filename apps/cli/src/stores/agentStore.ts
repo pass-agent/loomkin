@@ -1,5 +1,4 @@
 import { createStore } from "zustand";
-import type { Immutable } from "../lib/types/immutable.js";
 
 export interface AgentInfo {
   name: string;

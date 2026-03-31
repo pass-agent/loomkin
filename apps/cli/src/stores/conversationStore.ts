@@ -1,5 +1,4 @@
 import { createStore } from "zustand";
-import type { Immutable } from "../lib/types/immutable.js";
 import type { ConversationInfo, ConversationTurn } from "../lib/types.js";
 
 const MAX_COMPLETED = 20;

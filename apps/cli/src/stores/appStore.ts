@@ -2,7 +2,6 @@ import { createStore } from "zustand";
 import type { Mode } from "../lib/constants.js";
 import { getConfig } from "../lib/config.js";
 import type { KeybindMode, VimMode } from "../lib/keymap.js";
-import type { Immutable } from "../lib/types/immutable.js";
 
 export type ConnectionState =
   | "disconnected"

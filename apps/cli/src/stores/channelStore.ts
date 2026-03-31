@@ -2,7 +2,6 @@ import { createStore } from "zustand";
 import { joinChannel, leaveChannel } from "../lib/socket.js";
 import { useAppStore } from "./appStore.js";
 import type { Channel } from "phoenix";
-import type { Immutable } from "../lib/types/immutable.js";
 
 export interface ChannelStoreState {
   channel: Channel | null;

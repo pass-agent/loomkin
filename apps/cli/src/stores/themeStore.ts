@@ -1,7 +1,6 @@
 import { createStore } from "zustand";
 import { getConfig, setConfig } from "../lib/config.js";
 import { getTheme, type Theme } from "../lib/themes.js";
-import type { Immutable } from "../lib/types/immutable.js";
 
 export interface ThemeState {
   theme: Theme;

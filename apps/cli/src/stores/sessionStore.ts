@@ -1,5 +1,4 @@
 import { createStore } from "zustand";
-import type { Immutable } from "../lib/types/immutable.js";
 import type {
   Message,
   ToolCall,
@@ -62,7 +61,7 @@ export interface SessionState {
   setContextBudgetPercent: (percent: number | null) => void;
 }
 
-export const sessionStore = createStore<SessionState>((set, get) => ({
+export const sessionStore = createStore<SessionState>((set, _get) => ({
   sessionId: null,
   messages: [],
   isStreaming: false,

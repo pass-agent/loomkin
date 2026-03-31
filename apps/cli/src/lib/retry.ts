@@ -18,7 +18,7 @@ function isRetryable(err: unknown): boolean {
   return false;
 }
 
-function getRetryAfterMs(err: unknown): number | null {
+function getRetryAfterMs(_err: unknown): number | null {
   // ApiError does not expose headers, so we rely on default backoff for 429.
   // If the server returns a Retry-After header it would need to be surfaced
   // separately — for now return null and let backoff handle it.

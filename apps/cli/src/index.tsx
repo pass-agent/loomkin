@@ -131,7 +131,8 @@ function seedEarlyInput(): () => void {
   function onData(data: Buffer) {
     const s = data.toString("utf-8");
     // Only capture printable characters — ignore control sequences (ESC, etc.)
-    const printable = s.replace(/[\x00-\x1f\x7f]/g, "");
+    // eslint-disable-next-line no-control-regex
+    const printable = s.replace(/[\u0000-\u001f\u007f]/g, "");
     if (printable) chunks.push(printable);
   }
 
@@ -422,7 +423,7 @@ async function main() {
       if (cli.flags.systemPrompt) printSystemParts.push(cli.flags.systemPrompt);
       const printCompositePrompt = printSystemParts.join("\n\n");
       if (printCompositePrompt && sessionId) {
-        await sendMessageRest(sessionId, printCompositePrompt);
+        await sendMessageRest(sessionId, printCompositePrompt, "system");
       }
 
       await runPrintMode({
@@ -476,7 +477,7 @@ async function main() {
     if (cli.flags.systemPrompt) systemParts.push(cli.flags.systemPrompt);
     const compositeSystemPrompt = systemParts.join("\n\n");
     if (compositeSystemPrompt && sessionId) {
-      await sendMessageRest(sessionId, compositeSystemPrompt);
+      await sendMessageRest(sessionId, compositeSystemPrompt, "system");
     }
   } catch (err) {
     // Don't hard-exit — render the app with an error banner
