@@ -27,6 +27,7 @@ function createMockContext(): CommandContext {
     sendMessage: vi.fn(),
     clearMessages: vi.fn(),
     exit: vi.fn(),
+    showListPicker: vi.fn(),
   };
 }
 
@@ -45,12 +46,15 @@ test.each([
   expect(result!.command.name).toBe("keybinds");
 });
 
+test("keybinds handler: no args shows list picker", () => {
+  const ctx = createMockContext();
+  const result = resolve("/keybinds");
+  result!.command.handler(result!.args, ctx);
+  expect(ctx.showListPicker).toHaveBeenCalledOnce();
+  expect(ctx.addSystemMessage).not.toHaveBeenCalled();
+});
+
 test.each([
-  {
-    label: "no args shows current mode and bindings",
-    args: "",
-    expectContains: "Keybinding mode: default",
-  },
   {
     label: "show subcommand shows current mode",
     args: "show",
