@@ -8,6 +8,7 @@ import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
 import { ApprovalGatePrompt } from "./components/ApprovalGatePrompt.js";
+import { PlanApprovalPrompt } from "./components/PlanApprovalPrompt.js";
 import { InputArea } from "./components/InputArea.js";
 import { ProcessingStatus } from "./components/ProcessingStatus.js";
 import { useConnection } from "./hooks/useConnection.js";
@@ -57,6 +58,7 @@ import "./commands/inject.js";
 import "./commands/cancel.js";
 import "./commands/gates.js";
 import "./commands/update.js";
+import "./commands/plan.js";
 
 let messageCounter = 0;
 
@@ -101,10 +103,12 @@ export function App() {
     answerQuestion,
     respondApproval,
     respondSpawnGate,
+    respondPlan,
   } = useSessionChannel();
 
   const pendingApprovals = useStore(useSessionStore, (s) => s.pendingApprovals);
   const pendingSpawnGates = useStore(useSessionStore, (s) => s.pendingSpawnGates);
+  const pendingPlans = useStore(useSessionStore, (s) => s.pendingPlans);
 
   // Subscribe to agent status updates
   useAgentChannel();
@@ -264,6 +268,17 @@ export function App() {
             type="spawn_gate"
             gate={pendingSpawnGates[0]}
             onRespond={respondSpawnGate}
+          />
+        )}
+      {pendingPlans.length > 0 &&
+        !pendingPermissions.length &&
+        !pendingQuestions.length &&
+        !pendingApprovals.length &&
+        !pendingSpawnGates.length && (
+          <PlanApprovalPrompt
+            key={pendingPlans[0].plan_id}
+            plan={pendingPlans[0]}
+            onRespond={respondPlan}
           />
         )}
       <InputArea onSubmit={handleSubmit} commandContext={commandContext} />

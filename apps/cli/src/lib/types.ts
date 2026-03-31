@@ -294,6 +294,16 @@ export interface SpawnGateRequest {
   received_at: number;
 }
 
+// --- Plan mode types ---
+
+export interface PlanMessage {
+  plan_id: string;
+  agent_name: string;
+  plan: string;
+  timeout_ms: number;
+  received_at: number;
+}
+
 // --- Kin types ---
 
 export interface KinAgent {

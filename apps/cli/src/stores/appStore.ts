@@ -68,6 +68,9 @@ export interface AppState {
   // Update available (version string or null)
   updateAvailable: string | null;
 
+  // Plan mode
+  planMode: boolean;
+
   // Show model picker once after first connect (set on startup)
   showModelPickerOnConnect: boolean;
   setShowModelPickerOnConnect: (show: boolean) => void;
@@ -110,6 +113,7 @@ export interface AppState {
   setGitBranch: (branch: string | null) => void;
   setCustomKeybindings: (keybindings: Record<string, string>) => void;
   setUpdateAvailable: (version: string | null) => void;
+  setPlanMode: (enabled: boolean) => void;
 }
 
 const config = getConfig();
@@ -153,6 +157,8 @@ export const appStore = createStore<AppState>((set, get) => ({
   customKeybindings: {},
 
   updateAvailable: null,
+
+  planMode: false,
 
   showModelPickerOnConnect: false,
   setShowModelPickerOnConnect: (show) => set({ showModelPickerOnConnect: show }),
@@ -222,6 +228,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   setGitBranch: (gitBranch) => set({ gitBranch }),
   setCustomKeybindings: (customKeybindings) => set({ customKeybindings }),
   setUpdateAvailable: (updateAvailable) => set({ updateAvailable }),
+  setPlanMode: (planMode) => set({ planMode }),
 }));
 
 export const useAppStore = appStore;
