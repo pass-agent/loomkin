@@ -1,6 +1,7 @@
 import { getApiUrl } from "./urls.js";
 import { getConfig } from "./config.js";
 import { useAppStore } from "../stores/appStore.js";
+import { withRetry } from "./retry.js";
 import type {
   AuthResponse,
   LoginRequest,
@@ -73,7 +74,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+async function requestOnce<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
@@ -104,6 +105,25 @@ async function request<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  return withRetry(() => requestOnce<T>(path, options), {
+    maxAttempts: 3,
+    baseDelayMs: 500,
+    maxDelayMs: 10_000,
+    onRetry: (attempt, _err) => {
+      if (useAppStore.getState().verbose) {
+        console.error(`[api] retry attempt ${attempt}/3 for ${options.method ?? "GET"} ${path}`);
+      }
+      useAppStore.getState().setRetryState({ attempt, total: 3, path });
+    },
+  }).finally(() => {
+    useAppStore.getState().clearRetryState();
+  });
 }
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {

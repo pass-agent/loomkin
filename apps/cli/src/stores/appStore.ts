@@ -16,6 +16,12 @@ export interface AppError {
   action?: "retry" | "reauth" | "new_session";
 }
 
+export interface RetryState {
+  attempt: number;
+  total: number;
+  path: string;
+}
+
 export interface AppState {
   serverUrl: string;
   token: string | null;
@@ -27,6 +33,7 @@ export interface AppState {
   isConnected: boolean;
   reconnectAttempts: number;
   errors: AppError[];
+  retryState: RetryState | null;
 
   // CLI flags
   verbose: boolean;
@@ -36,6 +43,18 @@ export interface AppState {
   disallowedTools: string[] | null;
   maxTurns: number | null;
 
+  // Automation / CI flags
+  noColor: boolean;
+  quiet: boolean;
+  timeout: number | null;
+  logFile: string | null;
+  promptFile: string | null;
+  continueSession: boolean;
+  toolTimeout: number | null;
+  dryRun: boolean;
+  costLimit: number | null;
+  jsonStream: boolean;
+
   // Keybindings
   keybindMode: KeybindMode;
   vimMode: VimMode;
@@ -44,6 +63,8 @@ export interface AppState {
   showModelPickerOnConnect: boolean;
   setShowModelPickerOnConnect: (show: boolean) => void;
 
+  setRetryState: (state: RetryState) => void;
+  clearRetryState: () => void;
   setConnectionState: (state: ConnectionState) => void;
   incrementReconnectAttempts: () => void;
   setMode: (mode: Mode) => void;
@@ -58,6 +79,16 @@ export interface AppState {
   setAllowedTools: (tools: string[] | null) => void;
   setDisallowedTools: (tools: string[] | null) => void;
   setMaxTurns: (turns: number | null) => void;
+  setNoColor: (noColor: boolean) => void;
+  setQuiet: (quiet: boolean) => void;
+  setTimeout: (ms: number | null) => void;
+  setLogFile: (path: string | null) => void;
+  setPromptFile: (path: string | null) => void;
+  setContinueSession: (val: boolean) => void;
+  setToolTimeout: (ms: number | null) => void;
+  setDryRun: (val: boolean) => void;
+  setCostLimit: (usd: number | null) => void;
+  setJsonStream: (val: boolean) => void;
   setKeybindMode: (mode: KeybindMode) => void;
   setVimMode: (mode: VimMode) => void;
   setModelProviderStatus: (status: "idle" | "loading" | "loaded" | "error") => void;
@@ -77,6 +108,7 @@ export const appStore = createStore<AppState>((set) => ({
   isConnected: false,
   reconnectAttempts: 0,
   errors: [],
+  retryState: null,
 
   verbose: false,
   debug: false,
@@ -85,11 +117,25 @@ export const appStore = createStore<AppState>((set) => ({
   disallowedTools: null,
   maxTurns: null,
 
+  noColor: false,
+  quiet: false,
+  timeout: null,
+  logFile: null,
+  promptFile: null,
+  continueSession: false,
+  toolTimeout: null,
+  dryRun: false,
+  costLimit: null,
+  jsonStream: false,
+
   keybindMode: (config.keybindMode as KeybindMode) || "default",
   vimMode: "normal" as VimMode,
 
   showModelPickerOnConnect: false,
   setShowModelPickerOnConnect: (show) => set({ showModelPickerOnConnect: show }),
+
+  setRetryState: (retryState) => set({ retryState }),
+  clearRetryState: () => set({ retryState: null }),
 
   setConnectionState: (connectionState) =>
     set((state) => ({
@@ -127,6 +173,16 @@ export const appStore = createStore<AppState>((set) => ({
   setAllowedTools: (allowedTools) => set({ allowedTools }),
   setDisallowedTools: (disallowedTools) => set({ disallowedTools }),
   setMaxTurns: (maxTurns) => set({ maxTurns }),
+  setNoColor: (noColor) => set({ noColor }),
+  setQuiet: (quiet) => set({ quiet }),
+  setTimeout: (timeout) => set({ timeout }),
+  setLogFile: (logFile) => set({ logFile }),
+  setPromptFile: (promptFile) => set({ promptFile }),
+  setContinueSession: (continueSession) => set({ continueSession }),
+  setToolTimeout: (toolTimeout) => set({ toolTimeout }),
+  setDryRun: (dryRun) => set({ dryRun }),
+  setCostLimit: (costLimit) => set({ costLimit }),
+  setJsonStream: (jsonStream) => set({ jsonStream }),
   setKeybindMode: (keybindMode) =>
     set({ keybindMode, vimMode: keybindMode === "vim" ? "normal" : "normal" }),
   setVimMode: (vimMode) => set({ vimMode }),
