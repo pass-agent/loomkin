@@ -280,6 +280,30 @@ export async function refreshMcp(
   });
 }
 
+export async function addMcpServer(
+  url: string,
+  name?: string,
+  transport?: string,
+): Promise<{ message: string }> {
+  return request<{ message: string }>("/mcp", {
+    method: "POST",
+    body: JSON.stringify({ url, name, transport: transport ?? "http" }),
+  });
+}
+
+export async function removeMcpServer(name: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/mcp/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function restartMcpServer(name: string): Promise<{ message: string }> {
+  return request<{ message: string }>(`/mcp/${encodeURIComponent(name)}/restart`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 // --- Decisions ---
 
 export async function getDecisions(

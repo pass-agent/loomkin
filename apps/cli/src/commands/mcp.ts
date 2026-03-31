@@ -1,6 +1,6 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
-import { getMcpStatus, refreshMcp, ApiError } from "../lib/api.js";
+import { getMcpStatus, refreshMcp, addMcpServer, removeMcpServer, restartMcpServer, ApiError } from "../lib/api.js";
 import type { McpClientInfo, McpServerInfo } from "../lib/types.js";
 
 function statusDot(status: string): string {
@@ -47,8 +47,10 @@ function showOverview(
     lines.push(pc.dim("    ]"));
   } else {
     for (const client of clients) {
+      const isDisconnected = client.status !== "connected";
       lines.push(
-        `  ${statusDot(client.status)} ${pc.cyan(client.name)} ${pc.dim(`(${client.tool_count} tools)`)}`,
+        `  ${statusDot(client.status)} ${pc.cyan(client.name)} ${pc.dim(`(${client.tool_count} tools)`)}` +
+          (isDisconnected ? pc.dim(" [disconnected]") : ""),
       );
       lines.push(`    ${transportLabel(client.transport)}`);
     }
@@ -56,7 +58,9 @@ function showOverview(
   lines.push("");
 
   lines.push(
-    pc.dim("Usage: /mcp tools, /mcp server, /mcp refresh [name]"),
+    pc.dim(
+      "Usage: /mcp tools, /mcp server, /mcp refresh [name], /mcp add <url>, /mcp remove <name>, /mcp restart <name>",
+    ),
   );
   ctx.addSystemMessage(lines.join("\n"));
 }
@@ -125,7 +129,7 @@ function showServer(server: McpServerInfo, ctx: CommandContext): void {
 register({
   name: "mcp",
   description: "Manage MCP servers and view tools",
-  args: "[tools|server|refresh [name]]",
+  args: "[tools|server|refresh|add|remove|restart [name]] [--name <n>] [--transport http|stdio]",
   handler: async (args: string, ctx: CommandContext) => {
     const parts = args.trim().split(/\s+/);
     const subcommand = parts[0]?.toLowerCase() ?? "";
@@ -140,6 +144,75 @@ register({
           err instanceof ApiError
             ? `Refresh failed: ${err.body}`
             : "Refresh failed.";
+        ctx.addSystemMessage(pc.red(msg));
+      }
+      return;
+    }
+
+    if (subcommand === "add") {
+      // /mcp add <url> [--name <n>] [--transport http|stdio]
+      const url = parts[1];
+      if (!url) {
+        ctx.addSystemMessage(
+          pc.red("Usage: /mcp add <url> [--name <name>] [--transport http|stdio]"),
+        );
+        return;
+      }
+      let name: string | undefined;
+      let transport: string | undefined;
+      for (let i = 2; i < parts.length; i++) {
+        if (parts[i] === "--name" && parts[i + 1]) {
+          name = parts[++i];
+        } else if (parts[i] === "--transport" && parts[i + 1]) {
+          transport = parts[++i];
+        }
+      }
+      try {
+        const result = await addMcpServer(url, name, transport);
+        ctx.addSystemMessage(pc.green(result.message));
+      } catch (err) {
+        const msg =
+          err instanceof ApiError
+            ? `Failed to add MCP server: ${err.body}`
+            : "Failed to add MCP server.";
+        ctx.addSystemMessage(pc.red(msg));
+      }
+      return;
+    }
+
+    if (subcommand === "remove") {
+      const name = parts[1];
+      if (!name) {
+        ctx.addSystemMessage(pc.red("Usage: /mcp remove <name>"));
+        return;
+      }
+      try {
+        const result = await removeMcpServer(name);
+        ctx.addSystemMessage(pc.green(result.message));
+      } catch (err) {
+        const msg =
+          err instanceof ApiError
+            ? `Failed to remove MCP server: ${err.body}`
+            : "Failed to remove MCP server.";
+        ctx.addSystemMessage(pc.red(msg));
+      }
+      return;
+    }
+
+    if (subcommand === "restart") {
+      const name = parts[1];
+      if (!name) {
+        ctx.addSystemMessage(pc.red("Usage: /mcp restart <name>"));
+        return;
+      }
+      try {
+        const result = await restartMcpServer(name);
+        ctx.addSystemMessage(pc.green(result.message));
+      } catch (err) {
+        const msg =
+          err instanceof ApiError
+            ? `Failed to restart MCP server: ${err.body}`
+            : "Failed to restart MCP server.";
         ctx.addSystemMessage(pc.red(msg));
       }
       return;
