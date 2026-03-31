@@ -1,6 +1,7 @@
 import React, { Component } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import { useAppStore } from "../stores/appStore.js";
+import { reconnectSocket } from "../lib/socket.js";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -64,6 +65,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   handleRetry = () => {
+    reconnectSocket();
     this.setState({ hasError: false, error: null });
   };
 

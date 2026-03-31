@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import type { ApprovalRequest, SpawnGateRequest } from "../lib/types.js";
@@ -20,16 +20,33 @@ export function ApprovalGatePrompt(props: Props) {
   const [text, setText] = useState("");
   const { gate } = props;
 
+  // Live countdown timer
+  const [remaining, setRemaining] = useState(() => {
+    const elapsed = (Date.now() - gate.received_at) / 1000;
+    return Math.max(0, Math.round(gate.timeout_ms / 1000 - elapsed));
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() - gate.received_at) / 1000;
+      const left = Math.max(0, Math.round(gate.timeout_ms / 1000 - elapsed));
+      setRemaining(left);
+
+      // Auto-expire: remove from UI when timeout reaches zero
+      if (left <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [gate.gate_id, gate.received_at, gate.timeout_ms]);
+
   useInput(
     (input) => {
       if (mode !== "choose") return;
 
       if (input === "y") {
-        if (props.type === "approval") {
-          props.onRespond(gate.gate_id, "approved");
-        } else {
-          props.onRespond(gate.gate_id, "approved");
-        }
+        props.onRespond(gate.gate_id, "approved");
       } else if (input === "n") {
         setMode("reason");
       } else if (input === "c" && props.type === "approval") {
@@ -51,8 +68,7 @@ export function ApprovalGatePrompt(props: Props) {
     }
   };
 
-  const elapsed = Math.round((Date.now() - gate.received_at) / 1000);
-  const remaining = Math.max(0, Math.round(gate.timeout_ms / 1000) - elapsed);
+  const timeColor = remaining <= 10 ? "red" : remaining <= 30 ? "yellow" : "gray";
 
   return (
     <Box
@@ -64,20 +80,20 @@ export function ApprovalGatePrompt(props: Props) {
       {props.type === "approval" ? (
         <>
           <Text bold color="magenta">
-            {gate.agent_name} requests approval
+            {props.gate.agent_name} requests approval
           </Text>
-          <Text>{(gate as ApprovalRequest).question}</Text>
+          <Text>{props.gate.question}</Text>
         </>
       ) : (
         <>
           <Text bold color="magenta">
-            {gate.agent_name} wants to spawn agents
+            {props.gate.agent_name} wants to spawn agents
           </Text>
-          {(gate as SpawnGateRequest).purpose && (
-            <Text dimColor>Purpose: {(gate as SpawnGateRequest).purpose}</Text>
+          {props.gate.purpose && (
+            <Text dimColor>Purpose: {props.gate.purpose}</Text>
           )}
           <Box marginTop={1} flexDirection="column">
-            {(gate as SpawnGateRequest).roles.map((r, i) => (
+            {props.gate.roles.map((r, i) => (
               <Text key={`role-${i}`}>
                 {"  "}• {r.name ? `${r.name} (${r.role})` : r.role}
               </Text>
@@ -87,23 +103,23 @@ export function ApprovalGatePrompt(props: Props) {
             Estimated cost:{" "}
             <Text
               color={
-                (gate as SpawnGateRequest).estimated_cost >= 1
+                props.gate.estimated_cost >= 1
                   ? "red"
-                  : (gate as SpawnGateRequest).estimated_cost >= 0.1
+                  : props.gate.estimated_cost >= 0.1
                     ? "yellow"
                     : "green"
               }
             >
-              ${(gate as SpawnGateRequest).estimated_cost.toFixed(4)}
+              ${props.gate.estimated_cost.toFixed(4)}
             </Text>
           </Text>
-          {(gate as SpawnGateRequest).limit_warning && (
-            <Text color="yellow">⚠ {(gate as SpawnGateRequest).limit_warning}</Text>
+          {props.gate.limit_warning && (
+            <Text color="yellow">⚠ {props.gate.limit_warning}</Text>
           )}
         </>
       )}
 
-      <Text dimColor>Timeout: {remaining}s remaining</Text>
+      <Text color={timeColor}>{remaining}s remaining</Text>
 
       {mode === "choose" && (
         <Box marginTop={1}>

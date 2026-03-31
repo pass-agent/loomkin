@@ -225,6 +225,16 @@ export function useSessionChannel() {
         })
         .receive("error", () => {
           useSessionStore.getState().removePendingApproval(gateId);
+          useSessionStore.getState().addMessage({
+            id: `error-approval-${Date.now()}`,
+            role: "system",
+            content: "Approval response failed — gate may have expired.",
+            tool_calls: null,
+            tool_call_id: null,
+            token_count: null,
+            agent_name: null,
+            inserted_at: new Date().toISOString(),
+          });
         });
     },
     [],
@@ -241,6 +251,16 @@ export function useSessionChannel() {
         })
         .receive("error", () => {
           useSessionStore.getState().removePendingSpawnGate(gateId);
+          useSessionStore.getState().addMessage({
+            id: `error-spawn-gate-${Date.now()}`,
+            role: "system",
+            content: "Spawn gate response failed — gate may have expired.",
+            tool_calls: null,
+            tool_call_id: null,
+            token_count: null,
+            agent_name: null,
+            inserted_at: new Date().toISOString(),
+          });
         });
     },
     [],

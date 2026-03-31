@@ -338,12 +338,15 @@ defmodule LoomkinWeb.SessionChannel do
 
   # --- Gate responses ---
 
+  @valid_gate_outcomes ~w(approved denied)
+
   def handle_in(
         "approval_response",
         %{"gate_id" => gate_id, "outcome" => outcome} = params,
         socket
-      ) do
-    outcome_atom = if outcome == "approved", do: :approved, else: :denied
+      )
+      when outcome in @valid_gate_outcomes do
+    outcome_atom = String.to_existing_atom(outcome)
 
     case Registry.lookup(Loomkin.Teams.AgentRegistry, {:approval_gate, gate_id}) do
       [{pid, _}] ->
@@ -365,8 +368,9 @@ defmodule LoomkinWeb.SessionChannel do
         "spawn_gate_response",
         %{"gate_id" => gate_id, "outcome" => outcome} = params,
         socket
-      ) do
-    outcome_atom = if outcome == "approved", do: :approved, else: :denied
+      )
+      when outcome in @valid_gate_outcomes do
+    outcome_atom = String.to_existing_atom(outcome)
 
     case Registry.lookup(Loomkin.Teams.AgentRegistry, {:spawn_gate, gate_id}) do
       [{pid, _}] ->
@@ -472,62 +476,74 @@ defmodule LoomkinWeb.SessionChannel do
     {:noreply, socket}
   end
 
-  # --- Agent signal forwarding ---
+  # --- Agent signal forwarding (filtered by team_id) ---
 
   def handle_info(%Jido.Signal{type: "agent.status"} = sig, socket) do
-    push(socket, "agent_status", %{
-      agent_name: sig.data[:agent_name],
-      status: to_string(sig.data[:status]),
-      previous_status: to_string(sig.data[:previous_status] || ""),
-      pause_queued: sig.data[:pause_queued] || false
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_status", %{
+        agent_name: sig.data[:agent_name],
+        status: to_string(sig.data[:status]),
+        previous_status: to_string(sig.data[:previous_status] || ""),
+        pause_queued: sig.data[:pause_queued] || false
+      })
+    end
 
     {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "agent.role.changed"} = sig, socket) do
-    push(socket, "agent_role_changed", %{
-      agent_name: sig.data[:agent_name],
-      old_role: to_string(sig.data[:old_role]),
-      new_role: to_string(sig.data[:new_role])
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_role_changed", %{
+        agent_name: sig.data[:agent_name],
+        old_role: to_string(sig.data[:old_role]),
+        new_role: to_string(sig.data[:new_role])
+      })
+    end
 
     {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "agent.tool.executing"} = sig, socket) do
-    push(socket, "agent_tool_executing", %{
-      agent_name: sig.data[:agent_name],
-      tool_name: sig.data[:tool_name]
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_tool_executing", %{
+        agent_name: sig.data[:agent_name],
+        tool_name: sig.data[:tool_name]
+      })
+    end
 
     {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "agent.tool.complete"} = sig, socket) do
-    push(socket, "agent_tool_complete", %{
-      agent_name: sig.data[:agent_name],
-      tool_name: sig.data[:tool_name]
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_tool_complete", %{
+        agent_name: sig.data[:agent_name],
+        tool_name: sig.data[:tool_name]
+      })
+    end
 
     {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "agent.error"} = sig, socket) do
-    push(socket, "agent_error", %{
-      agent_name: sig.data[:agent_name],
-      error: to_string(sig.data[:error] || sig.data[:message] || "unknown")
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_error", %{
+        agent_name: sig.data[:agent_name],
+        error: to_string(sig.data[:error] || sig.data[:message] || "unknown")
+      })
+    end
 
     {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "agent.usage"} = sig, socket) do
-    push(socket, "agent_usage", %{
-      agent_name: sig.data[:agent_name],
-      tokens_used: sig.data[:tokens_used],
-      cost_usd: sig.data[:cost_usd]
-    })
+    if sig.data[:team_id] == socket.assigns[:team_id] do
+      push(socket, "agent_usage", %{
+        agent_name: sig.data[:agent_name],
+        tokens_used: sig.data[:tokens_used],
+        cost_usd: sig.data[:cost_usd]
+      })
+    end
 
     {:noreply, socket}
   end

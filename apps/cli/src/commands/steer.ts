@@ -1,11 +1,12 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { getSessionChannel } from "./channelUtil.js";
+import { usePaneStore } from "../stores/paneStore.js";
 
 register({
   name: "steer",
   description: "Inject guidance and resume a paused agent",
-  args: "<agent-name> <guidance>",
+  args: "[agent-name] <guidance>",
   handler: async (args: string, ctx: CommandContext) => {
     const channel = getSessionChannel();
     if (!channel) {
@@ -14,11 +15,23 @@ register({
     }
 
     const parts = args.trim().split(/\s+/);
-    const agentName = parts[0];
-    const guidance = parts.slice(1).join(" ");
+    const focused = usePaneStore.getState().focusedTarget;
+    let agentName: string | null;
+    let guidance: string;
 
-    if (!agentName || !guidance) {
-      ctx.addSystemMessage(pc.red("Usage: /steer <agent-name> <guidance text>"));
+    if (parts.length >= 2) {
+      agentName = parts[0];
+      guidance = parts.slice(1).join(" ");
+    } else if (focused && parts[0]) {
+      agentName = focused;
+      guidance = parts.join(" ");
+    } else {
+      ctx.addSystemMessage(pc.red("Usage: /steer [agent-name] <guidance text>"));
+      return;
+    }
+
+    if (!agentName) {
+      ctx.addSystemMessage(pc.red("Usage: /steer [agent-name] <guidance text>"));
       return;
     }
 

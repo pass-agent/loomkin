@@ -248,6 +248,7 @@ export function App() {
         !pendingPermissions.length &&
         !pendingQuestions.length && (
           <ApprovalGatePrompt
+            key={pendingApprovals[0].gate_id}
             type="approval"
             gate={pendingApprovals[0]}
             onRespond={respondApproval}
@@ -258,6 +259,7 @@ export function App() {
         !pendingQuestions.length &&
         !pendingApprovals.length && (
           <ApprovalGatePrompt
+            key={pendingSpawnGates[0].gate_id}
             type="spawn_gate"
             gate={pendingSpawnGates[0]}
             onRespond={respondSpawnGate}
