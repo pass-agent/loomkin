@@ -114,6 +114,52 @@ const cli = meow(
   },
 );
 
+// Capture keystrokes typed before Ink renders and store them for InputArea to replay.
+// Must be called before render() to avoid losing early input.
+function seedEarlyInput(): () => void {
+  const chunks: string[] = [];
+
+  function onData(data: Buffer) {
+    const s = data.toString("utf-8");
+    // Only capture printable characters — ignore control sequences (ESC, etc.)
+    const printable = s.replace(/[\x00-\x1f\x7f]/g, "");
+    if (printable) chunks.push(printable);
+  }
+
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode?.(true);
+    process.stdin.on("data", onData);
+  }
+
+  return () => {
+    if (process.stdin.isTTY) {
+      process.stdin.off("data", onData);
+      process.stdin.setRawMode?.(false);
+    }
+    const captured = chunks.join("");
+    if (captured) {
+      useAppStore.getState().setEarlyInput(captured);
+    }
+  };
+}
+
+// Startup phase timer for --debug mode
+class StartupTimer {
+  private marks = new Map<string, number>();
+  private start = performance.now();
+
+  mark(phase: string): void {
+    this.marks.set(phase, performance.now() - this.start);
+  }
+
+  dump(): void {
+    const entries = Array.from(this.marks.entries())
+      .map(([phase, ms]) => `${phase}: ${ms.toFixed(0)}ms`)
+      .join(", ");
+    console.error(pc.dim(`[startup] ${entries}`));
+  }
+}
+
 async function detectServerUrl(): Promise<void> {
   if (!DEV_FALLBACK_URL) return;
   if (cli.flags.server || process.env.LOOMKIN_SERVER_URL) return;
@@ -267,11 +313,20 @@ async function main() {
     store.setToken(cli.flags.apiKey);
   }
 
-  // Auto-detect server URL — fall back to localhost if primary is unreachable
-  await detectServerUrl();
+  const timer = new StartupTimer();
 
-  // Check auth — run setup wizard if needed
-  if (!isAuthenticated()) {
+  // Parallelize: server detection can run concurrently with local config reads.
+  // isAuthenticated() is a synchronous config read — resolve it immediately while
+  // detectServerUrl() does its network HEAD request.
+  const [, alreadyAuthed] = await Promise.all([
+    detectServerUrl().then(() => timer.mark("server-detect")),
+    Promise.resolve(isAuthenticated()),
+  ]);
+
+  timer.mark("config-read");
+
+  // Check auth — run setup wizard if needed (requires URL to be set, so after detectServerUrl)
+  if (!alreadyAuthed) {
     const success = await runSetupWizard();
     if (!success) {
       process.exit(1);
@@ -279,9 +334,10 @@ async function main() {
     // Reload token into store
     const { getConfig } = await import("./lib/config.js");
     useAppStore.getState().setToken(getConfig().token);
+    timer.mark("auth-wizard");
   }
 
-  // Non-interactive print mode
+  // Non-interactive print mode: skip early input buffering (stdin used for prompt)
   if (cli.flags.print != null) {
     let prompt = cli.flags.print;
 
@@ -350,9 +406,14 @@ async function main() {
     process.exit(0);
   }
 
+  // Start buffering early stdin before the TUI renders, so keystrokes
+  // typed during session setup are not lost.
+  const stopEarlyInput = seedEarlyInput();
+
   // Interactive mode — create or resume session
   try {
     await resolveSessionId();
+    timer.mark("session-resolve");
     // Only show model picker if no model is already set (e.g. from a resumed session or --model flag)
     if (!useAppStore.getState().model) {
       useAppStore.getState().setShowModelPickerOnConnect(true);
