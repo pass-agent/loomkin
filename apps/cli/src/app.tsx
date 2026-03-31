@@ -59,6 +59,7 @@ import "./commands/cancel.js";
 import "./commands/gates.js";
 import "./commands/update.js";
 import "./commands/plan.js";
+import "./commands/think.js";
 
 let messageCounter = 0;
 

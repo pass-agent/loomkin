@@ -58,6 +58,7 @@ const cli = meow(
     --api-key                       Override stored API key for this invocation
     --system-prompt                 Prepend a custom system prompt to the session
     --no-update-check               Skip background npm version check
+    --thinking-budget               Enable extended thinking with token budget (e.g. 10000)
     --dangerously-skip-permissions  Auto-approve all tool calls (no prompts)
     --allowed-tools                 Comma-separated allowlist of tool names
     --disallowed-tools              Comma-separated denylist of tool names
@@ -115,6 +116,7 @@ const cli = meow(
       dryRun: { type: "boolean", default: false },
       costLimit: { type: "number" },
       noUpdateCheck: { type: "boolean", default: false },
+      thinkingBudget: { type: "number" },
     },
   },
 );
@@ -297,6 +299,7 @@ async function main() {
   if (cli.flags.toolTimeout != null) store.setToolTimeout(cli.flags.toolTimeout);
   if (cli.flags.dryRun) store.setDryRun(true);
   if (cli.flags.costLimit != null) store.setCostLimit(cli.flags.costLimit);
+  if (cli.flags.thinkingBudget != null) store.setThinkingBudget(cli.flags.thinkingBudget);
   if (cli.flags.logFile) {
     store.setLogFile(cli.flags.logFile);
     // Open (create/truncate) the log file synchronously so we can append to it
