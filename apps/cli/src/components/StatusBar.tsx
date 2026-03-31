@@ -5,6 +5,7 @@ import { useAppStore } from "../stores/appStore.js";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAgentStore } from "../stores/agentStore.js";
 import { usePaneStore } from "../stores/paneStore.js";
+import { formatCost, formatTokens } from "../lib/costTracker.js";
 
 export function StatusBar() {
   const connectionState = useStore(useAppStore, (s) => s.connectionState);
@@ -14,6 +15,10 @@ export function StatusBar() {
   const modelProviderStatus = useStore(useAppStore, (s) => s.modelProviderStatus);
   const configuredProviderIds = useStore(useAppStore, (s) => s.configuredProviderIds);
   const sessionId = useStore(useSessionStore, (s) => s.sessionId);
+  const estimatedCostUsd = useStore(useSessionStore, (s) => s.estimatedCostUsd);
+  const totalInputTokens = useStore(useSessionStore, (s) => s.totalInputTokens);
+  const totalOutputTokens = useStore(useSessionStore, (s) => s.totalOutputTokens);
+  const contextBudgetPercent = useStore(useSessionStore, (s) => s.contextBudgetPercent);
   const agentCount = useStore(useAgentStore, (s) => s.agents.size);
   const workingCount = useStore(useAgentStore, (s) => {
     let count = 0;
@@ -80,6 +85,22 @@ export function StatusBar() {
         {sessionId && (
           <Text dimColor>
             session:<Text bold>{sessionId.slice(0, 8)}</Text>
+          </Text>
+        )}
+        {estimatedCostUsd > 0 && (
+          <Text dimColor>
+            <Text bold>{formatCost(estimatedCostUsd)}</Text>
+          </Text>
+        )}
+        {(totalInputTokens + totalOutputTokens) > 0 && (
+          <Text dimColor>
+            <Text bold>{formatTokens(totalInputTokens + totalOutputTokens)}</Text>
+            {" tok"}
+          </Text>
+        )}
+        {contextBudgetPercent != null && contextBudgetPercent < 80 && (
+          <Text color={contextBudgetPercent < 50 ? "red" : "yellow"}>
+            ctx:<Text bold>{contextBudgetPercent}%</Text>
           </Text>
         )}
         {hasActivityGroup && <Text dimColor>│</Text>}

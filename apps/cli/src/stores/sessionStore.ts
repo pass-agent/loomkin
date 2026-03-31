@@ -7,6 +7,7 @@ import type {
   ApprovalRequest,
   SpawnGateRequest,
 } from "../lib/types.js";
+import { calculateCost } from "../lib/costTracker.js";
 
 export interface SessionState {
   sessionId: string | null;
@@ -19,6 +20,12 @@ export interface SessionState {
   pendingApprovals: ApprovalRequest[];
   pendingSpawnGates: SpawnGateRequest[];
   scrollOffset: number;
+
+  // Token and cost tracking
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  estimatedCostUsd: number;
+  contextBudgetPercent: number | null;
 
   setSessionId: (id: string | null) => void;
   addMessage: (message: Message) => void;
@@ -45,9 +52,11 @@ export interface SessionState {
   removePendingSpawnGate: (gateId: string) => void;
   clearPendingSpawnGates: () => void;
   setScrollOffset: (offset: number) => void;
+  trackTokenUsage: (inputTokens: number, outputTokens: number, model: string) => void;
+  setContextBudgetPercent: (percent: number | null) => void;
 }
 
-export const sessionStore = createStore<SessionState>((set) => ({
+export const sessionStore = createStore<SessionState>((set, get) => ({
   sessionId: null,
   messages: [],
   isStreaming: false,
@@ -58,6 +67,10 @@ export const sessionStore = createStore<SessionState>((set) => ({
   pendingApprovals: [],
   pendingSpawnGates: [],
   scrollOffset: 0,
+  totalInputTokens: 0,
+  totalOutputTokens: 0,
+  estimatedCostUsd: 0,
+  contextBudgetPercent: null,
 
   setSessionId: (sessionId) => set({ sessionId }),
 
@@ -166,6 +179,20 @@ export const sessionStore = createStore<SessionState>((set) => ({
   clearPendingSpawnGates: () => set({ pendingSpawnGates: [] }),
 
   setScrollOffset: (scrollOffset) => set({ scrollOffset }),
+
+  trackTokenUsage: (inputTokens, outputTokens, model) =>
+    set((state) => {
+      const newInput = state.totalInputTokens + inputTokens;
+      const newOutput = state.totalOutputTokens + outputTokens;
+      const addedCost = calculateCost(model, inputTokens, outputTokens);
+      return {
+        totalInputTokens: newInput,
+        totalOutputTokens: newOutput,
+        estimatedCostUsd: state.estimatedCostUsd + addedCost,
+      };
+    }),
+
+  setContextBudgetPercent: (contextBudgetPercent) => set({ contextBudgetPercent }),
 }));
 
 export const useSessionStore = sessionStore;

@@ -31,7 +31,10 @@ export function useSessionChannel() {
     }
 
     on("new_message", (raw) => {
-      const payload = raw as { message: Message };
+      const payload = raw as {
+        message: Message;
+        usage?: { input_tokens?: number; output_tokens?: number; model?: string };
+      };
       const store = useSessionStore.getState();
       if (payload.message.role === "assistant") {
         store.setPendingResponse(false);
@@ -42,6 +45,15 @@ export function useSessionChannel() {
         store.updateMessage(payload.message.id, payload.message);
       } else {
         store.addMessage(payload.message);
+      }
+      // Track token usage from message event if provided by server
+      if (payload.usage) {
+        const inputTokens = payload.usage.input_tokens ?? 0;
+        const outputTokens = payload.usage.output_tokens ?? 0;
+        const model = payload.usage.model ?? useAppStore.getState().model ?? "";
+        if (inputTokens > 0 || outputTokens > 0) {
+          store.trackTokenUsage(inputTokens, outputTokens, model);
+        }
       }
     });
 
@@ -74,10 +86,22 @@ export function useSessionChannel() {
       }
     });
 
-    on("stream_end", () => {
+    on("stream_end", (raw) => {
+      const payload = raw as {
+        usage?: { input_tokens?: number; output_tokens?: number; model?: string };
+      };
       const store = useSessionStore.getState();
       store.setPendingResponse(false);
       store.setStreaming(false);
+      // Track token usage from stream_end if server sends it here
+      if (payload?.usage) {
+        const inputTokens = payload.usage.input_tokens ?? 0;
+        const outputTokens = payload.usage.output_tokens ?? 0;
+        const model = payload.usage.model ?? useAppStore.getState().model ?? "";
+        if (inputTokens > 0 || outputTokens > 0) {
+          store.trackTokenUsage(inputTokens, outputTokens, model);
+        }
+      }
     });
 
     on("tool_call_started", (raw) => {
