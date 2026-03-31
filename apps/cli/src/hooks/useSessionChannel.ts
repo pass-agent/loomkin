@@ -141,6 +141,46 @@ export function useSessionChannel() {
       });
     });
 
+    on("compaction_complete", (raw) => {
+      const payload = raw as { context_budget_percent?: number; summary?: string };
+      const store = useSessionStore.getState();
+      // Add a visual separator to the message list
+      store.addMessage({
+        id: `compaction-${Date.now()}`,
+        role: "system",
+        content: "─── Conversation compacted ───",
+        tool_calls: null,
+        tool_call_id: null,
+        token_count: null,
+        agent_name: null,
+        inserted_at: new Date().toISOString(),
+      });
+      // Update context budget if server reports remaining capacity
+      if (typeof payload.context_budget_percent === "number") {
+        store.setContextBudgetPercent(payload.context_budget_percent);
+      }
+    });
+
+    on("context_warning", (raw) => {
+      const payload = raw as { context_budget_percent?: number; message?: string };
+      const store = useSessionStore.getState();
+      const percent = payload.context_budget_percent;
+      if (typeof percent === "number") {
+        store.setContextBudgetPercent(percent);
+      }
+      const msg = payload.message ?? `Context window is getting full${typeof percent === "number" ? ` (${percent}% remaining)` : ""}. Consider using /compact.`;
+      store.addMessage({
+        id: `ctx-warning-${Date.now()}`,
+        role: "system",
+        content: msg,
+        tool_calls: null,
+        tool_call_id: null,
+        token_count: null,
+        agent_name: null,
+        inserted_at: new Date().toISOString(),
+      });
+    });
+
     return () => {
       for (const event of new Set(events)) {
         ch.off(event);
