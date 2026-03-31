@@ -30,6 +30,7 @@ import { runPrintMode } from "./lib/print.js";
 import { getGitContext, getGitBranch } from "./lib/git.js";
 import { loadKeybindings } from "./lib/keybindingParser.js";
 import { checkForUpdate, getUpdateAvailable } from "./lib/updater.js";
+import { loadAllMemories, formatMemoriesForPrompt } from "./lib/memory.js";
 
 const cli = meow(
   `
@@ -461,9 +462,12 @@ async function main() {
       useAppStore.getState().setShowModelPickerOnConnect(true);
     }
 
-    // Build composite system prompt: git context first, then user-supplied
+    // Build composite system prompt: memories, git context, then user-supplied
     const sessionId = useSessionStore.getState().sessionId;
+    const memories = loadAllMemories();
+    const memoriesPrompt = formatMemoriesForPrompt(memories);
     const systemParts: string[] = [];
+    if (memoriesPrompt) systemParts.push(memoriesPrompt);
     if (gitContext) systemParts.push(gitContext);
     if (cli.flags.systemPrompt) systemParts.push(cli.flags.systemPrompt);
     const compositeSystemPrompt = systemParts.join("\n\n");

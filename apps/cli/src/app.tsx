@@ -60,6 +60,7 @@ import "./commands/gates.js";
 import "./commands/update.js";
 import "./commands/plan.js";
 import "./commands/think.js";
+import "./commands/remember.js";
 
 let messageCounter = 0;
 
