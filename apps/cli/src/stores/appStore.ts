@@ -142,7 +142,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   earlyInput: "",
   setEarlyInput: (earlyInput) => set({ earlyInput }),
   consumeEarlyInput: () => {
-    const { earlyInput } = appStore.getState();
+    const earlyInput = get().earlyInput;
     if (earlyInput) set({ earlyInput: "" });
     return earlyInput;
   },
