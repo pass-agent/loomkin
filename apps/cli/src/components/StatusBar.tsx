@@ -33,6 +33,7 @@ export function StatusBar() {
   const keybindMode = useStore(useAppStore, (s) => s.keybindMode);
   const vimMode = useStore(useAppStore, (s) => s.vimMode);
   const gitBranch = useStore(useAppStore, (s) => s.gitBranch);
+  const updateAvailable = useStore(useAppStore, (s) => s.updateAvailable);
 
   const isConnected = connectionState === "connected";
   const isReconnecting =
@@ -139,6 +140,15 @@ export function StatusBar() {
           </Text>
         )}
       </Box>
+      {updateAvailable && (
+        <Box>
+          <Text color="yellow">
+            {"↑ "}
+            <Text bold>v{updateAvailable}</Text>
+            <Text dimColor> available</Text>
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }

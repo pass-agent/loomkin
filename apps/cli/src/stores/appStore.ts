@@ -65,6 +65,9 @@ export interface AppState {
   // Custom keybindings loaded from ~/.loomkin/keybindings.json
   customKeybindings: Record<string, string>;
 
+  // Update available (version string or null)
+  updateAvailable: string | null;
+
   // Show model picker once after first connect (set on startup)
   showModelPickerOnConnect: boolean;
   setShowModelPickerOnConnect: (show: boolean) => void;
@@ -106,6 +109,7 @@ export interface AppState {
   setConfiguredProviderIds: (ids: Set<string>) => void;
   setGitBranch: (branch: string | null) => void;
   setCustomKeybindings: (keybindings: Record<string, string>) => void;
+  setUpdateAvailable: (version: string | null) => void;
 }
 
 const config = getConfig();
@@ -147,6 +151,8 @@ export const appStore = createStore<AppState>((set, get) => ({
   gitBranch: null,
 
   customKeybindings: {},
+
+  updateAvailable: null,
 
   showModelPickerOnConnect: false,
   setShowModelPickerOnConnect: (show) => set({ showModelPickerOnConnect: show }),
@@ -215,6 +221,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   setConfiguredProviderIds: (configuredProviderIds) => set({ configuredProviderIds }),
   setGitBranch: (gitBranch) => set({ gitBranch }),
   setCustomKeybindings: (customKeybindings) => set({ customKeybindings }),
+  setUpdateAvailable: (updateAvailable) => set({ updateAvailable }),
 }));
 
 export const useAppStore = appStore;

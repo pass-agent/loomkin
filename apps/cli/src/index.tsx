@@ -29,6 +29,7 @@ import { isProviderConfigured } from "./lib/modelUtils.js";
 import { runPrintMode } from "./lib/print.js";
 import { getGitContext, getGitBranch } from "./lib/git.js";
 import { loadKeybindings } from "./lib/keybindingParser.js";
+import { checkForUpdate, getUpdateAvailable } from "./lib/updater.js";
 
 const cli = meow(
   `
@@ -56,6 +57,7 @@ const cli = meow(
     --log-file                      Redirect debug/verbose output to file instead of stderr
     --api-key                       Override stored API key for this invocation
     --system-prompt                 Prepend a custom system prompt to the session
+    --no-update-check               Skip background npm version check
     --dangerously-skip-permissions  Auto-approve all tool calls (no prompts)
     --allowed-tools                 Comma-separated allowlist of tool names
     --disallowed-tools              Comma-separated denylist of tool names
@@ -112,6 +114,7 @@ const cli = meow(
       toolTimeout: { type: "number" },
       dryRun: { type: "boolean", default: false },
       costLimit: { type: "number" },
+      noUpdateCheck: { type: "boolean", default: false },
     },
   },
 );
@@ -313,6 +316,18 @@ async function main() {
   if (cli.flags.apiKey) {
     // Override the stored token for this invocation only (not persisted)
     store.setToken(cli.flags.apiKey);
+  }
+
+  // Fire-and-forget background version check (non-blocking)
+  if (!cli.flags.noUpdateCheck && process.env.NO_UPDATE_CHECK !== "1") {
+    checkForUpdate("0.1.0");
+    // Poll the result a few seconds later and store in app state
+    setTimeout(() => {
+      const available = getUpdateAvailable();
+      if (available) {
+        useAppStore.getState().setUpdateAvailable(available);
+      }
+    }, 5000);
   }
 
   // Load custom keybindings from ~/.loomkin/keybindings.json

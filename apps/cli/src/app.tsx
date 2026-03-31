@@ -56,6 +56,7 @@ import "./commands/steer.js";
 import "./commands/inject.js";
 import "./commands/cancel.js";
 import "./commands/gates.js";
+import "./commands/update.js";
 
 let messageCounter = 0;
 
