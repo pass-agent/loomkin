@@ -61,6 +61,7 @@ import "./commands/update.js";
 import "./commands/plan.js";
 import "./commands/think.js";
 import "./commands/remember.js";
+import "./commands/plugins.js";
 
 let messageCounter = 0;
 

@@ -40,12 +40,32 @@ export interface SlashCommand {
 const commands = new Map<string, SlashCommand>();
 const aliasMap = new Map<string, string>();
 
+// Track which commands are built-in (registered before plugins load)
+export const BUILTIN_COMMANDS = new Set<string>();
+
 export function register(cmd: SlashCommand): void {
   commands.set(cmd.name, cmd);
   if (cmd.aliases) {
     for (const alias of cmd.aliases) {
       aliasMap.set(alias, cmd.name);
     }
+  }
+}
+
+/** Register a built-in command and mark it as protected. */
+export function registerBuiltin(cmd: SlashCommand): void {
+  register(cmd);
+  BUILTIN_COMMANDS.add(cmd.name);
+}
+
+/**
+ * Mark all currently registered commands as built-in.
+ * Call this after all built-in command files have been imported
+ * and before any plugins are loaded.
+ */
+export function markCurrentAsBuiltins(): void {
+  for (const name of commands.keys()) {
+    BUILTIN_COMMANDS.add(name);
   }
 }
 

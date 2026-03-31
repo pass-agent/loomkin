@@ -31,6 +31,7 @@ import { getGitContext, getGitBranch } from "./lib/git.js";
 import { loadKeybindings } from "./lib/keybindingParser.js";
 import { checkForUpdate, getUpdateAvailable } from "./lib/updater.js";
 import { loadAllMemories, formatMemoriesForPrompt } from "./lib/memory.js";
+import { loadPlugins } from "./lib/plugins.js";
 
 const cli = meow(
   `
@@ -333,6 +334,9 @@ async function main() {
       }
     }, 5000);
   }
+
+  // Load user plugins from ~/.loomkin/plugins/*.js
+  await loadPlugins();
 
   // Load custom keybindings from ~/.loomkin/keybindings.json
   const customKeybindings = loadKeybindings();
