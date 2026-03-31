@@ -469,6 +469,15 @@ async function main() {
     }
   })();
 
+  // Stop capturing early input; any buffered keystrokes will be stored in appStore
+  // and replayed by InputArea on mount.
+  stopEarlyInput();
+  timer.mark("render");
+
+  if (cli.flags.debug) {
+    timer.dump();
+  }
+
   // Render the TUI
   const { waitUntilExit } = render(
     <ErrorBoundary>

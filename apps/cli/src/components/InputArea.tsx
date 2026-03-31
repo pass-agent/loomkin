@@ -45,6 +45,15 @@ export function InputArea({ onSubmit, commandContext }: Props) {
   const showModelPickerOnConnect = useStore(useAppStore, (s) => s.showModelPickerOnConnect);
   const autoShownRef = useRef(false);
 
+  // Replay early input buffered before Ink mounted
+  useEffect(() => {
+    const early = useAppStore.getState().consumeEarlyInput();
+    if (early) {
+      setValue(early);
+      setCursor(early.length);
+    }
+  }, []);
+
   // Auto-show model picker once after first connect
   useEffect(() => {
     if (!showModelPickerOnConnect || connectionState !== "connected" || autoShownRef.current) return;
