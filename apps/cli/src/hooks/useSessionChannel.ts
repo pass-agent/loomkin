@@ -3,7 +3,7 @@ import { useStore } from "zustand";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAppStore } from "../stores/appStore.js";
 import { useChannelStore } from "../stores/channelStore.js";
-import type { Message, ToolCall, PermissionRequest, AskUserQuestion } from "../lib/types.js";
+import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
 
 /**
  * Subscribes to session-level events on the shared Phoenix channel.
@@ -159,6 +159,11 @@ export function useSessionChannel() {
       if (typeof payload.context_budget_percent === "number") {
         store.setContextBudgetPercent(payload.context_budget_percent);
       }
+    });
+
+    on("plan_proposal", (raw) => {
+      const payload = raw as unknown as PlanMessage;
+      useSessionStore.getState().addPendingPlan(payload);
     });
 
     on("context_warning", (raw) => {
@@ -330,6 +335,33 @@ export function useSessionChannel() {
     [],
   );
 
+  const respondPlan = useCallback(
+    (planId: string, outcome: "approved" | "rejected", reason?: string) => {
+      const ch = useChannelStore.getState().getChannel();
+      if (!ch) return;
+
+      const event = outcome === "approved" ? "plan_approved" : "plan_rejected";
+      ch.push(event, { plan_id: planId, ...(reason ? { reason } : {}) })
+        .receive("ok", () => {
+          useSessionStore.getState().removePendingPlan(planId);
+        })
+        .receive("error", () => {
+          useSessionStore.getState().removePendingPlan(planId);
+          useSessionStore.getState().addMessage({
+            id: `error-plan-${Date.now()}`,
+            role: "system",
+            content: "Plan response failed — plan may have expired.",
+            tool_calls: null,
+            tool_call_id: null,
+            token_count: null,
+            agent_name: null,
+            inserted_at: new Date().toISOString(),
+          });
+        });
+    },
+    [],
+  );
+
   return {
     messages,
     isStreaming,
@@ -342,5 +374,6 @@ export function useSessionChannel() {
     answerQuestion,
     respondApproval,
     respondSpawnGate,
+    respondPlan,
   };
 }

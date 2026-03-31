@@ -6,6 +6,7 @@ import type {
   AskUserQuestion,
   ApprovalRequest,
   SpawnGateRequest,
+  PlanMessage,
 } from "../lib/types.js";
 import { calculateCost } from "../lib/costTracker.js";
 
@@ -19,6 +20,7 @@ export interface SessionState {
   pendingQuestions: AskUserQuestion[];
   pendingApprovals: ApprovalRequest[];
   pendingSpawnGates: SpawnGateRequest[];
+  pendingPlans: PlanMessage[];
   scrollOffset: number;
 
   // Token and cost tracking
@@ -51,6 +53,9 @@ export interface SessionState {
   addPendingSpawnGate: (request: SpawnGateRequest) => void;
   removePendingSpawnGate: (gateId: string) => void;
   clearPendingSpawnGates: () => void;
+  addPendingPlan: (plan: PlanMessage) => void;
+  removePendingPlan: (planId: string) => void;
+  clearPendingPlans: () => void;
   setScrollOffset: (offset: number) => void;
   trackTokenUsage: (inputTokens: number, outputTokens: number, model: string) => void;
   setContextBudgetPercent: (percent: number | null) => void;
@@ -66,6 +71,7 @@ export const sessionStore = createStore<SessionState>((set, get) => ({
   pendingQuestions: [],
   pendingApprovals: [],
   pendingSpawnGates: [],
+  pendingPlans: [],
   scrollOffset: 0,
   totalInputTokens: 0,
   totalOutputTokens: 0,
@@ -177,6 +183,18 @@ export const sessionStore = createStore<SessionState>((set, get) => ({
     })),
 
   clearPendingSpawnGates: () => set({ pendingSpawnGates: [] }),
+
+  addPendingPlan: (plan) =>
+    set((state) => ({
+      pendingPlans: [...state.pendingPlans, plan],
+    })),
+
+  removePendingPlan: (planId) =>
+    set((state) => ({
+      pendingPlans: state.pendingPlans.filter((p) => p.plan_id !== planId),
+    })),
+
+  clearPendingPlans: () => set({ pendingPlans: [] }),
 
   setScrollOffset: (scrollOffset) => set({ scrollOffset }),
 
