@@ -313,6 +313,121 @@ defmodule Loomkin.Teams.LearningTest do
     end
   end
 
+  # ── recommend_model/2 with min_samples ──────────────────────────────
+
+  describe "recommend_model/2 with min_samples" do
+    test "returns nil when fewer samples than min_samples" do
+      insert_metric(%{model: "m1", task_type: "deploy", success: true, cost_usd: 0.01})
+      insert_metric(%{model: "m1", task_type: "deploy", success: true, cost_usd: 0.01})
+
+      assert Learning.recommend_model("deploy", min_samples: 5) == nil
+    end
+
+    test "returns recommendation when enough samples exist" do
+      for _ <- 1..6 do
+        insert_metric(%{model: "reliable", task_type: "deploy", success: true, cost_usd: 0.05})
+      end
+
+      {model, _score} = Learning.recommend_model("deploy", min_samples: 5)
+      assert model == "reliable"
+    end
+
+    test "defaults to min_samples of 1 when not specified" do
+      insert_metric(%{model: "m1", task_type: "refactor", success: true, cost_usd: 0.02})
+
+      assert {_model, _score} = Learning.recommend_model("refactor")
+    end
+  end
+
+  # ── learning_context/2 ─────────────────────────────────────────────
+
+  describe "learning_context/2" do
+    test "returns context string with success rate and cost" do
+      insert_metric(%{model: "m1", task_type: "code_edit", success: true, cost_usd: 0.10})
+      insert_metric(%{model: "m1", task_type: "code_edit", success: true, cost_usd: 0.20})
+      insert_metric(%{model: "m1", task_type: "code_edit", success: false, cost_usd: 0.30})
+
+      context = Learning.learning_context("m1", "code_edit")
+      assert is_binary(context)
+      assert context =~ "Historical data for m1"
+      assert context =~ "success rate on code_edit tasks"
+      assert context =~ "avg cost"
+    end
+
+    test "returns nil when no data exists" do
+      assert Learning.learning_context("unknown", "unknown") == nil
+    end
+
+    test "includes success rate even without cost data" do
+      insert_metric(%{model: "m2", task_type: "review", success: true, cost_usd: nil})
+      insert_metric(%{model: "m2", task_type: "review", success: true, cost_usd: nil})
+
+      context = Learning.learning_context("m2", "review")
+      assert context =~ "100.0% success rate"
+      refute context =~ "avg cost"
+    end
+  end
+
+  # ── bootstrap_learning_context/2 (AgentLoop integration) ────────────
+
+  describe "AgentLoop.bootstrap_learning_context/2" do
+    test "injects learning context when data exists" do
+      insert_metric(%{
+        model: "anthropic:claude-sonnet-4-6",
+        task_type: "developer",
+        success: true,
+        cost_usd: 0.05
+      })
+
+      insert_metric(%{
+        model: "anthropic:claude-sonnet-4-6",
+        task_type: "developer",
+        success: true,
+        cost_usd: 0.10
+      })
+
+      messages = [%{role: :user, content: "hello"}]
+      config = %{model: "anthropic:claude-sonnet-4-6", role: :developer}
+
+      result = Loomkin.AgentLoop.bootstrap_learning_context(messages, config)
+      assert length(result) == 2
+
+      [injected | _rest] = result
+      assert injected.role == :system
+      assert injected.content =~ "[Learning context]"
+      assert injected.content =~ "100.0% success rate"
+    end
+
+    test "returns messages unchanged when no data exists" do
+      messages = [%{role: :user, content: "hello"}]
+      config = %{model: "anthropic:claude-sonnet-4-6", role: :developer}
+
+      result = Loomkin.AgentLoop.bootstrap_learning_context(messages, config)
+      assert result == messages
+    end
+
+    test "returns messages unchanged when model is nil" do
+      messages = [%{role: :user, content: "hello"}]
+      config = %{model: nil, role: :developer}
+
+      result = Loomkin.AgentLoop.bootstrap_learning_context(messages, config)
+      assert result == messages
+    end
+
+    test "uses 'general' as task type when role is nil" do
+      insert_metric(%{model: "m1", task_type: "general", success: true, cost_usd: 0.02})
+
+      messages = [%{role: :user, content: "hello"}]
+      config = %{model: "m1", role: nil}
+
+      result = Loomkin.AgentLoop.bootstrap_learning_context(messages, config)
+      assert length(result) == 2
+
+      [injected | _rest] = result
+      assert injected.content =~ "general tasks"
+    end
+  end
+
   # ── record_task_result/1 with scope fields ─────────────────────────
 
   describe "record_task_result/1 with scope fields" do
@@ -344,6 +459,63 @@ defmodule Loomkin.Teams.LearningTest do
 
       assert metric.scope_tier == nil
       assert metric.files_touched == nil
+    end
+  end
+
+  # ── consult_model_recommendation integration (via recommend_model) ──
+
+  describe "recommend_model with min_samples: 5 (consult_model_recommendation path)" do
+    test "returns recommendation when 5+ samples exist for a role" do
+      for _ <- 1..6 do
+        insert_metric(%{
+          model: "anthropic:claude-sonnet-4-6",
+          task_type: "developer",
+          success: true,
+          cost_usd: 0.05
+        })
+      end
+
+      assert {model, score} = Learning.recommend_model("developer", min_samples: 5)
+      assert model == "anthropic:claude-sonnet-4-6"
+      assert is_float(score) and score > 0
+    end
+
+    test "returns nil when fewer than 5 samples exist for a role" do
+      for _ <- 1..4 do
+        insert_metric(%{
+          model: "anthropic:claude-sonnet-4-6",
+          task_type: "reviewer",
+          success: true,
+          cost_usd: 0.03
+        })
+      end
+
+      assert Learning.recommend_model("reviewer", min_samples: 5) == nil
+    end
+
+    test "picks best model among multiple candidates with 5+ samples" do
+      # Fast cheap model with high success
+      for _ <- 1..6 do
+        insert_metric(%{
+          model: "fast-model",
+          task_type: "coder",
+          success: true,
+          cost_usd: 0.01
+        })
+      end
+
+      # Expensive model with lower success
+      for _ <- 1..6 do
+        insert_metric(%{
+          model: "expensive-model",
+          task_type: "coder",
+          success: true,
+          cost_usd: 1.00
+        })
+      end
+
+      {model, _score} = Learning.recommend_model("coder", min_samples: 5)
+      assert model == "fast-model"
     end
   end
 end

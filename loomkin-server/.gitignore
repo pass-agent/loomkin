@@ -1,0 +1,62 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Ignore package tarball (built via "mix hex.build").
+loomkin-*.tar
+
+# Temporary files, for example, from tests.
+/tmp/
+.loomkin/
+
+# Phoenix/assets
+/priv/static/assets/
+/assets/node_modules/
+npm-debug.log
+
+# Root-level JS tooling (commitlint)
+/node_modules/
+/package-lock.json
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Federation identity keys (never commit private keys)
+/priv/keys/
+
+# Environment
+.env
+.env.*
+.devcontainer/.env
+
+# Build artifacts
+/loomkin
+
+/.specstory
+/.history
+/.expert
+/.claude
+/.cursorindexingignore
+/.loomkin.toml
+
+# Deciduous (local tooling, not part of the project)
+.deciduous/
+docs/graph-data.json
+docs/.nojekyll

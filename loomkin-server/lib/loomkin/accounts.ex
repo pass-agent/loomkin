@@ -299,6 +299,56 @@ defmodule Loomkin.Accounts do
     :ok
   end
 
+  ## Daemon tokens (macaroon-based)
+
+  @doc """
+  Generate a macaroon-based daemon token for relay authentication.
+
+  The token is scoped to the given user and workspace, and can optionally
+  be further restricted via `opts` (see `Loomkin.Relay.Macaroon.mint_daemon_token/3`).
+
+  ## Options
+
+    * `:role` — one of `"owner"`, `"collaborator"`, `"observer"` (default `"owner"`)
+    * `:paths` — list of path globs for file access restrictions
+    * `:ttl` — token time-to-live in seconds (default 86400 = 24h)
+    * `:instance` — relay instance URL
+
+  ## Examples
+
+      iex> generate_daemon_token(user, "workspace-123")
+      "eyJj..."
+
+      iex> generate_daemon_token(user, "workspace-123", role: "observer", ttl: 3600)
+      "eyJj..."
+
+  """
+  @spec generate_daemon_token(User.t(), String.t(), keyword()) :: String.t()
+  def generate_daemon_token(%User{} = user, workspace_id, opts \\ [])
+      when is_binary(workspace_id) do
+    Loomkin.Relay.Macaroon.mint_daemon_token(user.id, workspace_id, opts)
+  end
+
+  @doc """
+  Verify a macaroon-based daemon token.
+
+  Returns `{:ok, claims}` with parsed caveat claims on success,
+  or `{:error, reason}` on failure.
+
+  ## Examples
+
+      iex> verify_daemon_token(valid_token)
+      {:ok, %{"user_id" => "123", "workspace_id" => "ws-1", ...}}
+
+      iex> verify_daemon_token(expired_token)
+      {:error, :token_expired}
+
+  """
+  @spec verify_daemon_token(String.t()) :: {:ok, map()} | {:error, atom() | String.t()}
+  def verify_daemon_token(token) when is_binary(token) do
+    Loomkin.Relay.Macaroon.verify(token)
+  end
+
   ## Token helper
 
   defp update_user_and_delete_all_tokens(changeset) do

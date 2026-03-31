@@ -47,7 +47,7 @@ defmodule Loomkin.Teams.Learning do
     * `:tokens_used` - total tokens consumed (integer)
     * `:duration_ms` - wall-clock duration in milliseconds
     * `:project_path` - project path for context
-    * `:scope_tier` - scope tier string (e.g. "surgical", "scoped", "broad", "transformative")
+    * `:scope_tier` - scope tier string (e.g. "quick", "session", "campaign")
     * `:files_touched` - number of files touched by the task
   """
   @spec record_task_result(map()) :: {:ok, AgentMetric.t()} | {:error, Ecto.Changeset.t()}
@@ -101,13 +101,15 @@ defmodule Loomkin.Teams.Learning do
 
   Returns `{model, score}` or `nil` if no data exists.
   """
-  @spec recommend_model(String.t()) :: {String.t(), float()} | nil
-  def recommend_model(task_type) do
+  @spec recommend_model(String.t(), keyword()) :: {String.t(), float()} | nil
+  def recommend_model(task_type, opts \\ []) do
+    min_samples = Keyword.get(opts, :min_samples, 1)
+
     query =
       from m in AgentMetric,
         where: m.task_type == ^task_type,
         group_by: m.model,
-        having: count(m.id) >= 1,
+        having: count(m.id) >= ^min_samples,
         select: %{
           model: m.model,
           total: count(m.id),
@@ -251,6 +253,48 @@ defmodule Loomkin.Teams.Learning do
 
       _ ->
         {:default, tier}
+    end
+  end
+
+  @doc """
+  Build a concise learning context string for an agent about to work on a task.
+
+  Returns a short summary (max 500 chars) of historical performance data for
+  the given model and task type, or `nil` if no data exists.
+
+  Uses a single DB query filtered by both model AND task type to avoid
+  averaging cost across unrelated models.
+  """
+  @spec learning_context(String.t(), String.t()) :: String.t() | nil
+  def learning_context(model, task_type) do
+    query =
+      from m in AgentMetric,
+        where: m.model == ^model and m.task_type == ^task_type,
+        select: %{
+          total: count(m.id),
+          successes: sum(fragment("CASE WHEN ? THEN 1 ELSE 0 END", m.success)),
+          avg_cost: avg(m.cost_usd)
+        }
+
+    case Repo.one(query) do
+      %{total: 0} ->
+        nil
+
+      nil ->
+        nil
+
+      %{total: total, successes: successes, avg_cost: avg_cost} ->
+        rate = (successes || 0) / total
+        pct = Float.round(rate * 100, 1)
+
+        parts =
+          [
+            "#{pct}% success rate on #{task_type} tasks",
+            if(avg_cost, do: "avg cost $#{Float.round(avg_cost, 4)}")
+          ]
+          |> Enum.reject(&is_nil/1)
+
+        "Historical data for #{model}: " <> Enum.join(parts, ", ")
     end
   end
 

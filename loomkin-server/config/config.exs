@@ -105,4 +105,9 @@ config :loomkin, Loomkin.Mailer, adapter: Swoosh.Adapters.Local
 # Use Jason for JSON parsing
 config :phoenix, :json_library, Jason
 
+# Federation identity (did:web)
+config :loomkin, Loomkin.Federation.Identity,
+  domain: "localhost",
+  key_path: "priv/keys"
+
 import_config "#{config_env()}.exs"

@@ -22,6 +22,8 @@ defmodule Loomkin.Workspace do
     belongs_to :organization, Loomkin.Schemas.Organization
     has_many :sessions, Loomkin.Schemas.Session
     has_many :task_journal_entries, Loomkin.Workspace.TaskJournalEntry
+    has_many :memberships, Loomkin.Schemas.WorkspaceMembership
+    has_many :invites, Loomkin.Schemas.WorkspaceInvite
 
     timestamps(type: :utc_datetime)
   end

@@ -10,9 +10,10 @@ defmodule Loomkin.AgentLoop do
   alias Loomkin.AgentLoop.Checkpoint
   alias Loomkin.Healing.ErrorClassifier
   alias Loomkin.Permissions.HookRunner
+  alias Loomkin.Security.Redactor
   alias Loomkin.Session.ContextWindow
   alias Loomkin.Teams.ContextOffload
-  alias Loomkin.Security.Redactor
+  alias Loomkin.Teams.Learning
   alias Loomkin.Telemetry, as: LoomkinTelemetry
 
   require Logger
@@ -63,6 +64,9 @@ defmodule Loomkin.AgentLoop do
 
     # Bootstrap failure memory: inject lessons from past errors
     messages = bootstrap_failure_memory(messages, config)
+
+    # Bootstrap learning context: inject historical performance data
+    messages = bootstrap_learning_context(messages, config)
 
     case config.reasoning_strategy do
       :react ->
@@ -560,12 +564,7 @@ defmodule Loomkin.AgentLoop do
         atomized_args
       end
 
-    tool_type =
-      try do
-        String.to_existing_atom(tool_meta.tool_name)
-      rescue
-        ArgumentError -> :default
-      end
+    tool_type = String.to_existing_atom(tool_meta.tool_name)
 
     result =
       case Loomkin.Tools.RunnerRegistry.acquire(tool_type) do
@@ -1022,6 +1021,32 @@ defmodule Loomkin.AgentLoop do
           }
 
           [lesson | messages]
+
+        _ ->
+          messages
+      end
+    else
+      messages
+    end
+  rescue
+    _ -> messages
+  end
+
+  @doc false
+  def bootstrap_learning_context(messages, config) do
+    model = config.model
+    # Use role as the task type proxy — agents work on tasks matching their role
+    task_type = to_string(config.role || "general")
+
+    if model do
+      case Learning.learning_context(model, task_type) do
+        context when is_binary(context) and context != "" ->
+          msg = %{
+            role: :system,
+            content: "[Learning context]\n#{String.slice(context, 0, 500)}"
+          }
+
+          [msg | messages]
 
         _ ->
           messages

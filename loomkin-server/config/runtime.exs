@@ -19,6 +19,23 @@ if ollama_host = System.get_env("OLLAMA_HOST") do
   config :loomkin, ollama_host: ollama_host
 end
 
+# Federation identity — used for did:web DID generation and key storage
+federation_domain = System.get_env("LOOMKIN_DOMAIN")
+federation_key_path = System.get_env("LOOMKIN_KEY_PATH")
+
+if federation_domain || federation_key_path do
+  federation_opts =
+    []
+    |> then(fn opts ->
+      if federation_domain, do: Keyword.put(opts, :domain, federation_domain), else: opts
+    end)
+    |> then(fn opts ->
+      if federation_key_path, do: Keyword.put(opts, :key_path, federation_key_path), else: opts
+    end)
+
+  config :loomkin, Loomkin.Federation.Identity, federation_opts
+end
+
 if database_url = System.get_env("DATABASE_URL") do
   config :loomkin, Loomkin.Repo,
     url: database_url,

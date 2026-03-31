@@ -19,6 +19,7 @@ defmodule Loomkin.Workspace.Server do
 
   import Ecto.Query
 
+  alias Loomkin.Collaboration
   alias Loomkin.Repo
   alias Loomkin.Workspace
   alias Loomkin.Workspace.TaskJournalEntry
@@ -57,16 +58,17 @@ defmodule Loomkin.Workspace.Server do
       :not_found ->
         name = Map.get(attrs, :name, Path.basename(project_path))
 
-        case create_workspace(%{
-               name: name,
-               project_paths: [project_path],
-               status: :active,
-               user_id: user_id
-             }) do
-          {:ok, workspace} ->
+        workspace_attrs = %{
+          name: name,
+          project_paths: [project_path],
+          status: :active
+        }
+
+        case create_workspace_with_owner(workspace_attrs, user_id) do
+          {:ok, %{workspace: workspace}} ->
             ensure_started(workspace)
 
-          {:error, %Ecto.Changeset{} = changeset} ->
+          {:error, :workspace, %Ecto.Changeset{} = changeset, _changes} ->
             if has_unique_constraint_error?(changeset) do
               # Another process won the race — retry lookup
               case find_by_project_path(project_path, user_id) do
@@ -77,7 +79,7 @@ defmodule Loomkin.Workspace.Server do
               {:error, changeset}
             end
 
-          {:error, reason} ->
+          {:error, _step, reason, _changes} ->
             {:error, reason}
         end
     end
@@ -372,10 +374,8 @@ defmodule Loomkin.Workspace.Server do
     end
   end
 
-  defp create_workspace(attrs) do
-    %Workspace{}
-    |> Workspace.changeset(attrs)
-    |> Repo.insert()
+  defp create_workspace_with_owner(workspace_attrs, user_id) do
+    Collaboration.create_workspace_with_owner(workspace_attrs, user_id)
   end
 
   defp ensure_started(workspace) do

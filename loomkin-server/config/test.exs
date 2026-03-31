@@ -36,3 +36,8 @@ config :swoosh, :api_client, false
 
 # Secret redaction is disabled in test by default; tests opt in via Redactor.enable/0
 config :loomkin, :env, :test
+
+# Federation identity uses a temp path in tests (cleaned up per-test)
+config :loomkin, Loomkin.Federation.Identity,
+  domain: "test.loomkin.dev",
+  key_path: "tmp/test_keys"

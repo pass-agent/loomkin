@@ -13,6 +13,18 @@ defmodule LoomkinWeb.Router do
     plug :fetch_current_scope_for_user
   end
 
+  pipeline :api do
+    plug :accepts, ["json"]
+  end
+
+  # Federation identity — public, no auth required.
+  # Serves the instance DID document for did:web resolution.
+  scope "/.well-known", LoomkinWeb do
+    pipe_through :api
+
+    get "/did.json", FederationController, :did_document
+  end
+
   scope "/api/webhooks" do
     post "/telegram", Loomkin.Channels.Telegram.Webhook, :handle
   end
