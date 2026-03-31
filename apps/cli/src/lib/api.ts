@@ -203,10 +203,11 @@ export async function getSessionMessages(
 export async function sendMessageRest(
   sessionId: string,
   content: string,
+  role: string = "user",
 ): Promise<{ message: Message }> {
   return request<{ message: Message }>(`/sessions/${sessionId}/messages`, {
     method: "POST",
-    body: JSON.stringify({ message: { content } }),
+    body: JSON.stringify({ message: { content, role } }),
   });
 }
 

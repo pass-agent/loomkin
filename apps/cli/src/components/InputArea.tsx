@@ -42,6 +42,7 @@ export function InputArea({ onSubmit, commandContext }: Props) {
   const skipSubmitRef = useRef(false);
   const pendingInputCaptureRef = useRef<((input: string) => void) | null>(null);
 
+  const hasError = useStore(useAppStore, (s) => s.errors.length > 0);
   const keybindMode = useStore(useAppStore, (s) => s.keybindMode);
   const vimMode = useStore(useAppStore, (s) => s.vimMode);
   const setVimMode = useStore(useAppStore, (s) => s.setVimMode);
@@ -211,6 +212,8 @@ export function InputArea({ onSubmit, commandContext }: Props) {
   const selectedResult = searchResults[searchResultIndex] ?? null;
 
   useInput((input, key) => {
+    // Error banner owns all input while active
+    if (hasError) return;
     // Pickers own all input while open
     if (modelPickerProviders) return;
     if (listPickerOptions) return;
@@ -571,6 +574,7 @@ export function InputArea({ onSubmit, commandContext }: Props) {
                 }}
                 onSubmit={handleSubmit}
                 placeholder={placeholder}
+                focus={!hasError}
               />
             )}
             {modeHint && (
