@@ -3,6 +3,8 @@ import { register } from "./registry.js";
 import {
   saveMemory,
   loadAllMemories,
+  loadAgentMemories,
+  listAgentNames,
   deleteMemory,
   type MemoryEntry,
 } from "../lib/memory.js";
@@ -111,6 +113,10 @@ register({
 
     // Load agent-scoped memories (from agents dirs)
     // These are loaded separately since loadAllMemories() only returns global+project
+    for (const agentName of listAgentNames()) {
+      const agentMemories = loadAgentMemories(agentName);
+      byScope.agent.push(...agentMemories);
+    }
     const agentEntries = byScope.agent;
     if (agentEntries.length > 0) {
       const byAgent: Record<string, MemoryEntry[]> = {};

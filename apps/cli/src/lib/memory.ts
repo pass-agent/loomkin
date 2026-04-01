@@ -112,6 +112,19 @@ export function loadAgentMemories(agentName: string): MemoryEntry[] {
   return loadFromDir(getAgentMemoryDir(agentName), "agent", agentName);
 }
 
+/** Returns all known agent names (subdirectories of the agents dir). */
+export function listAgentNames(): string[] {
+  const agentsDir = join(homedir(), ".loomkin", "memory", "agents");
+  if (!existsSync(agentsDir)) return [];
+  try {
+    return readdirSync(agentsDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Save a memory entry.
  * @param scope - 'global' saves to ~/.loomkin/memory/
