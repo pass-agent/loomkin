@@ -19,6 +19,7 @@ import { useAppStore } from "./stores/appStore.js";
 import { useSessionStore } from "./stores/sessionStore.js";
 import { usePaneStore } from "./stores/paneStore.js";
 import { reconnectSocket } from "./lib/socket.js";
+import { writeText } from "tinyclip";
 import { defaultKeymap, matchKey } from "./lib/keymap.js";
 import type { CommandContext } from "./commands/registry.js";
 import type { Message } from "./lib/types.js";
@@ -136,6 +137,9 @@ export function App() {
       if (latestError.action === "retry") {
         reconnectSocket();
       }
+    }
+    if (input === "c") {
+      writeText(latestError.message).catch(() => {});
     }
   });
 

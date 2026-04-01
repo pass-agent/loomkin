@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
+import { writeText } from "tinyclip";
 import { startOAuthFlow, getOAuthStatus, submitOAuthPaste, ApiError } from "./api.js";
 import { openInBrowser } from "./open.js";
 
@@ -14,9 +15,11 @@ async function runRedirectHeadless(
   addMessage: (msg: string) => void,
 ): Promise<boolean> {
   await openInBrowser(authorizeUrl);
+  writeText(authorizeUrl).catch(() => {});
   addMessage(
     `Browser opened for ${displayName} authorization.\n` +
-      `If it didn't open, visit:\n  ${authorizeUrl}`,
+      `If it didn't open, visit:\n  ${authorizeUrl}\n` +
+      `(URL copied to clipboard)`,
   );
 
   let seenFlowActive = false;
@@ -48,10 +51,12 @@ async function runPasteBackHeadless(
   addMessage: (msg: string) => void,
   captureInput: ((callback: (input: string) => void) => void) | undefined,
 ): Promise<boolean> {
+  writeText(authorizeUrl).catch(() => {});
   addMessage(
     [
       `Authorize ${displayName} at:`,
       `  ${authorizeUrl}`,
+      `  (URL copied to clipboard)`,
       ``,
       `After authorizing, copy the code#state string from the redirect page and paste it below:`,
     ].join("\n"),
@@ -127,9 +132,10 @@ async function runRedirectOAuthFlow(
   authorizeUrl: string,
 ): Promise<boolean> {
   await openInBrowser(authorizeUrl);
+  writeText(authorizeUrl).catch(() => {});
   p.log.step(`Browser opened for ${displayName} authorization.`);
   p.log.info(
-    pc.dim(`If the browser did not open, visit:\n  ${pc.cyan(authorizeUrl)}`),
+    pc.dim(`If the browser did not open, visit:\n  ${pc.cyan(authorizeUrl)}\n  (URL copied to clipboard)`),
   );
 
   const spinner = p.spinner();
@@ -174,8 +180,9 @@ async function runPasteBackOAuthFlow(
   displayName: string,
   authorizeUrl: string,
 ): Promise<boolean> {
+  writeText(authorizeUrl).catch(() => {});
   p.log.step(`Authorize ${displayName} at the following URL:`);
-  p.log.message(`  ${pc.cyan(authorizeUrl)}`);
+  p.log.message(`  ${pc.cyan(authorizeUrl)}  ${pc.dim("(copied to clipboard)")}`);
   p.log.info(
     pc.dim(
       `${displayName} will redirect to their own site and show a code string.\nCopy the entire "code#state" string from that page.`,

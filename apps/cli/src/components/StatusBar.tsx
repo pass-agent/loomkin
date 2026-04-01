@@ -28,16 +28,19 @@ export function StatusBar() {
     }
     return count;
   });
-  const teamCostData = useStore(useAgentStore, (s) => {
-    let totalCost = 0;
-    let agentsWithCost = 0;
+  const teamTotalCost = useStore(useAgentStore, (s) => {
+    let total = 0;
     for (const agent of s.agents.values()) {
-      if (agent.costUsd != null && agent.costUsd > 0) {
-        totalCost += agent.costUsd;
-        agentsWithCost++;
-      }
+      if (agent.costUsd != null && agent.costUsd > 0) total += agent.costUsd;
     }
-    return { totalCost, agentsWithCost };
+    return total;
+  });
+  const agentsWithCostCount = useStore(useAgentStore, (s) => {
+    let count = 0;
+    for (const agent of s.agents.values()) {
+      if (agent.costUsd != null && agent.costUsd > 0) count++;
+    }
+    return count;
   });
   const splitMode = useStore(usePaneStore, (s) => s.splitMode);
   const selectedAgent = useStore(usePaneStore, (s) => s.selectedAgent);
@@ -135,10 +138,10 @@ export function StatusBar() {
             </Text>
           </Text>
         )}
-        {agentCount >= 2 && teamCostData.agentsWithCost >= 2 && (
+        {agentCount >= 2 && agentsWithCostCount >= 2 && (
           <Text dimColor>
             team:<Text bold>
-              {agentCount} | {formatCost(teamCostData.totalCost)}
+              {agentCount} | {formatCost(teamTotalCost)}
             </Text>
           </Text>
         )}
