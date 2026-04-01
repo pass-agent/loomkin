@@ -9,6 +9,7 @@ import {
   setAgentCostForSession,
 } from "../lib/config.js";
 import { usePaneStore } from "../stores/paneStore.js";
+import { runHooks } from "../lib/hooks.js";
 
 import type { ConversationInfo, Message } from "../lib/types.js";
 
@@ -138,6 +139,12 @@ export function useAgentChannel() {
         ...(payload.worktree_path ? { worktreePath: payload.worktree_path } : {}),
       });
       notify(`🤖 Agent ${payload.agent_name} (${payload.role}) joined the team`);
+
+      // Run SubagentStart hooks (fire-and-forget)
+      runHooks("SubagentStart", {
+        agent_name: payload.agent_name,
+        role: payload.role,
+      }).catch(() => {});
     });
 
     // --- Collaboration events ---

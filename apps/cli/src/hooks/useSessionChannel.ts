@@ -6,6 +6,7 @@ import { useChannelStore } from "../stores/channelStore.js";
 import { isMcpTool, truncateMcpOutput } from "../lib/mcpTruncation.js";
 import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.js";
 import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
+import { runHooks } from "../lib/hooks.js";
 import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
 
 /**
@@ -118,7 +119,36 @@ export function useSessionChannel() {
 
     on("tool_call_started", (raw) => {
       const payload = raw as { tool_call: ToolCall };
-      useSessionStore.getState().addPendingToolCall(payload.tool_call);
+      const store = useSessionStore.getState();
+      store.addPendingToolCall(payload.tool_call);
+
+      // Run PreToolUse hooks asynchronously — deny prevents the tool from proceeding
+      void runHooks("PreToolUse", {
+        tool: payload.tool_call.name,
+        input: payload.tool_call.arguments,
+      }).then((hookOutputs) => {
+        const denied = hookOutputs.find((o) => o.decision === "deny");
+        if (denied) {
+          useChannelStore.getState().getChannel()?.push("tool_denied", {
+            call_id: payload.tool_call.id,
+            reason: denied.reason ?? "Denied by hook",
+          });
+          useSessionStore.getState().removePendingToolCall(payload.tool_call.id);
+        }
+        const sysMsg = hookOutputs.find((o) => o.systemMessage);
+        if (sysMsg?.systemMessage) {
+          useSessionStore.getState().addMessage({
+            id: `hook-msg-${Date.now()}`,
+            role: "system",
+            content: sysMsg.systemMessage,
+            tool_calls: null,
+            tool_call_id: null,
+            token_count: null,
+            agent_name: null,
+            inserted_at: new Date().toISOString(),
+          });
+        }
+      }).catch(() => {});
     });
 
     on("tool_call_completed", (raw) => {
@@ -160,6 +190,12 @@ export function useSessionChannel() {
 
       store.removePendingToolCall(payload.tool_call.id);
       store.incrementToolCallsForExtraction();
+
+      // Run PostToolUse hooks (fire-and-forget)
+      runHooks("PostToolUse", {
+        tool: payload.tool_call.name,
+        output: payload.tool_call.output,
+      }).catch(() => {});
     });
 
     on("permission_request", (raw) => {

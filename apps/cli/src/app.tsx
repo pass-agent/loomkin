@@ -62,6 +62,7 @@ import "./commands/plan.js";
 import "./commands/think.js";
 import "./commands/remember.js";
 import "./commands/plugins.js";
+import "./commands/hooks.js";
 
 let messageCounter = 0;
 

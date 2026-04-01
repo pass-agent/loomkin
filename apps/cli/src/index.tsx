@@ -33,6 +33,7 @@ import { checkForUpdate, getUpdateAvailable } from "./lib/updater.js";
 import { loadAllMemories, formatMemoriesForPrompt } from "./lib/memory.js";
 import { loadSessionMemory } from "./lib/sessionExtractor.js";
 import { loadPlugins } from "./lib/plugins.js";
+import { runHooks } from "./lib/hooks.js";
 
 const cli = meow(
   `
@@ -496,8 +497,14 @@ async function main() {
       useAppStore.getState().setShowModelPickerOnConnect(true);
     }
 
-    // Build composite system prompt: memories, git context, then user-supplied
+    // Run SessionStart hooks before connecting
     const sessionId = useSessionStore.getState().sessionId;
+    await runHooks("SessionStart", {
+      session_id: sessionId,
+      server_url: useAppStore.getState().serverUrl,
+    }).catch(() => {});
+
+    // Build composite system prompt: memories, git context, then user-supplied
     const memories = loadAllMemories();
     const memoriesPrompt = formatMemoriesForPrompt(memories);
     const systemParts: string[] = [];
