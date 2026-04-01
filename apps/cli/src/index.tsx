@@ -71,6 +71,7 @@ const cli = meow(
     --dry-run                       Parse and validate without executing
     --cost-limit                    Maximum spend in USD; stop if exceeded
     --no-auto-compact               Disable automatic context compaction at 85% usage
+    --no-context-inject             Disable context re-injection after compaction
 
   Examples
     $ loomkin
@@ -125,6 +126,11 @@ const cli = meow(
         type: "boolean",
         default: false,
         description: "Disable automatic context compaction",
+      },
+      noContextInject: {
+        type: "boolean",
+        default: false,
+        description: "Disable context re-injection after compaction",
       },
     },
   },
@@ -325,6 +331,7 @@ async function main() {
   if (cli.flags.costLimit != null) store.setCostLimit(cli.flags.costLimit);
   if (cli.flags.thinkingBudget != null) store.setThinkingBudget(cli.flags.thinkingBudget);
   if (cli.flags.noAutoCompact) store.setAutoCompact(false);
+  if (cli.flags.noContextInject) store.setInjectContextAfterCompact(false);
   if (cli.flags.logFile) {
     store.setLogFile(cli.flags.logFile);
     // Open (create/truncate) the log file synchronously so we can append to it

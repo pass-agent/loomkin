@@ -5,6 +5,7 @@ import { useAppStore } from "../stores/appStore.js";
 import { useChannelStore } from "../stores/channelStore.js";
 import { isMcpTool, truncateMcpOutput } from "../lib/mcpTruncation.js";
 import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.js";
+import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
 import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
 
 /**
@@ -144,6 +145,19 @@ export function useSessionChannel() {
         }
       }
 
+      // Track file paths accessed by file/read/write/edit/bash tools
+      const toolName = payload.tool_call.name ?? "";
+      if (/file|read|write|edit|bash/i.test(toolName)) {
+        const args = payload.tool_call.arguments ?? {};
+        const filePath =
+          (args["path"] as string | undefined) ??
+          (args["file_path"] as string | undefined) ??
+          (args["command"] as string | undefined);
+        if (filePath && typeof filePath === "string") {
+          store.trackFilePath(filePath);
+        }
+      }
+
       store.removePendingToolCall(payload.tool_call.id);
       store.incrementToolCallsForExtraction();
     });
@@ -192,6 +206,21 @@ export function useSessionChannel() {
       // Update context budget if server reports remaining capacity
       if (typeof payload.context_budget_percent === "number") {
         store.setContextBudgetPercent(payload.context_budget_percent);
+      }
+
+      // Re-inject context (recent files + memories) after compaction if enabled
+      const appState = useAppStore.getState();
+      if (appState.injectContextAfterCompact) {
+        const { recentFilePaths } = store;
+        const liveChannel = useChannelStore.getState().getChannel();
+        const memories = loadAllMemories();
+        const memorySummary = formatMemoriesForPrompt(memories);
+        if (liveChannel) {
+          liveChannel.push("inject_context", {
+            recent_files: recentFilePaths.slice(0, 5),
+            memory_summary: memorySummary,
+          });
+        }
       }
     });
 
