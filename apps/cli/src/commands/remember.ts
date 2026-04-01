@@ -3,7 +3,6 @@ import { register } from "./registry.js";
 import {
   saveMemory,
   loadAllMemories,
-  loadAgentMemories,
   deleteMemory,
   type MemoryEntry,
 } from "../lib/memory.js";
