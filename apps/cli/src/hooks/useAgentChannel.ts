@@ -8,6 +8,7 @@ import {
   getAgentCostsForSession,
   setAgentCostForSession,
 } from "../lib/config.js";
+import { usePaneStore } from "../stores/paneStore.js";
 
 import type { ConversationInfo, Message } from "../lib/types.js";
 
@@ -149,6 +150,11 @@ export function useAgentChannel() {
       "conversation_started",
       (payload) => {
         useConversationStore.getState().startConversation(payload);
+        // Auto-open split pane to show the conversation feed
+        const pane = usePaneStore.getState();
+        if (!pane.splitMode) {
+          pane.toggleSplitMode();
+        }
         const who = payload.participants.join(", ");
         notify(`🗣 Conversation started: ${payload.topic} (${who})`);
       },

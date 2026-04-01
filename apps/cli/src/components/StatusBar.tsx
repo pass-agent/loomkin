@@ -5,6 +5,7 @@ import { useAppStore } from "../stores/appStore.js";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAgentStore } from "../stores/agentStore.js";
 import { usePaneStore } from "../stores/paneStore.js";
+import { useConversationStore } from "../stores/conversationStore.js";
 import { formatCost, formatTokens } from "../lib/costTracker.js";
 
 export function StatusBar() {
@@ -46,6 +47,7 @@ export function StatusBar() {
   const gitBranch = useStore(useAppStore, (s) => s.gitBranch);
   const updateAvailable = useStore(useAppStore, (s) => s.updateAvailable);
   const autoCompact = useStore(useAppStore, (s) => s.autoCompact);
+  const activeConversation = useStore(useConversationStore, (s) => s.getActive());
 
   const isConnected = connectionState === "connected";
   const isReconnecting =
@@ -135,6 +137,13 @@ export function StatusBar() {
           <Text dimColor>
             team:<Text bold>
               {agentCount} | {formatCost(teamCostData.totalCost)}
+            </Text>
+          </Text>
+        )}
+        {activeConversation && (
+          <Text dimColor>
+            conv:<Text bold color="magenta">
+              {activeConversation.participants.length}
             </Text>
           </Text>
         )}
