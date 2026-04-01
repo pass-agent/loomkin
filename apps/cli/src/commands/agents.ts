@@ -17,11 +17,12 @@ const STATUS_ICONS: Record<string, string> = {
   permanently_failed: pc.red("✖✖"),
 };
 
-function formatAgent(agent: AgentInfo): string {
+function formatAgent(agent: AgentInfo, indent = ""): string {
   const icon = STATUS_ICONS[agent.status] || pc.dim("○");
   const name = pc.bold(agent.name);
   const role = pc.cyan(agent.role);
   const status = agent.status;
+  const modelDisplay = agent.model ? agent.model : "(inherited)";
 
   let detail = "";
   if (agent.currentTool) {
@@ -46,7 +47,7 @@ function formatAgent(agent: AgentInfo): string {
     worktree = pc.dim(` [wt:${agent.worktreePath}]`);
   }
 
-  return `  ${icon} ${name} ${role} ${pc.dim(`[${status}]`)}${detail}${cost}${worktree}`;
+  return `${indent}${icon} ${name} ${pc.dim(`[${status}]`)} ${role}  ${pc.dim(modelDisplay)}${detail}${cost}${worktree}`;
 }
 
 register({
@@ -64,7 +65,43 @@ register({
     }
 
     const header = pc.bold(`Active agents (${agents.length})`);
-    const lines = agents.map(formatAgent);
+
+    // Build parent → children map
+    const childrenOf = new Map<string, AgentInfo[]>();
+    const roots: AgentInfo[] = [];
+
+    for (const agent of agents) {
+      if (agent.parentAgent) {
+        const siblings = childrenOf.get(agent.parentAgent) ?? [];
+        siblings.push(agent);
+        childrenOf.set(agent.parentAgent, siblings);
+      } else {
+        roots.push(agent);
+      }
+    }
+
+    const lines: string[] = [];
+
+    function renderAgent(agent: AgentInfo, depth: number) {
+      const indent = depth === 0 ? "  " : "  " + "  ".repeat(depth - 1) + "└─ ";
+      lines.push(formatAgent(agent, indent));
+
+      const children = childrenOf.get(agent.name) ?? [];
+      for (const child of children) {
+        renderAgent(child, depth + 1);
+      }
+    }
+
+    for (const root of roots) {
+      renderAgent(root, 0);
+    }
+
+    // Also render agents whose parent isn't in the current list
+    for (const agent of agents) {
+      if (agent.parentAgent && !agents.find((a) => a.name === agent.parentAgent)) {
+        lines.push(formatAgent(agent, "  "));
+      }
+    }
 
     ctx.addSystemMessage(`${header}\n${lines.join("\n")}`);
   },

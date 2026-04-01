@@ -13,6 +13,7 @@ export interface AgentInfo {
   lastError?: string;
   pauseQueued?: boolean;
   worktreePath?: string;
+  parentAgent?: string;
   updatedAt: string;
 }
 

@@ -67,7 +67,8 @@ register({
 
     const payload: Record<string, unknown> = { role };
     if (name) payload.name = name;
-    if (model) payload.model = model;
+    // Use explicit model, or 'inherit' to inherit from the parent session
+    payload.model = model ?? "inherit";
     if (worktree) payload.worktree = true;
     if (agentMemoryPrompt) payload.additional_system_prompt = agentMemoryPrompt;
 
