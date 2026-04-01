@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAppStore } from "../stores/appStore.js";
 import { useChannelStore } from "../stores/channelStore.js";
+import { isMcpTool, truncateMcpOutput } from "../lib/mcpTruncation.js";
 import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
 
 /**
@@ -111,7 +112,29 @@ export function useSessionChannel() {
 
     on("tool_call_completed", (raw) => {
       const payload = raw as { tool_call: ToolCall };
-      useSessionStore.getState().removePendingToolCall(payload.tool_call.id);
+      const store = useSessionStore.getState();
+
+      // Truncate MCP tool output to prevent context overflow
+      if (isMcpTool(payload.tool_call.name ?? "") && payload.tool_call.output != null) {
+        const result = truncateMcpOutput(payload.tool_call.output);
+        store.addMcpOutputChars(payload.tool_call.output.length);
+        if (result.truncated) {
+          // Mutate the output in the payload so downstream handlers see the truncated version
+          (payload.tool_call as ToolCall).output = result.output;
+          store.addMessage({
+            id: `mcp-truncated-${Date.now()}`,
+            role: "system",
+            content: `MCP tool output truncated (${result.removedChars} chars removed)`,
+            tool_calls: null,
+            tool_call_id: null,
+            token_count: null,
+            agent_name: null,
+            inserted_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      store.removePendingToolCall(payload.tool_call.id);
     });
 
     on("permission_request", (raw) => {

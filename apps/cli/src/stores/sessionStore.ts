@@ -29,6 +29,9 @@ export interface SessionState {
   estimatedCostUsd: number;
   contextBudgetPercent: number | null;
 
+  // MCP output tracking
+  mcpOutputTotalChars: number;
+
   setSessionId: (id: string | null) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, partial: Partial<Message>) => void;
@@ -59,6 +62,7 @@ export interface SessionState {
   setScrollOffset: (offset: number) => void;
   trackTokenUsage: (inputTokens: number, outputTokens: number, model: string) => void;
   setContextBudgetPercent: (percent: number | null) => void;
+  addMcpOutputChars: (n: number) => void;
 }
 
 export const sessionStore = createStore<SessionState>((set, _get) => ({
@@ -77,6 +81,7 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
   totalOutputTokens: 0,
   estimatedCostUsd: 0,
   contextBudgetPercent: null,
+  mcpOutputTotalChars: 0,
 
   setSessionId: (sessionId) => set({ sessionId }),
 
@@ -211,6 +216,9 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
     }),
 
   setContextBudgetPercent: (contextBudgetPercent) => set({ contextBudgetPercent }),
+
+  addMcpOutputChars: (n) =>
+    set((state) => ({ mcpOutputTotalChars: state.mcpOutputTotalChars + n })),
 }));
 
 export const useSessionStore = sessionStore;
