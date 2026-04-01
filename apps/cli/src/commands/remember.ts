@@ -72,13 +72,6 @@ register({
   handler: (_args, ctx) => {
     const entries = loadAllMemories();
 
-    if (entries.length === 0) {
-      ctx.addSystemMessage(
-        pc.dim("No memories saved. Use /remember <text> to save one."),
-      );
-      return;
-    }
-
     const byScope: Record<string, MemoryEntry[]> = {
       global: [],
       project: [],
@@ -89,7 +82,23 @@ register({
       (byScope[entry.scope] ?? byScope["global"]).push(entry);
     }
 
-    const lines: string[] = [pc.bold(`Memories (${entries.length}):`)];
+    // Load agent-scoped memories (from agents dirs)
+    // These are loaded separately since loadAllMemories() only returns global+project
+    for (const agentName of listAgentNames()) {
+      const agentMemories = loadAgentMemories(agentName);
+      byScope.agent.push(...agentMemories);
+    }
+    const agentEntries = byScope.agent;
+
+    const totalCount = entries.length + agentEntries.length;
+    if (totalCount === 0) {
+      ctx.addSystemMessage(
+        pc.dim("No memories saved. Use /remember <text> to save one."),
+      );
+      return;
+    }
+
+    const lines: string[] = [pc.bold(`Memories (${totalCount}):`)];
 
     if (byScope.global.length > 0) {
       lines.push("", pc.bold("## Global"));
@@ -110,14 +119,6 @@ register({
         lines.push(`    ${pc.dim(preview + ellipsis)}`);
       }
     }
-
-    // Load agent-scoped memories (from agents dirs)
-    // These are loaded separately since loadAllMemories() only returns global+project
-    for (const agentName of listAgentNames()) {
-      const agentMemories = loadAgentMemories(agentName);
-      byScope.agent.push(...agentMemories);
-    }
-    const agentEntries = byScope.agent;
     if (agentEntries.length > 0) {
       const byAgent: Record<string, MemoryEntry[]> = {};
       for (const e of agentEntries) {
