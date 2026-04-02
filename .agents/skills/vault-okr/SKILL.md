@@ -3,6 +3,7 @@ name: vault-okr
 description: View, update, review, or create OKR cycles
 allowed-tools:
   - vault_search
+  - vault_list
   - vault_create_entry
   - vault_update_entry
   - vault_dashboard
@@ -13,7 +14,7 @@ Manage Objectives and Key Results. Parse arguments to determine subcommand:
 
 ## view (default)
 
-`vault_search(query: "*", tags: ["okr"])` — read all active OKR entries.
+`vault_list(tags: ["okr"])` — read all active OKR entries.
 Present a formatted summary with objectives, key results, current values, targets,
 and status indicators (On Track >= 70%, At Risk 40-70%, Off Track < 40%, Completed = 100%).
 
@@ -38,7 +39,7 @@ Display current status (same as view), then for each OKR:
 
 Determine next cycle number from existing OKRs.
 Ask for cycle dates, objectives, key results per scope.
-`vault_create_entry(entry_type: "note", tags: ["okr"], ...)` for each scope.
+`vault_create_entry(entry_type: "okr", tags: ["okr"], ...)` for each scope.
 Update the OKR hub entry to list the new cycle.
 
 ## retro

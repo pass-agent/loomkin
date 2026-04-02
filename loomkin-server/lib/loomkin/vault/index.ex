@@ -12,20 +12,13 @@ defmodule Loomkin.Vault.Index do
   @doc "Insert or update a vault entry in the index."
   @spec upsert(map()) :: {:ok, VaultEntry.t()} | {:error, Ecto.Changeset.t()}
   def upsert(attrs) when is_map(attrs) do
-    vault_id = attrs[:vault_id] || attrs["vault_id"]
-    path = attrs[:path] || attrs["path"]
-
-    case get(vault_id, path) do
-      nil ->
-        %VaultEntry{}
-        |> VaultEntry.changeset(attrs)
-        |> Repo.insert()
-
-      existing ->
-        existing
-        |> VaultEntry.changeset(attrs)
-        |> Repo.update()
-    end
+    %VaultEntry{}
+    |> VaultEntry.changeset(attrs)
+    |> Repo.insert(
+      on_conflict: {:replace_all_except, [:id, :inserted_at]},
+      conflict_target: [:vault_id, :path],
+      returning: true
+    )
   end
 
   @doc "Delete a vault entry by vault_id and path."
@@ -36,8 +29,10 @@ defmodule Loomkin.Vault.Index do
         {:error, :not_found}
 
       entry ->
-        Repo.delete(entry)
-        :ok
+        case Repo.delete(entry) do
+          {:ok, _} -> :ok
+          {:error, changeset} -> {:error, changeset}
+        end
     end
   end
 

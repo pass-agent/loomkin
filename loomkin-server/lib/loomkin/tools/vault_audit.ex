@@ -21,24 +21,8 @@ defmodule Loomkin.Tools.VaultAudit do
   alias Loomkin.Repo
   alias Loomkin.Schemas.VaultEntry
   alias Loomkin.Schemas.VaultLink
-
-  @evergreen_types ~w(note topic project person idea source stream_idea guest_profile)
-
-  @temporal_patterns [
-    {~r/\bwill\b/i, "will"},
-    {~r/\bgoing to\b/i, "going to"},
-    {~r/\brecently\b/i, "recently"},
-    {~r/\bsoon\b/i, "soon"},
-    {~r/\bcurrently\b/i, "currently"},
-    {~r/\bnext (week|month|quarter|year)\b/i, "next week/month/quarter/year"},
-    {~r/\bpreviously\b/i, "previously"}
-  ]
-
-  @required_fields %{
-    "decision" => ["id", "date", "status"],
-    "meeting" => ["date"],
-    "checkin" => ["date", "author"]
-  }
+  alias Loomkin.Vault.Validators.Frontmatter
+  alias Loomkin.Vault.Validators.TemporalLanguage
 
   @impl true
   def run(params, _context) do
@@ -131,31 +115,29 @@ defmodule Loomkin.Tools.VaultAudit do
     entries =
       from(e in VaultEntry,
         where: e.vault_id == ^vault_id,
-        where: e.entry_type in ^@evergreen_types,
         where: not is_nil(e.body),
         select: %{path: e.path, body: e.body, entry_type: e.entry_type}
       )
       |> Repo.all()
 
     Enum.flat_map(entries, fn entry ->
-      violations =
-        @temporal_patterns
-        |> Enum.filter(fn {regex, _label} -> Regex.match?(regex, entry.body) end)
-        |> Enum.map(fn {_regex, label} -> label end)
+      case TemporalLanguage.validate(entry) do
+        :ok ->
+          []
 
-      if violations == [] do
-        []
-      else
-        [
-          %{
-            severity: :warning,
-            category: :temporal,
-            message:
-              "Temporal language in evergreen #{entry.entry_type}: #{entry.path} — found: #{Enum.join(violations, ", ")}",
-            path: entry.path,
-            fixable: false
-          }
-        ]
+        {:warn, violations} ->
+          words = Enum.map_join(violations, ", ", & &1.word)
+
+          [
+            %{
+              severity: :warning,
+              category: :temporal,
+              message:
+                "Temporal language in evergreen #{entry.entry_type}: #{entry.path} — found: #{words}",
+              path: entry.path,
+              fixable: false
+            }
+          ]
       end
     end)
   end
@@ -163,39 +145,31 @@ defmodule Loomkin.Tools.VaultAudit do
   # --- Check: Frontmatter ---
 
   defp run_check(:frontmatter, vault_id) do
-    types = Map.keys(@required_fields)
-
     entries =
       from(e in VaultEntry,
         where: e.vault_id == ^vault_id,
-        where: e.entry_type in ^types,
+        where: not is_nil(e.entry_type),
         select: %{path: e.path, entry_type: e.entry_type, metadata: e.metadata}
       )
       |> Repo.all()
 
     Enum.flat_map(entries, fn entry ->
-      required = Map.get(@required_fields, entry.entry_type, [])
-      metadata = entry.metadata || %{}
+      case Frontmatter.validate(entry) do
+        :ok ->
+          []
 
-      missing =
-        Enum.reject(required, fn field ->
-          Map.has_key?(metadata, field)
-        end)
-
-      if missing == [] do
-        []
-      else
-        [
-          %{
-            severity: :warning,
-            category: :frontmatter,
-            message:
-              "Missing frontmatter in #{entry.entry_type}: #{entry.path} — missing: #{Enum.join(missing, ", ")}",
-            path: entry.path,
-            fixable: true,
-            fix_data: %{entry_type: entry.entry_type, missing_fields: missing}
-          }
-        ]
+        {:warn, %{missing_fields: missing}} ->
+          [
+            %{
+              severity: :warning,
+              category: :frontmatter,
+              message:
+                "Missing frontmatter in #{entry.entry_type}: #{entry.path} — missing: #{Enum.join(missing, ", ")}",
+              path: entry.path,
+              fixable: true,
+              fix_data: %{entry_type: entry.entry_type, missing_fields: missing}
+            }
+          ]
       end
     end)
   end
@@ -286,38 +260,23 @@ defmodule Loomkin.Tools.VaultAudit do
   end
 
   defp format_report(issues) do
-    critical = Enum.filter(issues, &(&1.severity == :critical))
-    warnings = Enum.filter(issues, &(&1.severity == :warning))
-    info = Enum.filter(issues, &(&1.severity == :info))
-
-    sections = []
+    grouped = Enum.group_by(issues, & &1.severity)
 
     sections =
-      if critical != [] do
-        lines = Enum.map(critical, &format_issue/1) |> Enum.join("\n")
-        sections ++ ["## Critical (#{length(critical)})\n#{lines}"]
-      else
-        sections
-      end
+      [{:critical, "Critical"}, {:warning, "Warnings"}, {:info, "Info"}]
+      |> Enum.flat_map(fn {severity, label} ->
+        case Map.get(grouped, severity, []) do
+          [] ->
+            []
 
-    sections =
-      if warnings != [] do
-        lines = Enum.map(warnings, &format_issue/1) |> Enum.join("\n")
-        sections ++ ["## Warnings (#{length(warnings)})\n#{lines}"]
-      else
-        sections
-      end
-
-    sections =
-      if info != [] do
-        lines = Enum.map(info, &format_issue/1) |> Enum.join("\n")
-        sections ++ ["## Info (#{length(info)})\n#{lines}"]
-      else
-        sections
-      end
+          items ->
+            lines = Enum.map_join(items, "\n", &format_issue/1)
+            ["## #{label} (#{length(items)})\n#{lines}"]
+        end
+      end)
 
     total = length(issues)
-    fixed = issues |> Enum.count(&(&1[:fixed] == true))
+    fixed = Enum.count(issues, &(&1[:fixed] == true))
     fix_note = if fixed > 0, do: " (#{fixed} auto-fixed)", else: ""
 
     "# Vault Audit Report\nTotal issues: #{total}#{fix_note}\n\n#{Enum.join(sections, "\n\n")}"
