@@ -108,6 +108,10 @@ defmodule Loomkin.MixProject do
       {:sched_ex, github: "vinnymac/SchedEx", ref: "938861d", override: true},
       {:yaml_elixir, "~> 2.12"},
 
+      # S3-compatible storage (Tigris)
+      {:ex_aws, "~> 2.6"},
+      {:ex_aws_s3, "~> 2.5"},
+
       # OAuth
       {:assent, "~> 0.3.1"},
 
