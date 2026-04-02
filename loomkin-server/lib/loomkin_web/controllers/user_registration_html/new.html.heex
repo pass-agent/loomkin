@@ -6,10 +6,10 @@
     <line x1="0%" y1="80%" x2="100%" y2="60%" stroke="var(--accent-amber)" stroke-width="0.3" opacity="0.03" class="loom-thread-3" />
   </svg>
 
-  <div class="relative z-10 w-full max-w-sm px-5" style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;">
+  <div class="relative z-10 w-full max-w-xs px-5" style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;">
     <%!-- Owl + wordmark --%>
-    <div class="text-center mb-10">
-      <svg width="48" height="48" viewBox="0 0 32 32" fill="none" class="mx-auto mb-4 drop-shadow-[0_0_16px_rgba(180,160,232,0.15)]">
+    <div class="text-center mb-12">
+      <svg width="40" height="40" viewBox="0 0 32 32" fill="none" class="mx-auto mb-3">
         <path d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z" fill="var(--surface-1)" stroke="var(--brand)" stroke-width="1" />
         <path d="M11 5.5L9.5 2.5M21 5.5l1.5-3" stroke="var(--brand)" stroke-width="1.2" stroke-linecap="round" />
         <circle cx="12" cy="13" r="3.5" fill="var(--surface-0)" stroke="var(--accent-amber)" stroke-width="0.8" />
@@ -18,77 +18,53 @@
         <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
         <path d="M15 17l1 1.5 1-1.5" stroke="var(--accent-peach)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
-      <h1 class="text-2xl font-extralight tracking-tight" style="color: var(--text-primary);">
-        l<span class="font-light" style="color: var(--text-secondary);">oo</span>m<span class="font-semibold" style="color: var(--brand);">kin</span>
-      </h1>
-      <p class="font-mono text-[10px] tracking-[0.15em] uppercase mt-2" style="color: var(--text-muted);">
-        join the workshop
+      <p class="font-mono text-[10px] tracking-[0.2em] uppercase" style="color: var(--text-muted);">
+        new account
       </p>
     </div>
 
-    <%!-- Card --%>
-    <div class="rounded-xl p-7" style="background: var(--surface-1); border: 1px solid var(--border-subtle);">
-      <.form for={@form} action={~p"/users/register"} id="registration-form">
-        <div class="space-y-4">
-          <div>
-            <label for={@form[:email].id} class="block text-[11px] font-mono uppercase tracking-wider mb-2" style="color: var(--text-muted);">
-              Email
-            </label>
-            <input
-              type="email"
-              id={@form[:email].id}
-              name={@form[:email].name}
-              value={Phoenix.HTML.Form.input_value(@form, :email)}
-              autocomplete="username"
-              spellcheck="false"
-              required
-              phx-mounted={JS.focus()}
-              class="w-full px-4 py-3 rounded-lg text-sm border-0 outline-none focus:ring-1"
-              style="background: var(--surface-2); color: var(--text-primary); --tw-ring-color: var(--brand);"
-              placeholder="you@example.com"
-            />
-          </div>
-          <button
-            type="submit"
-            phx-disable-with="Weaving your account..."
-            class="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all"
-            style="background: var(--brand); color: var(--surface-0);"
-          >
-            Create account
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
-          </button>
+    <%!-- Form — raw, no card wrapper --%>
+    <.form for={@form} action={~p"/users/register"} id="registration-form">
+      <div class="space-y-5">
+        <div>
+          <label for={@form[:email].id} class="block text-[10px] font-mono uppercase tracking-widest mb-1" style="color: var(--text-muted);">
+            email
+          </label>
+          <input
+            type="email"
+            id={@form[:email].id}
+            name={@form[:email].name}
+            value={Phoenix.HTML.Form.input_value(@form, :email)}
+            autocomplete="username"
+            spellcheck="false"
+            required
+            phx-mounted={JS.focus()}
+            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
+            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--accent-emerald);"
+            placeholder="you@example.com"
+          />
         </div>
-      </.form>
-    </div>
+        <button
+          type="submit"
+          phx-disable-with="weaving..."
+          class="w-full py-2.5 text-xs font-mono uppercase tracking-wider transition-all hover:tracking-[0.2em]"
+          style="color: var(--surface-0); background: var(--brand);"
+        >
+          create account →
+        </button>
+      </div>
+    </.form>
 
     <%!-- Footer --%>
-    <p class="text-center mt-8 text-xs" style="color: var(--text-muted);">
-      Already have an account?
-      <.link
-        navigate={~p"/users/log-in"}
-        class="font-medium transition-colors"
-        style="color: var(--text-brand);"
-      >
-        Sign in
-      </.link>
+    <p class="text-center mt-10 text-[11px] font-mono" style="color: var(--text-muted);">
+      already here? <.link navigate={~p"/users/log-in"} style="color: var(--text-brand);">sign in</.link>
     </p>
 
-    <%!-- Quiet capability hints --%>
-    <div class="flex items-center justify-center gap-6 mt-12">
-      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
-        <span class="w-1 h-1 rounded-full" style="background: var(--accent-amber);" />
-        knowledge vaults
-      </span>
-      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
-        <span class="w-1 h-1 rounded-full" style="background: var(--accent-cyan);" />
-        agent teams
-      </span>
-      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
-        <span class="w-1 h-1 rounded-full" style="background: var(--accent-emerald);" />
-        decision graphs
-      </span>
+    <%!-- Thread ends --%>
+    <div class="flex items-center justify-center gap-6 mt-14">
+      <div class="w-12 h-px" style="background: var(--accent-amber); opacity: 0.2;" />
+      <div class="w-8 h-px" style="background: var(--brand); opacity: 0.15;" />
+      <div class="w-12 h-px" style="background: var(--accent-emerald); opacity: 0.2;" />
     </div>
   </div>
 </div>
