@@ -49,45 +49,61 @@ defmodule LoomkinWeb.HomeLive do
                 fill="none"
                 class="opacity-80 group-hover:opacity-100 transition-opacity"
               >
-                <%!-- Owl head silhouette --%>
+                <%!-- Nestled body — plump, rounded, tucked in --%>
                 <path
-                  d="M16 4C10 4 6 8 6 14c0 4 2 7 4 9l2 3c1 1.5 2.5 2 4 2s3-.5 4-2l2-3c2-2 4-5 4-9 0-6-4-10-10-10z"
+                  d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z"
                   fill="var(--surface-2)"
                   stroke="var(--brand)"
-                  stroke-width="1.5"
+                  stroke-width="1.2"
                 />
-                <%!-- Ear tufts --%>
+                <%!-- Ear tufts — small, cozy --%>
                 <path
-                  d="M10 6L8 2M22 6l2-4"
+                  d="M11 5.5L9.5 2.5M21 5.5l1.5-3"
                   stroke="var(--brand)"
-                  stroke-width="1.5"
+                  stroke-width="1.2"
                   stroke-linecap="round"
+                />
+                <%!-- Tucked wing hints --%>
+                <path
+                  d="M8 16c1.5 2 2.5 4.5 3 7M24 16c-1.5 2-2.5 4.5-3 7"
+                  stroke="var(--brand)"
+                  stroke-width="0.8"
+                  stroke-linecap="round"
+                  opacity="0.35"
+                />
+                <%!-- Chest feather lines — nestled texture --%>
+                <path
+                  d="M13 20c1-.6 2-.9 3-.9s2 .3 3 .9M13.5 22c.8-.4 1.6-.6 2.5-.6s1.7.2 2.5.6"
+                  stroke="var(--brand)"
+                  stroke-width="0.7"
+                  stroke-linecap="round"
+                  opacity="0.25"
                 />
                 <%!-- Left eye --%>
                 <circle
                   cx="12"
-                  cy="14"
+                  cy="13"
                   r="3.5"
                   fill="var(--surface-0)"
                   stroke="var(--accent-amber)"
-                  stroke-width="1"
+                  stroke-width="0.8"
                 />
-                <circle cx="12" cy="14" r="1.5" fill="var(--accent-amber)" />
+                <circle cx="12.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
                 <%!-- Right eye --%>
                 <circle
                   cx="20"
-                  cy="14"
+                  cy="13"
                   r="3.5"
                   fill="var(--surface-0)"
                   stroke="var(--accent-amber)"
-                  stroke-width="1"
+                  stroke-width="0.8"
                 />
-                <circle cx="20" cy="14" r="1.5" fill="var(--accent-amber)" />
-                <%!-- Beak --%>
+                <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+                <%!-- Beak — small, tucked --%>
                 <path
-                  d="M14.5 18L16 20l1.5-2"
+                  d="M15 17l1 1.5 1-1.5"
                   stroke="var(--accent-peach)"
-                  stroke-width="1.2"
+                  stroke-width="1"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 />
