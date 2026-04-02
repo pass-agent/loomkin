@@ -47,15 +47,12 @@
         <button
           type="submit"
           phx-disable-with="weaving..."
-          class="group w-full relative py-3 text-xs font-mono transition-all"
-          style="color: var(--text-primary);"
+          class="w-full py-2.5 font-mono text-xs tracking-wide transition-all duration-200"
+          style="background: var(--brand); color: var(--surface-0); border-radius: 2px;"
+          onmouseover="this.style.boxShadow='0 0 16px rgba(180,160,232,0.3)'"
+          onmouseout="this.style.boxShadow='none'"
         >
-          <span class="relative flex items-center justify-center gap-3">
-            <span class="w-4 h-px group-hover:w-8 transition-all duration-300" style="background: var(--accent-emerald);" />
-            <span class="tracking-wider">begin weaving</span>
-            <span class="w-4 h-px group-hover:w-8 transition-all duration-300" style="background: var(--accent-emerald);" />
-          </span>
-          <span class="absolute bottom-1 w-0 group-hover:w-1/2 h-px transition-all duration-500" style="background: var(--accent-emerald); left: 25%;" />
+          create account
         </button>
       </div>
     </.form>

@@ -351,12 +351,12 @@ defmodule LoomkinWeb.HomeLive do
       >
         <.link
           href={~p"/users/register"}
-          class="group inline-flex items-center gap-4 py-3 font-mono text-xs transition-all"
-          style="color: var(--text-primary);"
+          class="inline-block py-2.5 px-6 font-mono text-xs tracking-wide transition-all duration-200"
+          style="background: transparent; color: var(--brand); border: 1px solid var(--brand); border-radius: 2px;"
+          onmouseover="this.style.background='var(--brand)';this.style.color='var(--surface-0)';this.style.boxShadow='0 0 20px rgba(180,160,232,0.25)'"
+          onmouseout="this.style.background='transparent';this.style.color='var(--brand)';this.style.boxShadow='none'"
         >
-          <span class="w-6 h-px group-hover:w-10 transition-all duration-300" style="background: var(--brand);" />
-          <span class="tracking-wider">enter the workshop</span>
-          <span class="w-6 h-px group-hover:w-10 transition-all duration-300" style="background: var(--brand);" />
+          enter the workshop
         </.link>
       </div>
     </div>

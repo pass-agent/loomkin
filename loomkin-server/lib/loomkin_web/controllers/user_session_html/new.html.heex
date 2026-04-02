@@ -56,15 +56,12 @@
         </div>
         <button
           type="submit"
-          class="group w-full relative py-3 text-xs font-mono transition-all"
-          style="color: var(--text-primary);"
+          class="group w-full py-2.5 font-mono text-xs tracking-wide transition-all duration-200"
+          style="background: var(--surface-0); color: var(--brand); border: 1px solid var(--brand); border-radius: 2px;"
+          onmouseover="this.style.background='var(--brand)';this.style.color='var(--surface-0)';this.style.boxShadow='0 0 16px rgba(180,160,232,0.25)'"
+          onmouseout="this.style.background='var(--surface-0)';this.style.color='var(--brand)';this.style.boxShadow='none'"
         >
-          <span class="relative flex items-center justify-center gap-3">
-            <span class="w-4 h-px group-hover:w-8 transition-all duration-300" style="background: var(--accent-amber);" />
-            <span class="tracking-wider">send magic link</span>
-            <span class="w-4 h-px group-hover:w-8 transition-all duration-300" style="background: var(--accent-amber);" />
-          </span>
-          <span class="absolute bottom-1 left-1/4 w-0 group-hover:w-1/2 h-px transition-all duration-500 mx-auto" style="background: var(--brand); left: 25%;" />
+          send magic link
         </button>
       </div>
     </.form>
@@ -112,30 +109,26 @@
             placeholder="••••••••"
           />
         </div>
-        <div class="flex gap-4 justify-center pt-1">
+        <div class="flex gap-2">
           <button
             type="submit"
             name={@form[:remember_me].name}
             value="true"
-            class="group relative text-xs font-mono transition-all py-2"
-            style="color: var(--text-primary);"
+            class="flex-1 py-2.5 font-mono text-xs tracking-wide transition-all duration-200"
+            style="background: var(--brand); color: var(--surface-0); border-radius: 2px;"
+            onmouseover="this.style.boxShadow='0 0 16px rgba(180,160,232,0.3)'"
+            onmouseout="this.style.boxShadow='none'"
           >
-            <span class="relative z-10 flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full transition-all group-hover:scale-150" style="background: var(--accent-emerald); box-shadow: 0 0 0 0 var(--accent-emerald); transition: box-shadow 0.3s, transform 0.3s;" />
-              remember me
-            </span>
-            <span class="absolute bottom-0 left-0 w-0 group-hover:w-full h-px transition-all duration-300" style="background: var(--accent-emerald);" />
+            remember me
           </button>
           <button
             type="submit"
-            class="group relative text-xs font-mono transition-all py-2"
-            style="color: var(--text-muted);"
+            class="flex-1 py-2.5 font-mono text-xs tracking-wide transition-all duration-200"
+            style="background: transparent; color: var(--text-secondary); border: 1px solid var(--border-default); border-radius: 2px;"
+            onmouseover="this.style.borderColor='var(--text-secondary)';this.style.color='var(--text-primary)'"
+            onmouseout="this.style.borderColor='var(--border-default)';this.style.color='var(--text-secondary)'"
           >
-            <span class="relative z-10 flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full border transition-all group-hover:scale-150" style="border-color: var(--text-muted);" />
-              just this once
-            </span>
-            <span class="absolute bottom-0 left-0 w-0 group-hover:w-full h-px transition-all duration-300" style="background: var(--text-muted);" />
+            just this once
           </button>
         </div>
       </div>
