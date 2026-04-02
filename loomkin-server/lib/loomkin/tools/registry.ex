@@ -17,7 +17,18 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.LoadSkill,
     Loomkin.Tools.CreateBacklogItem,
     Loomkin.Tools.QueryBacklog,
-    Loomkin.Tools.UpdateBacklogItem
+    Loomkin.Tools.UpdateBacklogItem,
+    Loomkin.Tools.FetchContent,
+    Loomkin.Tools.VaultRead,
+    Loomkin.Tools.VaultWrite,
+    Loomkin.Tools.VaultSearch,
+    Loomkin.Tools.VaultList,
+    Loomkin.Tools.VaultCreateEntry,
+    Loomkin.Tools.VaultUpdateEntry,
+    Loomkin.Tools.VaultLink,
+    Loomkin.Tools.VaultKanban,
+    Loomkin.Tools.VaultDashboard,
+    Loomkin.Tools.VaultAudit
   ]
 
   @peer_tools [
@@ -150,6 +161,13 @@ defmodule Loomkin.Tools.Registry do
     test_command success_criteria max_iterations
     minutes
     item_id status category epic tags scope_estimate assigned_to assigned_team
+    source identifier format
+    vault_id entry_type
+    parent_path related_paths extra_frontmatter entry_date author
+    append frontmatter_updates add_tags remove_tags
+    source_path target_path link_type display_text remove
+    action assignee project_tag column filter_assignee filter_project filter_column
+    dashboard_type days person fix
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

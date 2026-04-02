@@ -30,8 +30,8 @@ defmodule Loomkin.Auth.Providers.Google do
 
   ## Scopes
 
-  Uses `https://www.googleapis.com/auth/cloud-platform` by default, which
-  covers both the Generative Language API and Vertex AI. The OIDC layer
+  Defaults to `cloud-platform` (Generative Language / Vertex AI) and
+  `drive.readonly` (Google Drive content fetching). The OIDC layer
   automatically prepends `openid`.
   """
 
@@ -39,7 +39,10 @@ defmodule Loomkin.Auth.Providers.Google do
 
   # ── Constants ──────────────────────────────────────────────────────
 
-  @default_scope "https://www.googleapis.com/auth/cloud-platform"
+  @default_scopes [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/drive.readonly"
+  ]
 
   # Google's token endpoint — needed for refresh (OIDC discovery only runs
   # during the authorize/callback flow, not during refresh)
@@ -64,7 +67,7 @@ defmodule Loomkin.Auth.Providers.Google do
 
   @impl true
   def scopes do
-    case get_config(:scopes, [@default_scope]) do
+    case get_config(:scopes, @default_scopes) do
       scopes when is_list(scopes) -> scopes
       scope when is_binary(scope) -> [scope]
     end

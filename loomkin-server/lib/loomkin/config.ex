@@ -100,7 +100,8 @@ defmodule Loomkin.Config do
         client_secret: nil,
         scopes: [
           "https://www.googleapis.com/auth/cloud-platform",
-          "https://www.googleapis.com/auth/generative-language.retriever"
+          "https://www.googleapis.com/auth/generative-language.retriever",
+          "https://www.googleapis.com/auth/drive.readonly"
         ],
         api_surface: "generative_language"
       },
@@ -130,6 +131,23 @@ defmodule Loomkin.Config do
         bot_token: nil,
         guild_ids: [],
         allow_user_ids: []
+      }
+    },
+    vault: %{
+      slug: nil,
+      storage: "local",
+      s3: %{
+        bucket: nil,
+        region: "auto",
+        endpoint: nil,
+        access_key_id: nil,
+        secret_access_key: nil,
+        prefix: "vault/"
+      },
+      sync: %{
+        obsidian_path: nil,
+        enabled: false,
+        bidirectional: false
       }
     }
   }
@@ -381,7 +399,9 @@ defmodule Loomkin.Config do
     max_nesting_depth
     conversations inactivity_timeout_ms max_personas default_max_rounds default_strategy
     cascade_threshold pulse_stale_days pulse_confidence_threshold
-    anthropic_tokens_per_min openai_tokens_per_min google_tokens_per_min)a
+    anthropic_tokens_per_min openai_tokens_per_min google_tokens_per_min
+    vault slug storage s3 bucket region endpoint access_key_id secret_access_key prefix
+    sync obsidian_path bidirectional)a
 
   # Pre-compute a string→atom lookup map so atomize_keys never raises
   @known_key_map Map.new(@known_keys, fn atom -> {Atom.to_string(atom), atom} end)
