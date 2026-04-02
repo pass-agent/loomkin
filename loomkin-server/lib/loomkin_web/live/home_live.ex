@@ -250,16 +250,61 @@ defmodule LoomkinWeb.HomeLive do
         </div>
 
         <h1
-          class="text-5xl md:text-6xl font-light tracking-tight mb-1"
+          class="text-5xl md:text-6xl font-light tracking-tight mb-0"
           style="color: var(--text-primary);"
         >
           loom<span class="font-semibold" style="color: var(--brand);">kin</span>
         </h1>
 
-        <div
-          class="w-16 h-px mx-auto my-6"
-          style="background: linear-gradient(90deg, transparent, var(--brand), transparent);"
-        />
+        <%!-- Nest — woven branches under the wordmark --%>
+        <div class="flex justify-center -mt-1 mb-6">
+          <svg width="180" height="20" viewBox="0 0 180 20" fill="none" class="opacity-60">
+            <%!-- Layered organic branch strokes --%>
+            <path
+              d="M20 12 C40 8, 60 14, 90 10 S140 6, 160 11"
+              stroke="var(--accent-amber)"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              opacity="0.5"
+            />
+            <path
+              d="M15 14 C45 10, 70 16, 95 12 S135 8, 165 13"
+              stroke="var(--brand)"
+              stroke-width="1"
+              stroke-linecap="round"
+              opacity="0.35"
+            />
+            <path
+              d="M25 10 C50 15, 80 9, 100 13 S140 11, 155 9"
+              stroke="var(--accent-peach)"
+              stroke-width="1.2"
+              stroke-linecap="round"
+              opacity="0.3"
+            />
+            <%!-- A few small twig accents --%>
+            <path
+              d="M55 11 L52 8"
+              stroke="var(--accent-amber)"
+              stroke-width="0.8"
+              stroke-linecap="round"
+              opacity="0.4"
+            />
+            <path
+              d="M120 10 L123 7"
+              stroke="var(--accent-amber)"
+              stroke-width="0.8"
+              stroke-linecap="round"
+              opacity="0.4"
+            />
+            <path
+              d="M85 13 L82 10"
+              stroke="var(--accent-peach)"
+              stroke-width="0.7"
+              stroke-linecap="round"
+              opacity="0.3"
+            />
+          </svg>
+        </div>
 
         <p
           class="text-sm max-w-sm mx-auto leading-relaxed"
