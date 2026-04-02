@@ -167,6 +167,17 @@ defmodule LoomkinWeb.Router do
     end
   end
 
+  # Vault browser — authenticated users browse org-scoped vault entries
+  scope "/vault", LoomkinWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :vault,
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_user}] do
+      live "/:slug", VaultBrowserLive, :index
+      live "/:slug/*path", VaultEntryLive, :show
+    end
+  end
+
   # App routes — gated by multi-tenant auth (passes through in local mode)
   scope "/", LoomkinWeb do
     pipe_through [:browser, :require_auth_if_multi_tenant]

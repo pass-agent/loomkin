@@ -141,4 +141,19 @@ defmodule Loomkin.Vault.Index do
   defp maybe_filter_tags(query, tags) when is_list(tags) do
     from(e in query, where: fragment("tags @> ?", ^tags))
   end
+
+  @doc "Get entries that link TO the given path (backlinks)."
+  @spec backlinks(String.t(), String.t()) :: [map()]
+  def backlinks(vault_id, target_path) do
+    alias Loomkin.Schemas.VaultLink
+
+    from(l in VaultLink,
+      where: l.vault_id == ^vault_id and l.target_path == ^target_path,
+      join: e in VaultEntry,
+      on: e.vault_id == l.vault_id and e.path == l.source_path,
+      select: %{path: e.path, title: e.title, link_type: l.link_type},
+      order_by: [asc: e.title]
+    )
+    |> Repo.all()
+  end
 end

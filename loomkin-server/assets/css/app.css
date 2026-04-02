@@ -2025,3 +2025,225 @@ body {
 [data-comms-filter="errors"] > [phx-update="stream"] > [data-comms-category]:not([data-comms-category="errors"]) {
   display: none;
 }
+
+/* ══════════════════════════════════════════
+   Vault Prose — Reading Typography
+   Clean, warm documentation reader aesthetic
+   ══════════════════════════════════════════ */
+.vault-prose {
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+.vault-prose h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.vault-prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  line-height: 1.3;
+}
+
+.vault-prose h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.vault-prose h4, .vault-prose h5, .vault-prose h6 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.vault-prose p {
+  margin-bottom: 1rem;
+}
+
+.vault-prose a:not(.vault-wiki-link) {
+  color: var(--brand);
+  text-decoration: underline;
+  text-decoration-color: rgba(180, 160, 232, 0.3);
+  text-underline-offset: 2px;
+  transition: text-decoration-color var(--transition-fast);
+}
+
+.vault-prose a:not(.vault-wiki-link):hover {
+  text-decoration-color: var(--brand);
+}
+
+.vault-wiki-link {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  padding: 0 2px;
+  border-radius: 3px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.vault-wiki-link:hover {
+  background: rgba(137, 220, 235, 0.1);
+  color: #a8e8f4;
+}
+
+.vault-wiki-link::before {
+  content: '[[';
+  opacity: 0.35;
+  font-size: 0.85em;
+}
+
+.vault-wiki-link::after {
+  content: ']]';
+  opacity: 0.35;
+  font-size: 0.85em;
+}
+
+.vault-prose strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.vault-prose em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.vault-prose ul, .vault-prose ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.vault-prose ul {
+  list-style-type: disc;
+}
+
+.vault-prose ol {
+  list-style-type: decimal;
+}
+
+.vault-prose li {
+  margin-bottom: 0.25rem;
+}
+
+.vault-prose li > ul, .vault-prose li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.vault-prose blockquote {
+  border-left: 3px solid var(--brand);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background: var(--brand-muted);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-secondary);
+}
+
+.vault-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.vault-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.15em 0.4em;
+  background: var(--surface-2);
+  border-radius: 4px;
+  color: var(--accent-peach);
+}
+
+.vault-prose pre {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.vault-prose pre code {
+  padding: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.vault-prose table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.vault-prose th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--border-default);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vault-prose td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vault-prose hr {
+  border: none;
+  border-top: 1px solid var(--border-default);
+  margin: 2rem 0;
+}
+
+.vault-prose img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  margin: 1rem 0;
+}
+
+/* Task list checkboxes */
+.vault-prose input[type="checkbox"] {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--border-hover);
+  border-radius: 3px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
+.vault-prose input[type="checkbox"]:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.vault-prose input[type="checkbox"]:checked::after {
+  content: '✓';
+  color: var(--surface-0);
+  font-size: 0.7rem;
+  font-weight: 700;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}

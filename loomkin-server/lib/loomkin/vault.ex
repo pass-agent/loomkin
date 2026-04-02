@@ -164,6 +164,32 @@ defmodule Loomkin.Vault do
     |> Repo.insert()
   end
 
+  @doc "Get a vault config by slug (vault_id). Raises if not found."
+  @spec get_vault_by_slug!(String.t()) :: VaultConfig.t()
+  def get_vault_by_slug!(slug) do
+    Repo.get_by!(VaultConfig, vault_id: slug)
+  end
+
+  @doc "List vaults belonging to an organization."
+  @spec list_vaults_for_org(String.t()) :: [VaultConfig.t()]
+  def list_vaults_for_org(org_id) do
+    from(vc in VaultConfig, where: vc.organization_id == ^org_id, order_by: vc.name)
+    |> Repo.all()
+  end
+
+  @doc "Check if a user can access a vault via org membership."
+  @spec user_can_access_vault?(map(), VaultConfig.t()) :: boolean()
+  def user_can_access_vault?(user, %VaultConfig{organization_id: nil}), do: user != nil
+
+  def user_can_access_vault?(nil, _vault_config), do: false
+
+  def user_can_access_vault?(user, %VaultConfig{organization_id: org_id}) do
+    from(m in Loomkin.Schemas.OrganizationMembership,
+      where: m.organization_id == ^org_id and m.user_id == ^user.id
+    )
+    |> Repo.exists?()
+  end
+
   # --- Private helpers ---
 
   defp run_validators(%Entry{} = entry) do

@@ -14,6 +14,7 @@ defmodule Loomkin.Schemas.VaultConfig do
     field :metadata, :map, default: %{}
 
     belongs_to :workspace, Loomkin.Workspace
+    belongs_to :organization, Loomkin.Schemas.Organization
 
     timestamps(type: :utc_datetime)
   end
