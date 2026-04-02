@@ -1,7 +1,95 @@
-<Layouts.app flash={@flash} current_scope={@current_scope}>
-  <div class="mx-auto max-w-sm">
-    <div class="text-center">
-      <.header>Welcome {@user.email}</.header>
+<div
+  class="loom-home min-h-screen relative overflow-hidden flex items-center justify-center"
+  style="background: var(--surface-0);"
+>
+  <%!-- Thread background --%>
+  <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden="true">
+    <line
+      x1="0%"
+      y1="30%"
+      x2="100%"
+      y2="45%"
+      stroke="var(--brand)"
+      stroke-width="0.5"
+      opacity="0.05"
+      class="loom-thread-1"
+    />
+    <line
+      x1="0%"
+      y1="65%"
+      x2="100%"
+      y2="40%"
+      stroke="var(--accent-emerald)"
+      stroke-width="0.5"
+      opacity="0.04"
+      class="loom-thread-2"
+    />
+    <line
+      x1="0%"
+      y1="80%"
+      x2="100%"
+      y2="55%"
+      stroke="var(--accent-amber)"
+      stroke-width="0.3"
+      opacity="0.03"
+      class="loom-thread-3"
+    />
+  </svg>
+
+  <div
+    class="relative z-10 w-full max-w-xs px-5"
+    style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;"
+  >
+    <%!-- Owl + greeting --%>
+    <div class="text-center mb-12">
+      <svg width="40" height="40" viewBox="0 0 32 32" fill="none" class="mx-auto mb-3">
+        <path
+          d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z"
+          fill="var(--surface-1)"
+          stroke="var(--brand)"
+          stroke-width="1"
+        />
+        <path
+          d="M11 5.5L9.5 2.5M21 5.5l1.5-3"
+          stroke="var(--brand)"
+          stroke-width="1.2"
+          stroke-linecap="round"
+        />
+        <circle
+          cx="12"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
+        <circle cx="12.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <circle
+          cx="20"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
+        <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <path
+          d="M15 17l1 1.5 1-1.5"
+          stroke="var(--accent-peach)"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <p
+        class="font-mono text-[10px] tracking-[0.2em] uppercase mb-4"
+        style="color: var(--text-muted);"
+      >
+        welcome back
+      </p>
+      <p class="text-sm font-mono truncate" style="color: var(--text-secondary);">
+        {@user.email}
+      </p>
     </div>
 
     <.form
@@ -9,20 +97,26 @@
       for={@form}
       id="confirmation_form"
       action={~p"/users/log-in?_action=confirmed"}
-      phx-mounted={JS.focus_first()}
     >
       <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-      <.button
-        name={@form[:remember_me].name}
-        value="true"
-        phx-disable-with="Confirming..."
-        class="btn btn-primary w-full"
-      >
-        Confirm and stay logged in
-      </.button>
-      <.button phx-disable-with="Confirming..." class="btn btn-primary btn-soft w-full mt-2">
-        Confirm and log in only this time
-      </.button>
+      <div class="space-y-3">
+        <button
+          type="submit"
+          name={@form[:remember_me].name}
+          value="true"
+          phx-disable-with="confirming..."
+          class="loom-btn loom-btn-solid w-full"
+        >
+          confirm &amp; stay logged in
+        </button>
+        <button
+          type="submit"
+          phx-disable-with="confirming..."
+          class="loom-btn loom-btn-ghost w-full"
+        >
+          confirm &amp; log in only this time
+        </button>
+      </div>
     </.form>
 
     <.form
@@ -30,30 +124,51 @@
       for={@form}
       id="login_form"
       action={~p"/users/log-in"}
-      phx-mounted={JS.focus_first()}
     >
       <input type="hidden" name={@form[:token].name} value={@form[:token].value} />
-      <%= if @current_scope do %>
-        <.button variant="primary" phx-disable-with="Logging in..." class="btn btn-primary w-full">
-          Log in
-        </.button>
-      <% else %>
-        <.button
-          name={@form[:remember_me].name}
-          value="true"
-          phx-disable-with="Logging in..."
-          class="btn btn-primary w-full"
-        >
-          Keep me logged in on this device
-        </.button>
-        <.button phx-disable-with="Logging in..." class="btn btn-primary btn-soft w-full mt-2">
-          Log me in only this time
-        </.button>
-      <% end %>
+      <div class="space-y-3">
+        <%= if @current_scope do %>
+          <button
+            type="submit"
+            phx-disable-with="logging in..."
+            class="loom-btn loom-btn-solid w-full"
+          >
+            log in
+          </button>
+        <% else %>
+          <button
+            type="submit"
+            name={@form[:remember_me].name}
+            value="true"
+            phx-disable-with="logging in..."
+            class="loom-btn loom-btn-solid w-full"
+          >
+            keep me logged in
+          </button>
+          <button
+            type="submit"
+            phx-disable-with="logging in..."
+            class="loom-btn loom-btn-ghost w-full"
+          >
+            just this once
+          </button>
+        <% end %>
+      </div>
     </.form>
 
-    <p :if={!@user.confirmed_at} class="alert alert-outline mt-8">
-      Tip: If you prefer passwords, you can enable them in the user settings.
+    <p
+      :if={!@user.confirmed_at}
+      class="mt-8 py-2 px-3 text-[10px] font-mono"
+      style="color: var(--text-muted); border-left: 2px solid var(--accent-amber);"
+    >
+      tip: you can enable passwords later in settings
     </p>
+
+    <%!-- Thread ends --%>
+    <div class="flex items-center justify-center gap-6 mt-14">
+      <div class="w-12 h-px" style="background: var(--brand); opacity: 0.2;" />
+      <div class="w-8 h-px" style="background: var(--accent-emerald); opacity: 0.15;" />
+      <div class="w-12 h-px" style="background: var(--accent-amber); opacity: 0.2;" />
+    </div>
   </div>
-</Layouts.app>
+</div>

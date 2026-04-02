@@ -1,33 +1,103 @@
-<div class="loom-home min-h-screen relative overflow-hidden flex items-center justify-center" style="background: var(--surface-0);">
+<div
+  class="loom-home min-h-screen relative overflow-hidden flex items-center justify-center"
+  style="background: var(--surface-0);"
+>
   <%!-- Thread background --%>
   <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden="true">
-    <line x1="0%" y1="25%" x2="100%" y2="40%" stroke="var(--accent-emerald)" stroke-width="0.5" opacity="0.05" class="loom-thread-1" />
-    <line x1="0%" y1="55%" x2="100%" y2="30%" stroke="var(--brand)" stroke-width="0.5" opacity="0.04" class="loom-thread-2" />
-    <line x1="0%" y1="80%" x2="100%" y2="60%" stroke="var(--accent-amber)" stroke-width="0.3" opacity="0.03" class="loom-thread-3" />
+    <line
+      x1="0%"
+      y1="25%"
+      x2="100%"
+      y2="40%"
+      stroke="var(--accent-emerald)"
+      stroke-width="0.5"
+      opacity="0.05"
+      class="loom-thread-1"
+    />
+    <line
+      x1="0%"
+      y1="55%"
+      x2="100%"
+      y2="30%"
+      stroke="var(--brand)"
+      stroke-width="0.5"
+      opacity="0.04"
+      class="loom-thread-2"
+    />
+    <line
+      x1="0%"
+      y1="80%"
+      x2="100%"
+      y2="60%"
+      stroke="var(--accent-amber)"
+      stroke-width="0.3"
+      opacity="0.03"
+      class="loom-thread-3"
+    />
   </svg>
 
-  <div class="relative z-10 w-full max-w-xs px-5" style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;">
+  <div
+    class="relative z-10 w-full max-w-xs px-5"
+    style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;"
+  >
     <%!-- Owl + wordmark --%>
     <div class="text-center mb-12">
       <svg width="40" height="40" viewBox="0 0 32 32" fill="none" class="mx-auto mb-3">
-        <path d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z" fill="var(--surface-1)" stroke="var(--brand)" stroke-width="1" />
-        <path d="M11 5.5L9.5 2.5M21 5.5l1.5-3" stroke="var(--brand)" stroke-width="1.2" stroke-linecap="round" />
-        <circle cx="12" cy="13" r="3.5" fill="var(--surface-0)" stroke="var(--accent-amber)" stroke-width="0.8" />
+        <path
+          d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z"
+          fill="var(--surface-1)"
+          stroke="var(--brand)"
+          stroke-width="1"
+        />
+        <path
+          d="M11 5.5L9.5 2.5M21 5.5l1.5-3"
+          stroke="var(--brand)"
+          stroke-width="1.2"
+          stroke-linecap="round"
+        />
+        <circle
+          cx="12"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
         <circle cx="12.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
-        <circle cx="20" cy="13" r="3.5" fill="var(--surface-0)" stroke="var(--accent-amber)" stroke-width="0.8" />
+        <circle
+          cx="20"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
         <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
-        <path d="M15 17l1 1.5 1-1.5" stroke="var(--accent-peach)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          d="M15 17l1 1.5 1-1.5"
+          stroke="var(--accent-peach)"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
-      <p class="font-mono text-[10px] tracking-[0.2em] uppercase" style="color: var(--text-muted);">
+      <p
+        class="font-mono text-[10px] tracking-[0.2em] uppercase"
+        style="color: var(--text-muted);"
+      >
         new account
       </p>
     </div>
 
-    <%!-- Form — raw, no card wrapper --%>
+    <%!-- Form --%>
     <.form for={@form} action={~p"/users/register"} id="registration-form">
       <div class="space-y-5">
         <div>
-          <label for={@form[:email].id} class="block text-[10px] font-mono uppercase tracking-widest mb-1" style="color: var(--text-muted);">
+          <label
+            for={@form[:email].id}
+            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
+            style="color: var(--text-muted);"
+          >
             email
           </label>
           <input
@@ -44,14 +114,7 @@
             placeholder="you@example.com"
           />
         </div>
-        <button
-          type="submit"
-          phx-disable-with="weaving..."
-          class="w-full py-2.5 font-mono text-xs tracking-wide transition-all duration-200"
-          style="background: var(--brand); color: var(--surface-0); border-radius: 2px;"
-          onmouseover="this.style.boxShadow='0 0 16px rgba(180,160,232,0.3)'"
-          onmouseout="this.style.boxShadow='none'"
-        >
+        <button type="submit" phx-disable-with="weaving..." class="loom-btn loom-btn-solid w-full">
           create account
         </button>
       </div>
@@ -59,7 +122,8 @@
 
     <%!-- Footer --%>
     <p class="text-center mt-10 text-[11px] font-mono" style="color: var(--text-muted);">
-      already here? <.link navigate={~p"/users/log-in"} style="color: var(--text-brand);">sign in</.link>
+      already here?
+      <.link navigate={~p"/users/log-in"} style="color: var(--text-brand);">sign in</.link>
     </p>
 
     <%!-- Thread ends --%>

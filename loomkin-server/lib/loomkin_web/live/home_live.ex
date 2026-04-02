@@ -5,8 +5,6 @@ defmodule LoomkinWeb.HomeLive do
   """
   use LoomkinWeb, :live_view
 
-  alias Loomkin.Vault
-
   def mount(_params, _session, socket) do
     unless Application.get_env(:loomkin, :multi_tenant) do
       {:ok, push_navigate(socket, to: ~p"/projects")}
@@ -322,40 +320,43 @@ defmodule LoomkinWeb.HomeLive do
         </h1>
       </div>
 
-      <%!-- The Thread — a single line of purpose --%>
+      <%!-- The Thread — what this is --%>
       <div
-        class="mt-10 text-center"
+        class="mt-6 text-center"
         style="animation: fadeUp 0.8s 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;"
       >
-        <p class="font-mono text-xs tracking-[0.15em] uppercase" style="color: var(--text-muted);">
-          weaving agent teams since the small hours
+        <p
+          class="text-sm md:text-base font-light leading-relaxed"
+          style="color: var(--text-secondary);"
+        >
+          autonomous agent teams that build while you sleep
         </p>
       </div>
 
       <%!-- Three threads — what loomkin does, as woven strands --%>
       <div
-        class="mt-16 flex flex-col sm:flex-row items-center gap-0"
+        class="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-2xl"
         style="animation: fadeUp 0.8s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;"
       >
-        <.thread_strand color="var(--accent-amber)" label="orchestrate" />
-        <span class="font-mono text-[10px] px-3 py-2" style="color: var(--text-muted);">~</span>
-        <.thread_strand color="var(--accent-cyan)" label="delegate" />
-        <span class="font-mono text-[10px] px-3 py-2" style="color: var(--text-muted);">~</span>
-        <.thread_strand color="var(--accent-emerald)" label="build" />
+        <.thread_strand
+          color="var(--accent-amber)"
+          label="orchestrate"
+          desc="coordinate agent teams in real time"
+        />
+        <.thread_strand
+          color="var(--accent-cyan)"
+          label="delegate"
+          desc="route tasks to the right agent"
+        />
+        <.thread_strand color="var(--accent-emerald)" label="build" desc="ship code, autonomously" />
       </div>
 
-      <%!-- Bottom whisper --%>
+      <%!-- CTA --%>
       <div
         class="mt-20 mb-8"
         style="animation: fadeUp 0.8s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;"
       >
-        <.link
-          href={~p"/users/register"}
-          class="inline-block py-2.5 px-6 font-mono text-xs tracking-wide transition-all duration-200"
-          style="background: transparent; color: var(--brand); border: 1px solid var(--brand); border-radius: 2px;"
-          onmouseover="this.style.background='var(--brand)';this.style.color='var(--surface-0)';this.style.boxShadow='0 0 20px rgba(180,160,232,0.25)'"
-          onmouseout="this.style.background='transparent';this.style.color='var(--brand)';this.style.boxShadow='none'"
-        >
+        <.link href={~p"/users/register"} class="loom-btn loom-btn-outline">
           enter the workshop
         </.link>
       </div>
@@ -365,13 +366,18 @@ defmodule LoomkinWeb.HomeLive do
 
   attr :color, :string, required: true
   attr :label, :string, required: true
+  attr :desc, :string, required: true
 
   defp thread_strand(assigns) do
     ~H"""
-    <div class="flex items-center gap-2 px-3 py-2">
-      <div class="w-8 h-px" style={"background: #{@color}; opacity: 0.5;"} />
-      <span class="font-mono text-[11px] tracking-wider" style={"color: #{@color};"}>{@label}</span>
-      <div class="w-8 h-px" style={"background: #{@color}; opacity: 0.5;"} />
+    <div class="text-center sm:text-left">
+      <div class="flex items-center gap-2 mb-2 justify-center sm:justify-start">
+        <div class="w-6 h-px" style={"background: #{@color}; opacity: 0.5;"} />
+        <span class="font-mono text-[11px] tracking-wider" style={"color: #{@color};"}>{@label}</span>
+      </div>
+      <p class="text-[11px] leading-relaxed pl-0 sm:pl-8" style="color: var(--text-muted);">
+        {@desc}
+      </p>
     </div>
     """
   end

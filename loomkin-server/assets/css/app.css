@@ -175,6 +175,64 @@ body {
 .loom-thread-5 { animation: threadDrift1 20s ease-in-out infinite; }
 .loom-thread-6 { animation: threadDrift2 16s ease-in-out infinite; }
 
+/* ── Loom buttons — auth & landing ── */
+.loom-btn {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.625rem 1.5rem;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-align: center;
+}
+
+.loom-btn-outline {
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.loom-btn-outline:hover {
+  background: var(--brand);
+  color: var(--surface-0);
+  box-shadow: 0 0 20px rgba(180, 160, 232, 0.25);
+}
+
+.loom-btn-outline:active {
+  transform: scale(0.97);
+}
+
+.loom-btn-solid {
+  background: var(--brand);
+  color: var(--surface-0);
+  border: 1px solid var(--brand);
+}
+
+.loom-btn-solid:hover {
+  box-shadow: 0 0 20px rgba(180, 160, 232, 0.3);
+}
+
+.loom-btn-solid:active {
+  transform: scale(0.97);
+}
+
+.loom-btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.loom-btn-ghost:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.loom-btn-ghost:active {
+  transform: scale(0.97);
+}
+
 /* ══════════════════════════════════════════
    Focus Rings — Soft Glow
    ══════════════════════════════════════════ */
