@@ -1,101 +1,37 @@
-<div class="min-h-screen bg-surface-0 relative overflow-hidden flex items-center justify-center">
-  <%!-- Aurora ambient background --%>
-  <div class="home-aurora" aria-hidden="true" />
+<div class="loom-home min-h-screen relative overflow-hidden flex items-center justify-center" style="background: var(--surface-0);">
+  <%!-- Thread background --%>
+  <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden="true">
+    <line x1="0%" y1="25%" x2="100%" y2="40%" stroke="var(--accent-emerald)" stroke-width="0.5" opacity="0.05" class="loom-thread-1" />
+    <line x1="0%" y1="55%" x2="100%" y2="30%" stroke="var(--brand)" stroke-width="0.5" opacity="0.04" class="loom-thread-2" />
+    <line x1="0%" y1="80%" x2="100%" y2="60%" stroke="var(--accent-amber)" stroke-width="0.3" opacity="0.03" class="loom-thread-3" />
+  </svg>
 
-  <%!-- Centered card --%>
-  <div class="relative z-10 w-full max-w-md px-4 animate-fade-in">
-    <%!-- Logo + branding --%>
+  <div class="relative z-10 w-full max-w-sm px-5" style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;">
+    <%!-- Owl + wordmark --%>
     <div class="text-center mb-10">
-      <%!-- Loom thread mark — three interwoven strands --%>
-      <div class="inline-block mb-4">
-        <svg
-          width="52"
-          height="52"
-          viewBox="0 0 52 52"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          class="drop-shadow-[0_0_14px_rgba(124,58,237,0.3)]"
-        >
-          <%!-- Woven circle: three orbital arcs that weave over/under each other --%>
-          <ellipse
-            cx="26"
-            cy="26"
-            rx="18"
-            ry="8"
-            transform="rotate(-30 26 26)"
-            stroke="url(#wv1r)"
-            stroke-width="2"
-            fill="none"
-          />
-          <ellipse
-            cx="26"
-            cy="26"
-            rx="18"
-            ry="8"
-            transform="rotate(30 26 26)"
-            stroke="url(#wv2r)"
-            stroke-width="2"
-            fill="none"
-          />
-          <ellipse
-            cx="26"
-            cy="26"
-            rx="18"
-            ry="8"
-            transform="rotate(90 26 26)"
-            stroke="url(#wv3r)"
-            stroke-width="2"
-            fill="none"
-          />
-          <defs>
-            <linearGradient
-              id="wv1r"
-              x1="8"
-              y1="18"
-              x2="44"
-              y2="34"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stop-color="#7C3AED" />
-              <stop offset="1" stop-color="#a78bfa" />
-            </linearGradient>
-            <linearGradient
-              id="wv2r"
-              x1="8"
-              y1="34"
-              x2="44"
-              y2="18"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stop-color="#22d3ee" stop-opacity="0.7" />
-              <stop offset="1" stop-color="#7C3AED" />
-            </linearGradient>
-            <linearGradient
-              id="wv3r"
-              x1="26"
-              y1="8"
-              x2="26"
-              y2="44"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop stop-color="#a78bfa" stop-opacity="0.6" />
-              <stop offset="1" stop-color="#22d3ee" stop-opacity="0.8" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <h1 class="text-2xl font-light text-white tracking-wide">
-        loom<span class="font-semibold text-brand">kin</span>
+      <svg width="48" height="48" viewBox="0 0 32 32" fill="none" class="mx-auto mb-4 drop-shadow-[0_0_16px_rgba(180,160,232,0.15)]">
+        <path d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z" fill="var(--surface-1)" stroke="var(--brand)" stroke-width="1" />
+        <path d="M11 5.5L9.5 2.5M21 5.5l1.5-3" stroke="var(--brand)" stroke-width="1.2" stroke-linecap="round" />
+        <circle cx="12" cy="13" r="3.5" fill="var(--surface-0)" stroke="var(--accent-amber)" stroke-width="0.8" />
+        <circle cx="12.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <circle cx="20" cy="13" r="3.5" fill="var(--surface-0)" stroke="var(--accent-amber)" stroke-width="0.8" />
+        <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <path d="M15 17l1 1.5 1-1.5" stroke="var(--accent-peach)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <h1 class="text-2xl font-extralight tracking-tight" style="color: var(--text-primary);">
+        l<span class="font-light" style="color: var(--text-secondary);">oo</span>m<span class="font-semibold" style="color: var(--brand);">kin</span>
       </h1>
-      <p class="text-gray-600 text-xs mt-2 tracking-widest uppercase">Create your workspace</p>
+      <p class="font-mono text-[10px] tracking-[0.15em] uppercase mt-2" style="color: var(--text-muted);">
+        join the workshop
+      </p>
     </div>
 
-    <%!-- Glass card --%>
-    <div class="glass rounded-2xl p-8 space-y-6">
+    <%!-- Card --%>
+    <div class="rounded-xl p-7" style="background: var(--surface-1); border: 1px solid var(--border-subtle);">
       <.form for={@form} action={~p"/users/register"} id="registration-form">
         <div class="space-y-4">
           <div>
-            <label for={@form[:email].id} class="block text-xs font-medium text-gray-400 mb-1.5">
+            <label for={@form[:email].id} class="block text-[11px] font-mono uppercase tracking-wider mb-2" style="color: var(--text-muted);">
               Email
             </label>
             <input
@@ -107,46 +43,52 @@
               spellcheck="false"
               required
               phx-mounted={JS.focus()}
-              class={[
-                "w-full px-4 py-3 rounded-xl text-sm text-white placeholder-gray-600",
-                "bg-surface-1 border border-border-subtle",
-                "focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/20",
-                "transition-all duration-200"
-              ]}
+              class="w-full px-4 py-3 rounded-lg text-sm border-0 outline-none focus:ring-1"
+              style="background: var(--surface-2); color: var(--text-primary); --tw-ring-color: var(--brand);"
               placeholder="you@example.com"
             />
           </div>
           <button
             type="submit"
-            phx-disable-with="Creating account..."
-            class={[
-              "w-full py-3 rounded-xl text-sm font-medium",
-              "bg-brand hover:bg-violet-500 active:bg-violet-600",
-              "text-white shadow-lg shadow-brand/20",
-              "transition-all duration-200 hover:shadow-brand/30",
-              "flex items-center justify-center gap-2"
-            ]}
+            phx-disable-with="Weaving your account..."
+            class="w-full py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all"
+            style="background: var(--brand); color: var(--surface-0);"
           >
-            Create account <span class="hero-arrow-right-mini w-4 h-4" />
+            Create account
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
           </button>
         </div>
       </.form>
     </div>
 
-    <%!-- Footer link --%>
-    <p class="text-center mt-6 text-sm text-gray-500">
+    <%!-- Footer --%>
+    <p class="text-center mt-8 text-xs" style="color: var(--text-muted);">
       Already have an account?
       <.link
         navigate={~p"/users/log-in"}
-        class="text-brand hover:text-violet-300 font-medium transition-colors"
+        class="font-medium transition-colors"
+        style="color: var(--text-brand);"
       >
         Sign in
       </.link>
     </p>
 
-    <%!-- Social proof / tagline --%>
-    <p class="text-center mt-4 text-xs text-gray-600">
-      AI-native agent orchestration — observe, guide, and collaborate with your team
-    </p>
+    <%!-- Quiet capability hints --%>
+    <div class="flex items-center justify-center gap-6 mt-12">
+      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
+        <span class="w-1 h-1 rounded-full" style="background: var(--accent-amber);" />
+        knowledge vaults
+      </span>
+      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
+        <span class="w-1 h-1 rounded-full" style="background: var(--accent-cyan);" />
+        agent teams
+      </span>
+      <span class="flex items-center gap-1.5 text-[10px] font-mono" style="color: var(--text-muted);">
+        <span class="w-1 h-1 rounded-full" style="background: var(--accent-emerald);" />
+        decision graphs
+      </span>
+    </div>
   </div>
 </div>
