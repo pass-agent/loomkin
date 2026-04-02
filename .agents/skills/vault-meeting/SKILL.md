@@ -8,6 +8,7 @@ allowed-tools:
   - vault_link
   - vault_kanban
   - vault_dashboard
+  - vault_audit
   - decision_log
   - fetch_content
   - context_offload

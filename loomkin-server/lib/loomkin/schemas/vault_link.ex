@@ -28,6 +28,18 @@ defmodule Loomkin.Schemas.VaultLink do
     link
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
+    |> validate_no_self_link()
     |> unique_constraint([:vault_id, :source_path, :target_path, :link_type])
+  end
+
+  defp validate_no_self_link(changeset) do
+    source = get_field(changeset, :source_path)
+    target = get_field(changeset, :target_path)
+
+    if source && target && source == target do
+      add_error(changeset, :target_path, "cannot link an entry to itself")
+    else
+      changeset
+    end
   end
 end

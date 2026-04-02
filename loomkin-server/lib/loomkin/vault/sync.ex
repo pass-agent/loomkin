@@ -12,23 +12,23 @@ defmodule Loomkin.Vault.Sync do
   """
   @spec full_sync(String.t(), module(), keyword()) :: {:ok, map()}
   def full_sync(vault_id, adapter, storage_opts) do
-    {:ok, paths} = adapter.list("", storage_opts)
+    with {:ok, paths} <- adapter.list("", storage_opts) do
+      md_paths = Enum.filter(paths, &String.ends_with?(&1, ".md"))
 
-    md_paths = Enum.filter(paths, &String.ends_with?(&1, ".md"))
+      results =
+        Enum.map(md_paths, fn path ->
+          sync_entry(vault_id, path, adapter, storage_opts)
+        end)
 
-    results =
-      Enum.map(md_paths, fn path ->
-        sync_entry(vault_id, path, adapter, storage_opts)
-      end)
+      synced = Enum.count(results, &match?({:ok, :synced}, &1))
 
-    synced = Enum.count(results, &match?({:ok, :synced}, &1))
+      errors =
+        results
+        |> Enum.filter(&match?({:error, _, _}, &1))
+        |> Enum.map(fn {:error, path, reason} -> {path, reason} end)
 
-    errors =
-      results
-      |> Enum.filter(&match?({:error, _, _}, &1))
-      |> Enum.map(fn {:error, path, reason} -> {path, reason} end)
-
-    {:ok, %{synced: synced, errors: errors, total: length(md_paths)}}
+      {:ok, %{synced: synced, errors: errors, total: length(md_paths)}}
+    end
   end
 
   @doc """
@@ -89,22 +89,23 @@ defmodule Loomkin.Vault.Sync do
   """
   @spec check_sync(String.t(), module(), keyword()) :: {:ok, map()}
   def check_sync(vault_id, adapter, storage_opts) do
-    {:ok, storage_paths} = adapter.list("", storage_opts)
-    storage_set = storage_paths |> Enum.filter(&String.ends_with?(&1, ".md")) |> MapSet.new()
+    with {:ok, storage_paths} <- adapter.list("", storage_opts) do
+      storage_set = storage_paths |> Enum.filter(&String.ends_with?(&1, ".md")) |> MapSet.new()
 
-    index_entries = Index.list(vault_id, limit: 10_000)
-    index_set = index_entries |> Enum.map(& &1.path) |> MapSet.new()
+      index_entries = Index.list(vault_id, limit: 100_000)
+      index_set = index_entries |> Enum.map(& &1.path) |> MapSet.new()
 
-    storage_only = MapSet.difference(storage_set, index_set) |> MapSet.to_list()
-    index_only = MapSet.difference(index_set, storage_set) |> MapSet.to_list()
+      storage_only = MapSet.difference(storage_set, index_set) |> MapSet.to_list()
+      index_only = MapSet.difference(index_set, storage_set) |> MapSet.to_list()
 
-    {:ok,
-     %{
-       in_sync: storage_only == [] and index_only == [],
-       storage_only: storage_only,
-       index_only: index_only,
-       storage_count: MapSet.size(storage_set),
-       index_count: MapSet.size(index_set)
-     }}
+      {:ok,
+       %{
+         in_sync: storage_only == [] and index_only == [],
+         storage_only: storage_only,
+         index_only: index_only,
+         storage_count: MapSet.size(storage_set),
+         index_count: MapSet.size(index_set)
+       }}
+    end
   end
 end

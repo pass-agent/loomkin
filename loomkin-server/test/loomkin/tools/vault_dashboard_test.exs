@@ -5,9 +5,9 @@ defmodule Loomkin.Tools.VaultDashboardTest do
   alias Loomkin.Tools.VaultKanban
   alias Loomkin.Vault
 
-  @vault_id "vault-dashboard-tool-test"
-
   setup do
+    vault_id = "vault-dashboard-test-#{System.unique_integer([:positive])}"
+
     tmp_root =
       Path.join(
         System.tmp_dir!(),
@@ -19,32 +19,32 @@ defmodule Loomkin.Tools.VaultDashboardTest do
 
     {:ok, _config} =
       Vault.create_vault(%{
-        vault_id: @vault_id,
+        vault_id: vault_id,
         name: "Dashboard Test Vault",
         storage_type: "local",
         storage_config: %{"root" => tmp_root}
       })
 
-    %{root: tmp_root}
+    %{root: tmp_root, vault_id: vault_id}
   end
 
   describe "index dashboard" do
-    test "returns structured summary with entry counts", %{root: _root} do
+    test "returns structured summary with entry counts", %{vault_id: vault_id} do
       Vault.write(
-        @vault_id,
+        vault_id,
         "notes/idea.md",
         "---\ntitle: An Idea\ntype: note\n---\nSome content"
       )
 
       Vault.write(
-        @vault_id,
+        vault_id,
         "meetings/standup.md",
         "---\ntitle: Standup\ntype: meeting\ndate: 2026-04-01\n---\nMeeting notes"
       )
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "index", days: 30},
+                 %{vault_id: vault_id, dashboard_type: "index", days: 30},
                  %{}
                )
 
@@ -54,10 +54,10 @@ defmodule Loomkin.Tools.VaultDashboardTest do
       assert result =~ "meeting"
     end
 
-    test "includes active kanban items", %{root: _root} do
+    test "includes active kanban items", %{vault_id: vault_id} do
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "Active task",
           column: "in_progress"
@@ -67,17 +67,17 @@ defmodule Loomkin.Tools.VaultDashboardTest do
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "index"},
+                 %{vault_id: vault_id, dashboard_type: "index"},
                  %{}
                )
 
       assert result =~ "Active task"
     end
 
-    test "handles empty vault" do
+    test "handles empty vault", %{vault_id: vault_id} do
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "index"},
+                 %{vault_id: vault_id, dashboard_type: "index"},
                  %{}
                )
 
@@ -87,16 +87,16 @@ defmodule Loomkin.Tools.VaultDashboardTest do
   end
 
   describe "activity dashboard" do
-    test "returns recent entries grouped by date", %{root: _root} do
+    test "returns recent entries grouped by date", %{vault_id: vault_id} do
       Vault.write(
-        @vault_id,
+        vault_id,
         "notes/today.md",
         "---\ntitle: Today Note\ntype: note\n---\nContent"
       )
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "activity", days: 7},
+                 %{vault_id: vault_id, dashboard_type: "activity", days: 7},
                  %{}
                )
 
@@ -104,10 +104,10 @@ defmodule Loomkin.Tools.VaultDashboardTest do
       assert result =~ "Today Note"
     end
 
-    test "returns empty message when no activity" do
+    test "returns empty message when no activity", %{vault_id: vault_id} do
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "activity", days: 7},
+                 %{vault_id: vault_id, dashboard_type: "activity", days: 7},
                  %{}
                )
 
@@ -116,22 +116,22 @@ defmodule Loomkin.Tools.VaultDashboardTest do
   end
 
   describe "updates_hub" do
-    test "returns checkin summaries grouped by author", %{root: _root} do
+    test "returns checkin summaries grouped by author", %{vault_id: vault_id} do
       Vault.write(
-        @vault_id,
+        vault_id,
         "checkins/alice-01.md",
         "---\ntitle: Alice Checkin\ntype: checkin\ndate: 2026-04-01\nauthor: Alice\n---\nDoing great"
       )
 
       Vault.write(
-        @vault_id,
+        vault_id,
         "checkins/bob-01.md",
         "---\ntitle: Bob Checkin\ntype: checkin\ndate: 2026-04-01\nauthor: Bob\n---\nShipping things"
       )
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "updates_hub", days: 30},
+                 %{vault_id: vault_id, dashboard_type: "updates_hub", days: 30},
                  %{}
                )
 
@@ -140,22 +140,22 @@ defmodule Loomkin.Tools.VaultDashboardTest do
       assert result =~ "Bob"
     end
 
-    test "filters by person", %{root: _root} do
+    test "filters by person", %{vault_id: vault_id} do
       Vault.write(
-        @vault_id,
+        vault_id,
         "checkins/alice-02.md",
         "---\ntitle: Alice Update\ntype: checkin\ndate: 2026-04-01\nauthor: Alice\n---\nStuff"
       )
 
       Vault.write(
-        @vault_id,
+        vault_id,
         "checkins/bob-02.md",
         "---\ntitle: Bob Update\ntype: checkin\ndate: 2026-04-01\nauthor: Bob\n---\nThings"
       )
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "updates_hub", days: 30, person: "Alice"},
+                 %{vault_id: vault_id, dashboard_type: "updates_hub", days: 30, person: "Alice"},
                  %{}
                )
 
@@ -165,15 +165,15 @@ defmodule Loomkin.Tools.VaultDashboardTest do
   end
 
   describe "kanban_summary" do
-    test "returns column counts and in-progress items" do
+    test "returns column counts and in-progress items", %{vault_id: vault_id} do
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "add", description: "Backlog item", column: "backlog"},
+        %{vault_id: vault_id, action: "add", description: "Backlog item", column: "backlog"},
         %{}
       )
 
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "Active item",
           column: "in_progress",
@@ -184,7 +184,7 @@ defmodule Loomkin.Tools.VaultDashboardTest do
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "kanban_summary"},
+                 %{vault_id: vault_id, dashboard_type: "kanban_summary"},
                  %{}
                )
 
@@ -194,10 +194,10 @@ defmodule Loomkin.Tools.VaultDashboardTest do
       assert result =~ "alice"
     end
 
-    test "includes project tag breakdown" do
+    test "includes project tag breakdown", %{vault_id: vault_id} do
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "TCS work",
           project_tag: "tcs"
@@ -207,7 +207,7 @@ defmodule Loomkin.Tools.VaultDashboardTest do
 
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "BTRW work",
           project_tag: "btrw"
@@ -217,7 +217,7 @@ defmodule Loomkin.Tools.VaultDashboardTest do
 
       assert {:ok, %{result: result}} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "kanban_summary"},
+                 %{vault_id: vault_id, dashboard_type: "kanban_summary"},
                  %{}
                )
 
@@ -227,10 +227,10 @@ defmodule Loomkin.Tools.VaultDashboardTest do
   end
 
   describe "error handling" do
-    test "returns error for unknown dashboard type" do
+    test "returns error for unknown dashboard type", %{vault_id: vault_id} do
       assert {:error, msg} =
                VaultDashboard.run(
-                 %{vault_id: @vault_id, dashboard_type: "invalid"},
+                 %{vault_id: vault_id, dashboard_type: "invalid"},
                  %{}
                )
 

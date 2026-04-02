@@ -6,6 +6,7 @@ allowed-tools:
   - vault_kanban
   - vault_update_entry
   - vault_search
+  - vault_list
   - vault_dashboard
   - ask_user
   - team_spawn
@@ -49,7 +50,7 @@ For smaller vaults, skip team mode and process single-agent.
 
 ## Check Temporal Entries
 
-`vault_search(query: "*", entry_type: "checkin")` — find checkins older than 30 days for archiving.
+`vault_list(entry_type: "checkin")` — find checkins older than 30 days for archiving.
 
 ## Present Findings
 

@@ -109,6 +109,9 @@ defmodule Loomkin.Tools.VaultCreateEntry do
       nil -> :ok
       _exists -> {:error, "Entry already exists at #{path}. Use vault_update_entry to modify it."}
     end
+  rescue
+    # If the check itself fails, let the write proceed — the DB constraint is the real guard
+    _ -> :ok
   end
 
   # --- Path resolution ---
@@ -183,23 +186,21 @@ defmodule Loomkin.Tools.VaultCreateEntry do
   defp next_dr_number(vault_id, date) do
     year = String.slice(date, 0, 4)
 
-    case Vault.get_config(vault_id) do
-      {:ok, config} ->
-        sequences = get_in(config.metadata, ["dr_sequences"]) || %{}
-        current = Map.get(sequences, year, 0)
-        next = current + 1
+    with {:ok, config} <- Vault.get_config(vault_id) do
+      sequences = get_in(config.metadata, ["dr_sequences"]) || %{}
+      current = Map.get(sequences, year, 0)
+      next = current + 1
 
-        updated_sequences = Map.put(sequences, year, next)
-        updated_metadata = Map.put(config.metadata || %{}, "dr_sequences", updated_sequences)
+      updated_sequences = Map.put(sequences, year, next)
+      updated_metadata = Map.put(config.metadata || %{}, "dr_sequences", updated_sequences)
 
-        config
-        |> VaultConfig.changeset(%{metadata: updated_metadata})
-        |> Repo.update()
+      case config |> VaultConfig.changeset(%{metadata: updated_metadata}) |> Repo.update() do
+        {:ok, _} ->
+          {:ok, next, year}
 
-        {:ok, next, year}
-
-      {:error, _} = err ->
-        err
+        {:error, changeset} ->
+          {:error, "Failed to update DR sequence: #{inspect(changeset.errors)}"}
+      end
     end
   end
 
@@ -225,13 +226,21 @@ defmodule Loomkin.Tools.VaultCreateEntry do
         %{vault_id: vault_id, source_path: source_path, target_path: target, link_type: :related}
       end)
 
-    Enum.each(links ++ related, fn attrs ->
-      %VaultLink{}
-      |> VaultLink.changeset(attrs)
-      |> Repo.insert()
-    end)
+    errors =
+      (links ++ related)
+      |> Enum.reduce([], fn attrs, acc ->
+        case %VaultLink{} |> VaultLink.changeset(attrs) |> Repo.insert() do
+          {:ok, _} -> acc
+          {:error, changeset} -> [{attrs.target_path, changeset.errors} | acc]
+        end
+      end)
 
-    :ok
+    if errors == [] do
+      :ok
+    else
+      targets = Enum.map_join(errors, ", ", fn {path, _} -> path end)
+      {:error, "Failed to create links to: #{targets}"}
+    end
   end
 
   defp format_links(nil, []), do: ""

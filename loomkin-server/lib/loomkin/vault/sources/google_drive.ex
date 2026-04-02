@@ -50,7 +50,7 @@ defmodule Loomkin.Vault.Sources.GoogleDrive do
     search_url =
       "#{@drive_api_base}/files?" <>
         URI.encode_query(%{
-          "q" => "name contains '#{escape_drive_query(clean_query)}'",
+          "q" => "name contains #{Jason.encode!(clean_query)}",
           "fields" => "files(id,name,mimeType)",
           "pageSize" => "1"
         })
@@ -162,10 +162,6 @@ defmodule Loomkin.Vault.Sources.GoogleDrive do
   # A Google Drive file ID is typically 20-60 alphanumeric characters with hyphens/underscores
   defp file_id?(identifier) do
     Regex.match?(~r/\A[a-zA-Z0-9_-]{20,60}\z/, identifier)
-  end
-
-  defp escape_drive_query(query) do
-    String.replace(query, "'", "\\'")
   end
 
   defp get_token do

@@ -4,9 +4,9 @@ defmodule Loomkin.Tools.VaultKanbanTest do
   alias Loomkin.Tools.VaultKanban
   alias Loomkin.Vault
 
-  @vault_id "vault-kanban-tool-test"
-
   setup do
+    vault_id = "vault-kanban-test-#{System.unique_integer([:positive])}"
+
     tmp_root =
       Path.join(
         System.tmp_dir!(),
@@ -18,19 +18,19 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
     {:ok, _config} =
       Vault.create_vault(%{
-        vault_id: @vault_id,
+        vault_id: vault_id,
         name: "Kanban Test Vault",
         storage_type: "local",
         storage_config: %{"root" => tmp_root}
       })
 
-    %{root: tmp_root}
+    %{root: tmp_root, vault_id: vault_id}
   end
 
   describe "add" do
-    test "creates a kanban item with defaults" do
+    test "creates a kanban item with defaults", %{vault_id: vault_id} do
       params = %{
-        vault_id: @vault_id,
+        vault_id: vault_id,
         action: "add",
         description: "Write the quarterly report"
       }
@@ -41,9 +41,9 @@ defmodule Loomkin.Tools.VaultKanbanTest do
       assert result =~ "backlog"
     end
 
-    test "creates a kanban item with all fields" do
+    test "creates a kanban item with all fields", %{vault_id: vault_id} do
       params = %{
-        vault_id: @vault_id,
+        vault_id: vault_id,
         action: "add",
         description: "Review PR #42",
         assignee: "alice",
@@ -62,10 +62,10 @@ defmodule Loomkin.Tools.VaultKanbanTest do
   end
 
   describe "complete" do
-    test "marks item done with timestamp" do
+    test "marks item done with timestamp", %{vault_id: vault_id} do
       {:ok, %{result: add_result}} =
         VaultKanban.run(
-          %{vault_id: @vault_id, action: "add", description: "Finish docs"},
+          %{vault_id: vault_id, action: "add", description: "Finish docs"},
           %{}
         )
 
@@ -73,7 +73,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       assert {:ok, %{result: result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "complete", task_id: task_id},
+                 %{vault_id: vault_id, action: "complete", task_id: task_id},
                  %{}
                )
 
@@ -83,18 +83,18 @@ defmodule Loomkin.Tools.VaultKanbanTest do
       # Verify via list that it shows as done
       assert {:ok, %{result: list_result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "list", filter_column: "done"},
+                 %{vault_id: vault_id, action: "list", filter_column: "done"},
                  %{}
                )
 
       assert list_result =~ "Finish docs"
     end
 
-    test "returns error for missing task" do
+    test "returns error for missing task", %{vault_id: vault_id} do
       assert {:error, msg} =
                VaultKanban.run(
                  %{
-                   vault_id: @vault_id,
+                   vault_id: vault_id,
                    action: "complete",
                    task_id: "00000000-0000-0000-0000-000000000000"
                  },
@@ -106,10 +106,10 @@ defmodule Loomkin.Tools.VaultKanbanTest do
   end
 
   describe "move" do
-    test "changes column" do
+    test "changes column", %{vault_id: vault_id} do
       {:ok, %{result: add_result}} =
         VaultKanban.run(
-          %{vault_id: @vault_id, action: "add", description: "Deploy v2"},
+          %{vault_id: vault_id, action: "add", description: "Deploy v2"},
           %{}
         )
 
@@ -117,7 +117,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       assert {:ok, %{result: result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "move", task_id: task_id, column: "in_progress"},
+                 %{vault_id: vault_id, action: "move", task_id: task_id, column: "in_progress"},
                  %{}
                )
 
@@ -125,10 +125,10 @@ defmodule Loomkin.Tools.VaultKanbanTest do
       assert result =~ "in_progress"
     end
 
-    test "returns error for invalid column" do
+    test "returns error for invalid column", %{vault_id: vault_id} do
       {:ok, %{result: add_result}} =
         VaultKanban.run(
-          %{vault_id: @vault_id, action: "add", description: "Test task"},
+          %{vault_id: vault_id, action: "add", description: "Test task"},
           %{}
         )
 
@@ -136,7 +136,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       assert {:error, msg} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "move", task_id: task_id, column: "invalid"},
+                 %{vault_id: vault_id, action: "move", task_id: task_id, column: "invalid"},
                  %{}
                )
 
@@ -145,29 +145,29 @@ defmodule Loomkin.Tools.VaultKanbanTest do
   end
 
   describe "list" do
-    test "returns items grouped by column" do
+    test "returns items grouped by column", %{vault_id: vault_id} do
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "add", description: "Task A", column: "backlog"},
+        %{vault_id: vault_id, action: "add", description: "Task A", column: "backlog"},
         %{}
       )
 
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "add", description: "Task B", column: "in_progress"},
+        %{vault_id: vault_id, action: "add", description: "Task B", column: "in_progress"},
         %{}
       )
 
       assert {:ok, %{result: result}} =
-               VaultKanban.run(%{vault_id: @vault_id, action: "list"}, %{})
+               VaultKanban.run(%{vault_id: vault_id, action: "list"}, %{})
 
       assert result =~ "2 tasks"
       assert result =~ "Task A"
       assert result =~ "Task B"
     end
 
-    test "respects assignee filter" do
+    test "respects assignee filter", %{vault_id: vault_id} do
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "Alice task",
           assignee: "alice"
@@ -177,7 +177,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "Bob task",
           assignee: "bob"
@@ -187,7 +187,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       assert {:ok, %{result: result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "list", filter_assignee: "alice"},
+                 %{vault_id: vault_id, action: "list", filter_assignee: "alice"},
                  %{}
                )
 
@@ -195,10 +195,10 @@ defmodule Loomkin.Tools.VaultKanbanTest do
       refute result =~ "Bob task"
     end
 
-    test "respects project filter" do
+    test "respects project filter", %{vault_id: vault_id} do
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "TCS item",
           project_tag: "tcs"
@@ -208,7 +208,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       VaultKanban.run(
         %{
-          vault_id: @vault_id,
+          vault_id: vault_id,
           action: "add",
           description: "BTRW item",
           project_tag: "btrw"
@@ -218,7 +218,7 @@ defmodule Loomkin.Tools.VaultKanbanTest do
 
       assert {:ok, %{result: result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "list", filter_project: "tcs"},
+                 %{vault_id: vault_id, action: "list", filter_project: "tcs"},
                  %{}
                )
 
@@ -226,57 +226,57 @@ defmodule Loomkin.Tools.VaultKanbanTest do
       refute result =~ "BTRW item"
     end
 
-    test "returns empty message when no tasks" do
+    test "returns empty message when no tasks", %{vault_id: vault_id} do
       assert {:ok, %{result: result}} =
-               VaultKanban.run(%{vault_id: @vault_id, action: "list"}, %{})
+               VaultKanban.run(%{vault_id: vault_id, action: "list"}, %{})
 
       assert result =~ "No tasks found"
     end
   end
 
   describe "archive" do
-    test "moves done items to archived" do
+    test "moves done items to archived", %{vault_id: vault_id} do
       {:ok, %{result: add_result}} =
         VaultKanban.run(
-          %{vault_id: @vault_id, action: "add", description: "Archive me"},
+          %{vault_id: vault_id, action: "add", description: "Archive me"},
           %{}
         )
 
       task_id = extract_task_id(add_result)
 
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "complete", task_id: task_id},
+        %{vault_id: vault_id, action: "complete", task_id: task_id},
         %{}
       )
 
       assert {:ok, %{result: result}} =
-               VaultKanban.run(%{vault_id: @vault_id, action: "archive"}, %{})
+               VaultKanban.run(%{vault_id: vault_id, action: "archive"}, %{})
 
       assert result =~ "Archived 1 completed"
 
       # Archived items should not appear in list
       assert {:ok, %{result: list_result}} =
-               VaultKanban.run(%{vault_id: @vault_id, action: "list"}, %{})
+               VaultKanban.run(%{vault_id: vault_id, action: "list"}, %{})
 
       assert list_result =~ "No tasks found"
     end
   end
 
   describe "search" do
-    test "fuzzy matches descriptions" do
+    test "fuzzy matches descriptions", %{vault_id: vault_id} do
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "add", description: "Implement authentication flow"},
+        %{vault_id: vault_id, action: "add", description: "Implement authentication flow"},
         %{}
       )
 
       VaultKanban.run(
-        %{vault_id: @vault_id, action: "add", description: "Write unit tests"},
+        %{vault_id: vault_id, action: "add", description: "Write unit tests"},
         %{}
       )
 
       assert {:ok, %{result: result}} =
                VaultKanban.run(
-                 %{vault_id: @vault_id, action: "search", search_term: "authentication"},
+                 %{vault_id: vault_id, action: "search", search_term: "authentication"},
                  %{}
                )
 
