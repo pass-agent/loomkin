@@ -12,9 +12,37 @@ allowed-tools:
   - fetch_content
   - context_offload
   - ask_user
+  - team_spawn
 ---
 
 Process a meeting transcript and extract structured information into the knowledge base.
+
+## Team Mode (Large Transcripts)
+
+If the transcript is very long (60+ minutes of conversation, or the user requests team processing), spawn a team to parallelize the work:
+
+```
+team_spawn(
+  team_name: "meeting-processing",
+  purpose: "Process a long meeting transcript into structured vault entries",
+  roles: [
+    %{name: "meeting-lead", role: "lead"},
+    %{name: "vault-researcher", role: "researcher"},
+    %{name: "vault-writer", role: "coder"},
+    %{name: "vault-reviewer", role: "reviewer"}
+  ]
+)
+```
+
+Team roles:
+- **meeting-lead**: Orchestrates extraction, manages redaction judgment, coordinates. Reads the transcript, identifies decisions/action items/topics, delegates creation to the writer.
+- **vault-researcher**: Queries vault for related context — prior decisions on discussed topics, open tasks for mentioned projects, recent checkins from attendees. Provides context to the lead and writer.
+- **vault-writer**: Creates the meeting note, decision records, atomic notes, and kanban items with proper formatting and linking. Works from the lead's extraction.
+- **vault-reviewer**: Validates output quality — checks for temporal language in notes, verifies link targets exist, ensures frontmatter is complete. Runs `vault_audit` on created entries.
+
+The researcher and writer can work in parallel on different aspects. For shorter meetings (under 60 minutes), skip team mode and process single-agent.
+
+---
 
 ## Step 0: Get the Transcript
 

@@ -8,9 +8,35 @@ allowed-tools:
   - vault_search
   - vault_dashboard
   - ask_user
+  - team_spawn
 ---
 
 Run a health check on the knowledge base and fix issues.
+
+## Team Mode (Large Vaults)
+
+For large vaults (500+ entries), spawn a team to parallelize grooming:
+
+```
+team_spawn(
+  team_name: "vault-grooming",
+  purpose: "Audit, archive, and fix issues across a large vault",
+  roles: [
+    %{name: "vault-auditor", role: "researcher"},
+    %{name: "vault-archiver", role: "coder"},
+    %{name: "vault-fixer", role: "coder"}
+  ]
+)
+```
+
+Team roles:
+- **vault-auditor**: Runs `vault_audit(scope: "full")` and catalogs all issues. Shares the report with archiver and fixer.
+- **vault-archiver**: Processes completed task archival (`vault_kanban(action: "archive")`), archives old checkins, and moves stale entries.
+- **vault-fixer**: Applies approved metadata fixes, corrects frontmatter, resolves structural issues.
+
+For smaller vaults, skip team mode and process single-agent.
+
+---
 
 ## Audit
 
