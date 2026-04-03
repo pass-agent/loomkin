@@ -1,0 +1,52 @@
+appId: com.loomkin.mobile
+name: "Navigation: Back button returns to previous screen"
+tags:
+  - navigation
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to sessions tab
+- tapOn:
+    id: "tabs-sessions-button"
+
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Wait for session cards to load, then tap the first one
+- extendedWaitUntil:
+    visible:
+      id: "sessions-list-card-.*"
+    timeout: 10000
+
+- tapOn:
+    id: "sessions-list-card-.*"
+    index: 0
+
+# Verify chat view loaded (session detail has message input)
+- extendedWaitUntil:
+    visible:
+      id: "session-message-input"
+    timeout: 10000
+
+# Tap the back button in the header to return to session list
+- tapOn:
+    point: 10%, 7%
+
+# Verify we returned to session list
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Verify the session list still has cards (content preserved after back)
+- assertVisible:
+    id: "sessions-list-card-.*"
+
+# Verify the new session FAB is still available
+- assertVisible:
+    id: "sessions-new-session-button"

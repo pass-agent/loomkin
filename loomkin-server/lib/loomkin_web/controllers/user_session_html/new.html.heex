@@ -1,0 +1,217 @@
+<div
+  class="loom-home min-h-screen relative overflow-hidden flex items-center justify-center"
+  style="background: var(--surface-0);"
+>
+  <%!-- Thread background --%>
+  <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" aria-hidden="true">
+    <line
+      x1="0%"
+      y1="30%"
+      x2="100%"
+      y2="45%"
+      stroke="var(--brand)"
+      stroke-width="0.5"
+      opacity="0.05"
+      class="loom-thread-1"
+    />
+    <line
+      x1="0%"
+      y1="60%"
+      x2="100%"
+      y2="35%"
+      stroke="var(--accent-amber)"
+      stroke-width="0.5"
+      opacity="0.04"
+      class="loom-thread-2"
+    />
+    <line
+      x1="0%"
+      y1="75%"
+      x2="100%"
+      y2="55%"
+      stroke="var(--accent-cyan)"
+      stroke-width="0.3"
+      opacity="0.03"
+      class="loom-thread-3"
+    />
+  </svg>
+
+  <div
+    class="relative z-10 w-full max-w-xs px-5"
+    style="animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;"
+  >
+    <%!-- Owl + wordmark --%>
+    <div class="text-center mb-12">
+      <svg width="40" height="40" viewBox="0 0 32 32" fill="none" class="mx-auto mb-3">
+        <path
+          d="M16 3C9.5 3 5.5 7.5 5.5 13.5c0 3.5 1.5 6.5 3.5 8.5C11 24 13 26 16 26s5-2 7-4c2-2 3.5-5 3.5-8.5C26.5 7.5 22.5 3 16 3z"
+          fill="var(--surface-1)"
+          stroke="var(--brand)"
+          stroke-width="1"
+        />
+        <path
+          d="M11 5.5L9.5 2.5M21 5.5l1.5-3"
+          stroke="var(--brand)"
+          stroke-width="1.2"
+          stroke-linecap="round"
+        />
+        <circle
+          cx="12"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
+        <circle cx="12.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <circle
+          cx="20"
+          cy="13"
+          r="3.5"
+          fill="var(--surface-0)"
+          stroke="var(--accent-amber)"
+          stroke-width="0.8"
+        />
+        <circle cx="20.3" cy="12.7" r="1.5" fill="var(--accent-amber)" />
+        <path
+          d="M15 17l1 1.5 1-1.5"
+          stroke="var(--accent-peach)"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <p
+        class="font-mono text-[10px] tracking-[0.2em] uppercase"
+        style="color: var(--text-muted);"
+      >
+        sign in
+      </p>
+    </div>
+
+    <div
+      :if={local_mail_adapter?()}
+      class="mb-6 py-2 px-3 text-[10px] font-mono flex items-center gap-2"
+      style="color: var(--text-muted); border-left: 2px solid var(--accent-cyan);"
+    >
+      local mail &mdash;
+      <.link
+        href="/dev/mailbox"
+        class="underline underline-offset-2"
+        style="color: var(--accent-cyan);"
+      >
+        mailbox
+      </.link>
+    </div>
+
+    <%!-- Email magic link --%>
+    <.form :let={f} for={@form} as={:user} id="login_form_magic" action={~p"/users/log-in"}>
+      <div class="space-y-5">
+        <div>
+          <label
+            for={f[:email].id}
+            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
+            style="color: var(--text-muted);"
+          >
+            email
+          </label>
+          <input
+            type="email"
+            id={f[:email].id}
+            name={f[:email].name}
+            value={f[:email].value}
+            readonly={!!@current_scope}
+            autocomplete="username"
+            spellcheck="false"
+            required
+            phx-mounted={JS.focus()}
+            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
+            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--brand);"
+            placeholder="you@example.com"
+          />
+        </div>
+        <button type="submit" class="loom-btn loom-btn-outline w-full">
+          send magic link
+        </button>
+      </div>
+    </.form>
+
+    <%!-- Divider --%>
+    <div class="flex items-center gap-4 my-8">
+      <div class="flex-1 h-px" style="background: var(--border-subtle);" />
+      <span
+        class="text-[9px] font-mono uppercase tracking-widest"
+        style="color: var(--text-muted);"
+      >
+        password
+      </span>
+      <div class="flex-1 h-px" style="background: var(--border-subtle);" />
+    </div>
+
+    <%!-- Password form --%>
+    <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
+      <div class="space-y-5">
+        <div>
+          <label
+            for="password-email"
+            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
+            style="color: var(--text-muted);"
+          >
+            email
+          </label>
+          <input
+            type="email"
+            id="password-email"
+            name={f[:email].name}
+            value={f[:email].value}
+            readonly={!!@current_scope}
+            autocomplete="username"
+            spellcheck="false"
+            required
+            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
+            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--brand);"
+            placeholder="you@example.com"
+          />
+        </div>
+        <div>
+          <label
+            for={f[:password].id}
+            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
+            style="color: var(--text-muted);"
+          >
+            password
+          </label>
+          <input
+            type="password"
+            id={f[:password].id}
+            name={f[:password].name}
+            autocomplete="current-password"
+            spellcheck="false"
+            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
+            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--brand);"
+            placeholder="••••••••"
+          />
+        </div>
+        <div class="flex gap-2">
+          <button
+            type="submit"
+            name={@form[:remember_me].name}
+            value="true"
+            class="loom-btn loom-btn-solid flex-1"
+          >
+            remember me
+          </button>
+          <button type="submit" class="loom-btn loom-btn-ghost flex-1">
+            just this once
+          </button>
+        </div>
+      </div>
+    </.form>
+
+    <%!-- Footer --%>
+    <p class="text-center mt-10 text-[11px] font-mono" style="color: var(--text-muted);">
+      no account?
+      <.link navigate={~p"/users/register"} style="color: var(--text-brand);">register</.link>
+    </p>
+  </div>
+</div>

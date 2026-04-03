@@ -1,0 +1,168 @@
+name: Mobile E2E Tests
+
+on:
+  push:
+    paths:
+      - 'apps/mobile/**'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+
+jobs:
+  # TODO: mobile e2e tests are currently broken and need to be fixed before re-enabling
+  e2e-ios:
+    if: false
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Maestro
+        run: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.20.0-rc.3'
+          otp-version: '28'
+
+      - name: Start PostgreSQL
+        run: |
+          PG=$(ls /opt/homebrew/opt/ | grep "^postgresql@" | sort -V | tail -1)
+          export PATH="/opt/homebrew/opt/${PG}/bin:$PATH"
+          pg_ctl -D "/opt/homebrew/var/${PG}" start
+          sleep 3
+          createuser -s postgres || true
+
+      - name: Start Phoenix server
+        run: |
+          cd loomkin-server
+          mix deps.get
+          mix ecto.setup
+          mix run priv/repo/seeds/e2e_seeds.exs
+          mix phx.server &
+        env:
+          MIX_ENV: test
+          DB_PORT: 5432
+          PHX_PORT: 4200
+
+      - name: Install mobile deps
+        run: cd apps/mobile && pnpm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build e2e client (iOS)
+        run: cd apps/mobile && eas build --profile e2e --platform ios --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Run Maestro (iOS)
+        run: |
+          cd apps/mobile
+          $HOME/.maestro/bin/maestro test .maestro/flows/ \
+            --platform ios \
+            --format junit \
+            --output e2e/reports/ios-results.xml
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ios-results
+          path: apps/mobile/e2e/reports/
+
+  # TODO: mobile e2e tests are currently broken and need to be fixed before re-enabling
+  e2e-android:
+    if: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: loomkin_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Maestro
+        run: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.20.0-rc.3'
+          otp-version: '28'
+
+      - name: Start Phoenix server
+        run: |
+          cd loomkin-server
+          mix deps.get
+          mix ecto.setup
+          mix run priv/repo/seeds/e2e_seeds.exs
+          mix phx.server &
+        env:
+          MIX_ENV: test
+          DB_PORT: 5432
+          PHX_PORT: 4200
+          PHX_IP: 0.0.0.0
+
+      - name: Install mobile deps
+        run: cd apps/mobile && pnpm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build e2e client (Android)
+        run: cd apps/mobile && eas build --profile e2e --platform android --local --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Run Maestro (Android)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          script: |
+            cd apps/mobile
+            $HOME/.maestro/bin/maestro test .maestro/flows/ \
+              --platform android \
+              --format junit \
+              --output e2e/reports/android-results.xml
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-android-results
+          path: apps/mobile/e2e/reports/

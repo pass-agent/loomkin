@@ -1,0 +1,51 @@
+appId: com.loomkin.mobile
+name: "Error States: Failed authentication shows error"
+tags:
+  - error
+  - auth
+
+---
+
+# Launch app fresh
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 10000
+
+# Enter a valid-format email that doesn't exist
+- tapOn:
+    id: "login-email-input"
+- inputText: "nonexistent@invalid-domain-e2e.test"
+
+# Enter a password (required field)
+- tapOn:
+    id: "login-password-input"
+- inputText: "wrongpassword123"
+
+# Submit
+- tapOn:
+    id: "login-submit-button"
+
+# Verify inline error text appears with the server error message
+- extendedWaitUntil:
+    visible:
+      id: "login-error-text"
+    timeout: 10000
+
+# Verify we're still on the login screen
+- assertVisible:
+    id: "login-screen"
+
+# Verify the email input still has the entered value
+- assertVisible:
+    id: "login-email-input"
+
+# Verify submit button is still interactive (not stuck in loading)
+- extendedWaitUntil:
+    visible:
+      id: "login-submit-button"
+    timeout: 3000

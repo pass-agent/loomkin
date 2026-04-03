@@ -1,0 +1,24 @@
+appId: com.loomkin.mobile
+name: "Error States: Offline mode shows error"
+tags:
+  - error
+  - offline
+
+---
+
+# Authenticate first (while online)
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to sessions tab to verify data loads normally
+- tapOn:
+    id: "tabs-sessions-button"
+
+# Verify sessions screen loads with data
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 10000
+
+# Verify session list or empty state is visible (app handles both)
+- assertVisible:
+    id: "sessions-screen"

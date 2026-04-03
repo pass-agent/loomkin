@@ -1,0 +1,31 @@
+appId: com.loomkin.mobile
+name: "Sessions: View session list"
+tags:
+  - sessions
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to sessions tab
+- tapOn:
+    id: "tabs-sessions-button"
+
+# Verify sessions screen loads
+- extendedWaitUntil:
+    visible:
+      id: "sessions-screen"
+    timeout: 5000
+
+# Verify the filter tabs are visible (indicates list loaded)
+- extendedWaitUntil:
+    visible:
+      id: "sessions-filter-all-button"
+    timeout: 5000
+
+# Verify the new session FAB is visible
+- extendedWaitUntil:
+    visible:
+      id: "sessions-new-session-button"
+    timeout: 3000

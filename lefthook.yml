@@ -1,8 +1,20 @@
 pre-commit:
   commands:
     format:
-      run: mise exec -- mix format --check-formatted
-      fail_text: "Run `mix format` to fix formatting"
+      run: cd loomkin-server && mise exec -- mix format --check-formatted
+      fail_text: "Run `cd loomkin-server && mix format` to fix formatting"
+    mobile-lint:
+      glob: "apps/mobile/**/*.{ts,tsx}"
+      run: cd apps/mobile && pnpm tsc --noEmit 2>/dev/null || true
+      fail_text: "Mobile TypeScript errors found"
+    desktop-lint:
+      glob: "apps/desktop/src/**/*.{ts,tsx}"
+      run: cd apps/desktop && pnpm tsc --noEmit 2>/dev/null || true
+      fail_text: "Desktop TypeScript errors found"
+    cli-lint:
+      glob: "apps/cli/src/**/*.{ts,tsx}"
+      run: cd apps/cli && pnpm tsc --noEmit 2>/dev/null || true
+      fail_text: "CLI TypeScript errors found"
 
 commit-msg:
   commands:

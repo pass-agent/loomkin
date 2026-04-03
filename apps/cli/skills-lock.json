@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "bun-development": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "038ce6fe6357843e33d96afa2a900c100066f0c9c2cab2d6562cdb3202ebc7c2"
+    },
+    "clack": {
+      "source": "alexeira/skills",
+      "sourceType": "github",
+      "computedHash": "e0f1b620b4dc19023f3f381a94c6856fe3b96dac605285b642acc961a67fe946"
+    },
+    "react-ink": {
+      "source": "absolutelyskilled/absolutelyskilled",
+      "sourceType": "github",
+      "computedHash": "a9b13a4172e5cd0b80d5b2466a757bfe688ba4cc78b20afd30482aa256462ad0"
+    },
+    "tui-design": {
+      "source": "hyperb1iss/hyperskills",
+      "sourceType": "github",
+      "computedHash": "848e926c0bb1e9c6b24e8a913baec8377478b82880603c305432a9ce5cf1395a"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+appId: com.loomkin.mobile
+name: "Teams: View team roster with agent cards"
+tags:
+  - teams
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to teams tab
+- tapOn:
+    id: "tabs-teams-button"
+
+# Verify teams screen loads
+- extendedWaitUntil:
+    visible:
+      id: "teams-screen"
+    timeout: 5000

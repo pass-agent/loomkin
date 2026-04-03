@@ -1,0 +1,46 @@
+appId: com.loomkin.mobile
+name: "Chat: Keyboard focus and text input"
+tags:
+  - chat
+  - keyboard
+
+---
+
+# Set up an authenticated session with chat open
+- runFlow: ../../utils/setup-session.yaml
+
+# Tap the message input to focus and bring up keyboard
+- tapOn:
+    id: "session-message-input"
+
+# Wait for keyboard to appear
+- waitForAnimationToEnd
+
+# Clear any existing text and type
+- eraseText:
+    charactersToErase: 50
+- inputText: "Testing keyboard focus"
+
+# Verify the text was entered into the input
+- extendedWaitUntil:
+    visible:
+      text: "Testing keyboard focus"
+    timeout: 3000
+
+# Verify send button is visible
+- assertVisible:
+    id: "session-send-button"
+
+# Send the message
+- tapOn:
+    id: "session-send-button"
+
+# Verify input was cleared (confirms send executed)
+- extendedWaitUntil:
+    notVisible:
+      text: "Testing keyboard focus"
+    timeout: 5000
+
+# Verify input is ready for next message
+- assertVisible:
+    id: "session-message-input"

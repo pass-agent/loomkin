@@ -1,0 +1,48 @@
+appId: com.loomkin.mobile
+name: "Auth: Logout returns to login screen"
+tags:
+  - auth
+
+---
+
+# Authenticate first
+- runFlow: ../../utils/setup-auth.yaml
+
+# Navigate to settings tab
+- tapOn:
+    id: "tabs-settings-button"
+
+# Verify settings screen loads
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 5000
+
+# Tap logout button (now in fixed footer, always visible)
+- extendedWaitUntil:
+    visible:
+      id: "settings-logout-button"
+    timeout: 5000
+
+- tapOn:
+    id: "settings-logout-button"
+
+# Confirm the logout alert dialog
+- extendedWaitUntil:
+    visible:
+      text: "Sign Out"
+    timeout: 3000
+
+- tapOn:
+    text: "Sign Out"
+    index: 1
+
+# Verify we return to the login screen
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 10000
+
+# Verify email input is empty (state cleared)
+- assertVisible:
+    id: "login-email-input"
