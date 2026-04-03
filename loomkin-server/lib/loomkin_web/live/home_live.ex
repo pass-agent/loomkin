@@ -556,21 +556,6 @@ defmodule LoomkinWeb.HomeLive do
   end
 
   defp load_user_vaults(user) do
-    import Ecto.Query
-
-    org_ids =
-      Loomkin.Repo.all(
-        from(m in Loomkin.Schemas.OrganizationMembership,
-          where: m.user_id == ^user.id,
-          select: m.organization_id
-        )
-      )
-
-    Loomkin.Repo.all(
-      from(vc in Loomkin.Schemas.VaultConfig,
-        where: vc.organization_id in ^org_ids or is_nil(vc.organization_id),
-        order_by: [asc: vc.name]
-      )
-    )
+    Loomkin.Vault.list_vaults_for_user(user)
   end
 end

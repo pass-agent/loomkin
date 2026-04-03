@@ -9,6 +9,7 @@ defmodule Loomkin.Vault do
   import Ecto.Query
 
   alias Loomkin.Repo
+  alias Loomkin.Schemas.OrganizationMembership
   alias Loomkin.Schemas.VaultConfig
   alias Loomkin.Schemas.VaultEntry
   alias Loomkin.Vault.Entry
@@ -170,6 +171,23 @@ defmodule Loomkin.Vault do
     Repo.get_by!(VaultConfig, vault_id: slug)
   end
 
+  @doc "List vaults accessible to a user via their org memberships."
+  @spec list_vaults_for_user(map()) :: [VaultConfig.t()]
+  def list_vaults_for_user(user) do
+    org_ids =
+      from(m in OrganizationMembership,
+        where: m.user_id == ^user.id,
+        select: m.organization_id
+      )
+      |> Repo.all()
+
+    from(vc in VaultConfig,
+      where: vc.organization_id in ^org_ids or is_nil(vc.organization_id),
+      order_by: [asc: vc.name]
+    )
+    |> Repo.all()
+  end
+
   @doc "List vaults belonging to an organization."
   @spec list_vaults_for_org(String.t()) :: [VaultConfig.t()]
   def list_vaults_for_org(org_id) do
@@ -188,40 +206,6 @@ defmodule Loomkin.Vault do
       where: m.organization_id == ^org_id and m.user_id == ^user.id
     )
     |> Repo.exists?()
-  end
-
-  @doc """
-  Ensure a vault exists for a workspace. Returns the vault_id.
-
-  If the workspace already has a vault, returns its vault_id.
-  Otherwise creates a local vault named after the workspace.
-  """
-  @spec ensure_workspace_vault(String.t()) :: {:ok, String.t()} | {:error, term()}
-  def ensure_workspace_vault(workspace_id) do
-    vault_id = "ws-#{workspace_id}"
-
-    case get_config(vault_id) do
-      {:ok, _config} ->
-        {:ok, vault_id}
-
-      {:error, :vault_not_found} ->
-        workspace = Repo.get(Loomkin.Workspace, workspace_id)
-        name = if workspace, do: workspace.name, else: "Workspace"
-
-        case create_vault(%{
-               vault_id: vault_id,
-               name: "#{name} Vault",
-               storage_type: "local",
-               workspace_id: workspace_id
-             }) do
-          {:ok, _config} ->
-            {:ok, vault_id}
-
-          {:error, %Ecto.Changeset{errors: errors}} ->
-            # Concurrent creation race — the vault exists now
-            if Keyword.has_key?(errors, :vault_id), do: {:ok, vault_id}, else: {:error, errors}
-        end
-    end
   end
 
   # --- Private helpers ---

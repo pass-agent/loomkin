@@ -29,6 +29,9 @@ defmodule LoomkinWeb.Router do
     post "/auth/login", AuthController, :login
     post "/auth/login/confirm", AuthController, :confirm
     post "/auth/anonymous", AuthController, :anonymous
+
+    post "/device/code", DeviceAuthController, :create_code
+    post "/device/token", DeviceAuthController, :poll_token
   end
 
   # Authenticated API routes (bearer token required)
@@ -74,6 +77,10 @@ defmodule LoomkinWeb.Router do
     get "/providers/oauth/:provider/status", OAuthController, :status
     post "/providers/oauth/:provider/paste", OAuthController, :paste
     delete "/providers/oauth/:provider", OAuthController, :disconnect
+
+    get "/vaults", VaultController, :index
+    get "/vaults/:vault_id", VaultController, :show
+    get "/vaults/:vault_id/search", VaultController, :search
   end
 
   # CORS preflight for API routes
@@ -152,6 +159,16 @@ defmodule LoomkinWeb.Router do
     live_session :home,
       on_mount: [{LoomkinWeb.UserAuth, :mount_current_scope}] do
       live "/", HomeLive, :index
+    end
+  end
+
+  # Device authorization — requires authentication to approve/deny
+  scope "/", LoomkinWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :device_verify,
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_user}] do
+      live "/device", DeviceVerifyLive, :index
     end
   end
 
