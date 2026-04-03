@@ -66,6 +66,7 @@ import "./commands/remember.js";
 import "./commands/plugins.js";
 import "./commands/hooks.js";
 import "./commands/delegate.js";
+import "./commands/vault.js";
 
 let messageCounter = 0;
 
