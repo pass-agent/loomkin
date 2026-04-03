@@ -6,37 +6,19 @@ defmodule LoomkinWeb.VaultBrowserLive do
   alias Loomkin.Vault
   alias Loomkin.Vault.Index
 
-  @type_icons %{
-    "note" =>
-      "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2",
-    "topic" =>
-      "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z",
-    "project" => "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z",
-    "person" => "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
-    "decision" =>
-      "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
-    "meeting" =>
-      "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
-    "checkin" =>
-      "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4",
-    "idea" =>
-      "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z",
-    "source" =>
-      "M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1",
-    "okr" => "M13 10V3L4 14h7v7l9-11h-7z"
-  }
-
   @type_colors %{
-    "note" => "text-accent-cyan",
-    "topic" => "text-accent-mauve",
-    "project" => "text-accent-amber",
-    "person" => "text-accent-emerald",
-    "decision" => "text-accent-rose",
-    "meeting" => "text-accent-peach",
-    "checkin" => "text-accent-emerald",
-    "idea" => "text-accent-amber",
-    "source" => "text-accent-cyan",
-    "okr" => "text-accent-rose"
+    "note" => "--accent-cyan",
+    "topic" => "--accent-mauve",
+    "project" => "--accent-amber",
+    "person" => "--accent-emerald",
+    "decision" => "--accent-rose",
+    "meeting" => "--accent-peach",
+    "checkin" => "--accent-emerald",
+    "idea" => "--accent-amber",
+    "source" => "--accent-cyan",
+    "spec" => "--accent-mauve",
+    "milestone" => "--accent-peach",
+    "okr" => "--accent-rose"
   }
 
   @impl true
@@ -107,84 +89,81 @@ defmodule LoomkinWeb.VaultBrowserLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen flex flex-col" style="background: var(--surface-0);">
-      <%!-- Top bar --%>
-      <header
-        class="sticky top-0 z-30 flex items-center gap-4 px-6 py-4 border-b"
-        style="background: var(--surface-1); border-color: var(--border-default);"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="w-8 h-8 rounded-lg flex items-center justify-center"
-            style="background: var(--brand-subtle);"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="1.5"
-              style="color: var(--brand);"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
+    <div class="vault-browser min-h-screen flex flex-col" style="background: var(--surface-0);">
+      <%!-- Header — vault identity + search --%>
+      <header class="vault-header sticky top-0 z-30 px-6 py-4" style="background: var(--surface-0);">
+        <div class="max-w-7xl mx-auto flex items-center gap-6">
+          <%!-- Vault identity --%>
+          <div class="flex items-center gap-3">
+            <div class="vault-icon-ring">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+                style="color: var(--brand);"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-base font-semibold" style="color: var(--text-primary);">
+                {@vault.name}
+              </h1>
+              <p class="text-[10px] font-mono tracking-wider" style="color: var(--text-muted);">
+                {total_count(@type_counts)} entries
+              </p>
+            </div>
           </div>
-          <h1 class="text-lg font-semibold" style="color: var(--text-primary);">
-            {@vault.name}
-          </h1>
-        </div>
 
-        <div class="flex-1 max-w-xl ml-8">
-          <form phx-change="search" phx-submit="search" class="relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="1.5"
-              style="color: var(--text-muted);"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          <%!-- Search --%>
+          <div class="flex-1 max-w-lg">
+            <form phx-change="search" phx-submit="search" class="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="1.5"
+                style="color: var(--text-muted);"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                name="query"
+                value={@search_query}
+                placeholder="Search the knowledge base..."
+                phx-debounce="300"
+                autocomplete="off"
+                class="vault-search-input"
               />
-            </svg>
-            <input
-              type="text"
-              name="query"
-              value={@search_query}
-              placeholder="Search entries..."
-              phx-debounce="300"
-              autocomplete="off"
-              class="w-full pl-10 pr-4 py-2 rounded-lg text-sm border-0 outline-none focus:ring-1"
-              style="background: var(--surface-2); color: var(--text-primary); --tw-ring-color: var(--brand);"
-            />
-          </form>
+            </form>
+          </div>
         </div>
-
-        <div class="ml-auto text-sm" style="color: var(--text-muted);">
-          {total_count(@type_counts)} entries
-        </div>
+        <%!-- Subtle divider thread --%>
+        <div class="vault-header-thread" />
       </header>
 
-      <div class="flex flex-1 overflow-hidden">
-        <%!-- Sidebar: entry types --%>
-        <nav
-          class="w-56 shrink-0 overflow-y-auto py-4 px-3 border-r hidden md:block"
-          style="background: var(--surface-1); border-color: var(--border-subtle);"
-        >
+      <div class="flex flex-1 overflow-hidden max-w-7xl mx-auto w-full">
+        <%!-- Sidebar: entry type facets --%>
+        <nav class="vault-sidebar">
           <p
-            class="px-3 pb-2 text-xs font-medium uppercase tracking-wider"
+            class="px-3 pb-3 text-[10px] font-mono uppercase tracking-[0.15em]"
             style="color: var(--text-muted);"
           >
-            Types
+            Facets
           </p>
           <div class="space-y-0.5">
             <button
@@ -192,105 +171,104 @@ defmodule LoomkinWeb.VaultBrowserLive do
               phx-click="filter_type"
               phx-value-type={type}
               class={[
-                "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all",
-                "hover:bg-[var(--surface-2)]",
-                @active_type == type && "bg-[var(--brand-subtle)]"
+                "vault-type-btn",
+                @active_type == type && "active"
               ]}
-              style={
-                if @active_type == type,
-                  do: "color: var(--text-brand);",
-                  else: "color: var(--text-secondary);"
-              }
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class={["w-4 h-4 shrink-0", type_color(type)]}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d={type_icon(type)} />
-              </svg>
-              <span class="truncate">{type_label(type)}</span>
               <span
-                class="ml-auto text-xs tabular-nums"
-                style="color: var(--text-muted);"
-              >
-                {count}
-              </span>
+                class="vault-type-dot"
+                style={"background: var(#{type_color_var(type)});"}
+              />
+              <span class="truncate flex-1 text-left">{type_label(type)}</span>
+              <span class="vault-type-count">{count}</span>
             </button>
           </div>
         </nav>
 
-        <%!-- Main: entry list --%>
-        <main class="flex-1 overflow-y-auto" style="background: var(--surface-0);">
-          <%!-- Recently updated --%>
+        <%!-- Main content --%>
+        <main class="flex-1 overflow-y-auto px-6 pb-12">
+          <%!-- Recently updated — horizontal cards --%>
           <div
             :if={@search_query == "" and @active_type == nil and @recent != []}
-            class="px-6 pt-5 pb-3"
+            class="pt-6 pb-4"
           >
-            <p
-              class="text-xs font-medium uppercase tracking-wider mb-3"
-              style="color: var(--text-muted);"
-            >
-              Recently updated
-            </p>
-            <div class="flex gap-3 overflow-x-auto pb-2">
-              <.link
-                :for={entry <- @recent}
-                navigate={~p"/vault/#{@slug}/#{entry.path}"}
-                class="shrink-0 w-52 rounded-lg p-3.5 transition-all hover:translate-y-[-1px] group/card"
-                style="background: var(--surface-1); border: 1px solid var(--border-subtle);"
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-5 h-px" style="background: var(--brand); opacity: 0.4;" />
+              <p
+                class="text-[10px] font-mono uppercase tracking-[0.15em]"
+                style="color: var(--text-muted);"
               >
-                <div class="flex items-center gap-2 mb-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class={["w-3.5 h-3.5 shrink-0", type_color(entry.entry_type)]}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d={type_icon(entry.entry_type)}
+                Recently woven
+              </p>
+              <div class="flex-1 h-px" style="background: var(--border-subtle);" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <.link
+                :for={{entry, idx} <- Enum.with_index(@recent)}
+                navigate={~p"/vault/#{@slug}/#{entry.path}"}
+                class="vault-recent-card group"
+                style={"animation: fadeUp 0.4s #{idx * 0.06}s cubic-bezier(0.16, 1, 0.3, 1) both;"}
+              >
+                <div
+                  class="vault-card-thread"
+                  style={"background: var(#{type_color_var(entry.entry_type)});"}
+                />
+                <div class="p-3.5">
+                  <div class="flex items-center gap-2 mb-2.5">
+                    <span
+                      class="vault-type-dot"
+                      style={"background: var(#{type_color_var(entry.entry_type)});"}
                     />
-                  </svg>
-                  <span
-                    class="text-[10px] uppercase tracking-wider"
+                    <span
+                      class="text-[9px] font-mono uppercase tracking-widest"
+                      style="color: var(--text-muted);"
+                    >
+                      {entry.entry_type}
+                    </span>
+                  </div>
+                  <h3 class="vault-card-title">
+                    {entry.title || Path.basename(entry.path, ".md")}
+                  </h3>
+                  <p
+                    :if={body_preview(entry) != ""}
+                    class="text-[11px] mt-1.5 line-clamp-2 leading-relaxed"
                     style="color: var(--text-muted);"
                   >
-                    {entry.entry_type}
+                    {body_preview(entry)}
+                  </p>
+                  <span
+                    class="text-[10px] font-mono mt-3 block"
+                    style="color: var(--text-muted); opacity: 0.7;"
+                  >
+                    {format_date(entry.updated_at)}
                   </span>
                 </div>
-                <h3
-                  class="text-sm font-medium truncate group-hover/card:text-[var(--brand)]"
-                  style="color: var(--text-primary); transition: color 0.15s;"
-                >
-                  {entry.title || Path.basename(entry.path, ".md")}
-                </h3>
-                <p
-                  :if={body_preview(entry) != ""}
-                  class="text-xs mt-1 line-clamp-1"
-                  style="color: var(--text-muted);"
-                >
-                  {body_preview(entry)}
-                </p>
-                <span class="text-[10px] mt-2 block" style="color: var(--text-muted);">
-                  {format_date(entry.updated_at)}
-                </span>
               </.link>
             </div>
           </div>
 
-          <div
-            id="entries"
-            phx-update="stream"
-            class="divide-y"
-            style="border-color: var(--border-subtle);"
-          >
+          <%!-- Entry list --%>
+          <div :if={@search_query != "" or @active_type != nil or @recent != []} class="mb-3 mt-4">
+            <div class="flex items-center gap-2">
+              <div class="w-5 h-px" style="background: var(--brand); opacity: 0.4;" />
+              <p
+                class="text-[10px] font-mono uppercase tracking-[0.15em]"
+                style="color: var(--text-muted);"
+              >
+                <%= cond do %>
+                  <% @search_query != "" -> %>
+                    Results for "{@search_query}"
+                  <% @active_type -> %>
+                    {type_label(@active_type)}
+                  <% true -> %>
+                    All entries
+                <% end %>
+              </p>
+              <div class="flex-1 h-px" style="background: var(--border-subtle);" />
+            </div>
+          </div>
+
+          <div id="entries" phx-update="stream" class="vault-entry-list">
             <.entry_row
               :for={{dom_id, entry} <- @streams.entries}
               id={dom_id}
@@ -299,27 +277,49 @@ defmodule LoomkinWeb.VaultBrowserLive do
             />
           </div>
 
+          <%!-- Empty state --%>
           <div class="hidden only:flex flex-col items-center justify-center py-24 px-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-12 h-12 mb-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="1"
-              style="color: var(--text-muted);"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-            <p class="text-sm" style="color: var(--text-muted);">
+            <div class="vault-empty-owl mb-6">
+              <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+                <path
+                  d="M16 6C11 6 8 10 8 15c0 3 1 6 3 8 1.5 1.5 3 3 5 3s3.5-1.5 5-3c2-2 3-5 3-8 0-5-3-9-8-9z"
+                  fill="var(--surface-2)"
+                  stroke="var(--brand)"
+                  stroke-width="0.8"
+                />
+                <path
+                  d="M11 14.5c1-0.5 2-0.5 3 0"
+                  stroke="var(--accent-amber)"
+                  stroke-width="0.8"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M18 14.5c1-0.5 2-0.5 3 0"
+                  stroke="var(--accent-amber)"
+                  stroke-width="0.8"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M15 17l1 1 1-1"
+                  stroke="var(--accent-peach)"
+                  stroke-width="0.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <p class="text-sm mb-1" style="color: var(--text-secondary);">
               <%= if @search_query != "" do %>
-                No results for "<span style="color: var(--text-secondary);"><%= @search_query %></span>"
+                No results for "<span style="color: var(--text-primary);"><%= @search_query %></span>"
               <% else %>
-                No entries yet
+                The vault is quiet
+              <% end %>
+            </p>
+            <p class="text-xs font-mono" style="color: var(--text-muted);">
+              <%= if @search_query != "" do %>
+                try a different query
+              <% else %>
+                entries appear here as agents weave knowledge
               <% end %>
             </p>
           </div>
@@ -334,86 +334,72 @@ defmodule LoomkinWeb.VaultBrowserLive do
     <.link
       navigate={~p"/vault/#{@slug}/#{@entry.path}"}
       id={@id}
-      class="flex items-start gap-4 px-6 py-4 transition-colors hover:bg-[var(--surface-1)] group"
+      class="vault-entry-row group"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class={["w-4 h-4 mt-0.5 shrink-0", type_color(@entry.entry_type)]}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="1.5"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d={type_icon(@entry.entry_type)} />
-      </svg>
-
-      <div class="min-w-0 flex-1">
-        <div class="flex items-baseline gap-2">
-          <h3
-            class="text-sm font-medium truncate group-hover:text-[var(--brand)]"
-            style="color: var(--text-primary); transition: color var(--transition-fast);"
-          >
-            {@entry.title || Path.basename(@entry.path, ".md")}
-          </h3>
-          <span
-            :if={@entry.entry_type}
-            class="shrink-0 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style="background: var(--surface-2); color: var(--text-muted);"
-          >
-            {@entry.entry_type}
-          </span>
-        </div>
-        <p
-          :if={body_preview(@entry) != ""}
-          class="text-xs mt-1 line-clamp-2 leading-relaxed"
-          style="color: var(--text-muted);"
-        >
-          {body_preview(@entry)}
-        </p>
-        <div class="flex items-center gap-3 mt-1.5">
-          <span
-            :if={@entry.updated_at}
-            class="text-xs"
+      <div
+        class="vault-row-accent"
+        style={"background: var(#{type_color_var(@entry.entry_type)});"}
+      />
+      <div class="flex items-start gap-3.5 flex-1 min-w-0 py-3.5 px-4">
+        <span
+          class="vault-type-dot mt-1.5 shrink-0"
+          style={"background: var(#{type_color_var(@entry.entry_type)});"}
+        />
+        <div class="min-w-0 flex-1">
+          <div class="flex items-baseline gap-2">
+            <h3 class="vault-row-title">
+              {@entry.title || Path.basename(@entry.path, ".md")}
+            </h3>
+            <span
+              :if={@entry.entry_type}
+              class="shrink-0 text-[9px] font-mono uppercase tracking-widest"
+              style="color: var(--text-muted);"
+            >
+              {@entry.entry_type}
+            </span>
+          </div>
+          <p
+            :if={body_preview(@entry) != ""}
+            class="text-[11px] mt-1 line-clamp-2 leading-relaxed"
             style="color: var(--text-muted);"
           >
-            {format_date(@entry.updated_at)}
-          </span>
-          <span
-            :for={tag <- @entry.tags || []}
-            class="text-xs px-1.5 py-0.5 rounded"
-            style="background: var(--brand-muted); color: var(--text-brand);"
-          >
-            {tag}
-          </span>
+            {body_preview(@entry)}
+          </p>
+          <div class="flex items-center gap-2.5 mt-2">
+            <span
+              :if={@entry.updated_at}
+              class="text-[10px] font-mono"
+              style="color: var(--text-muted); opacity: 0.7;"
+            >
+              {format_date(@entry.updated_at)}
+            </span>
+            <span
+              :for={tag <- @entry.tags || []}
+              class="vault-tag"
+            >
+              {tag}
+            </span>
+          </div>
         </div>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-4 h-4 shrink-0 mt-1.5 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+          style="color: var(--brand);"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
       </div>
-
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="1.5"
-        style="color: var(--text-muted);"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
     </.link>
     """
   end
 
   # --- Helpers ---
 
-  defp type_icon(type),
-    do:
-      Map.get(
-        @type_icons,
-        type,
-        "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      )
-
-  defp type_color(type), do: Map.get(@type_colors, type, "text-[var(--text-muted)]")
+  defp type_color_var(type), do: Map.get(@type_colors, type, "--text-muted")
 
   defp type_label(nil), do: "Other"
 
