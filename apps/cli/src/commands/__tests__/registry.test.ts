@@ -19,7 +19,7 @@ test("getAllCommands returns all registered commands sorted by name", () => {
   const names = commands.map((c) => c.name);
   expect(names.length).toBeGreaterThanOrEqual(8);
   expect(names).toEqual([...names].sort());
-  for (const expected of ["help", "clear", "mode", "model", "quit", "compact", "session", "mcp"]) {
+  for (const expected of ["help", "clear", "mode", "model", "exit", "compact", "session", "mcp"]) {
     expect(names).toContain(expected);
   }
 });
@@ -27,7 +27,7 @@ test("getAllCommands returns all registered commands sorted by name", () => {
 test.each([
   { input: "/help", expectedName: "help", expectedArgs: "" },
   { input: "/mode plan", expectedName: "mode", expectedArgs: "plan" },
-  { input: "/q", expectedName: "quit", expectedArgs: "" },
+  { input: "/q", expectedName: "exit", expectedArgs: "" },
   { input: "/HELP", expectedName: "help", expectedArgs: "" },
   { input: "  /mode   chat  ", expectedName: "mode", expectedArgs: "chat" },
 ])("resolve($input) → command=$expectedName args=$expectedArgs", ({ input, expectedName, expectedArgs }) => {
