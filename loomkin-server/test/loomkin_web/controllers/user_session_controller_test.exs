@@ -12,9 +12,9 @@ defmodule LoomkinWeb.UserSessionControllerTest do
     test "renders login page", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in")
       response = html_response(conn, 200)
-      assert response =~ "Sign in to your workspace"
+      assert response =~ "sign in"
       assert response =~ ~p"/users/register"
-      assert response =~ "Sign in with email"
+      assert response =~ "send magic link"
     end
 
     test "renders login page with email filled in (sudo mode)", %{conn: conn, user: user} do
@@ -24,8 +24,8 @@ defmodule LoomkinWeb.UserSessionControllerTest do
         |> get(~p"/users/log-in")
         |> html_response(200)
 
-      assert html =~ "Sign in to your workspace"
-      assert html =~ "Sign in with email"
+      assert html =~ "sign in"
+      assert html =~ "send magic link"
 
       assert html =~ ~s(id="login_form_magic_email")
       assert html =~ ~s(value="#{user.email}")
@@ -34,9 +34,9 @@ defmodule LoomkinWeb.UserSessionControllerTest do
     test "renders login page (email + password)", %{conn: conn} do
       conn = get(conn, ~p"/users/log-in?mode=password")
       response = html_response(conn, 200)
-      assert response =~ "Sign in to your workspace"
+      assert response =~ "sign in"
       assert response =~ ~p"/users/register"
-      assert response =~ "Sign in with email"
+      assert response =~ "send magic link"
     end
   end
 
@@ -48,7 +48,7 @@ defmodule LoomkinWeb.UserSessionControllerTest do
         end)
 
       conn = get(conn, ~p"/users/log-in/#{token}")
-      assert html_response(conn, 200) =~ "Confirm and stay logged in"
+      assert html_response(conn, 200) =~ "confirm &amp; stay logged in"
     end
 
     test "renders login page for confirmed user", %{conn: conn, user: user} do
@@ -60,7 +60,7 @@ defmodule LoomkinWeb.UserSessionControllerTest do
       conn = get(conn, ~p"/users/log-in/#{token}")
       html = html_response(conn, 200)
       refute html =~ "Confirm my account"
-      assert html =~ "Keep me logged in"
+      assert html =~ "keep me logged in"
     end
 
     test "raises error for invalid token", %{conn: conn} do
@@ -125,7 +125,7 @@ defmodule LoomkinWeb.UserSessionControllerTest do
         })
 
       response = html_response(conn, 200)
-      assert response =~ "Sign in to your workspace"
+      assert response =~ "sign in"
       assert response =~ "Invalid email or password"
     end
   end
