@@ -21,6 +21,8 @@ defmodule LoomkinWeb.VaultBrowserLive do
     "okr" => "--accent-rose"
   }
 
+  @page_size 30
+
   @impl true
   def mount(%{"slug" => slug}, _session, socket) do
     vault = Vault.get_vault_by_slug!(slug)
@@ -28,8 +30,9 @@ defmodule LoomkinWeb.VaultBrowserLive do
 
     if Vault.user_can_access_vault?(user, vault) do
       type_counts = Vault.stats(slug).by_type
+      total = total_count(type_counts)
       recent = Index.list(slug, limit: 5, order_by: {:desc, :updated_at})
-      entries = Index.list(slug, limit: 50, order_by: {:desc, :updated_at})
+      entries = Index.list(slug, limit: @page_size, order_by: {:desc, :updated_at})
 
       {:ok,
        socket
@@ -37,9 +40,12 @@ defmodule LoomkinWeb.VaultBrowserLive do
          vault: vault,
          slug: slug,
          type_counts: type_counts,
+         total: total,
          active_type: nil,
          search_query: "",
          recent: recent,
+         page: 0,
+         has_more: length(entries) >= @page_size,
          page_title: vault.name
        )
        |> stream(:entries, entries)}
@@ -53,20 +59,30 @@ defmodule LoomkinWeb.VaultBrowserLive do
 
   @impl true
   def handle_event("search", %{"query" => ""}, socket) do
-    entries = Index.list(socket.assigns.slug, limit: 50, order_by: {:desc, :updated_at})
+    entries = Index.list(socket.assigns.slug, limit: @page_size, order_by: {:desc, :updated_at})
 
     {:noreply,
      socket
-     |> assign(search_query: "", active_type: nil)
+     |> assign(
+       search_query: "",
+       active_type: nil,
+       page: 0,
+       has_more: length(entries) >= @page_size
+     )
      |> stream(:entries, entries, reset: true)}
   end
 
   def handle_event("search", %{"query" => query}, socket) do
-    results = Vault.search(socket.assigns.slug, query, limit: 50)
+    results = Vault.search(socket.assigns.slug, query, limit: @page_size)
 
     {:noreply,
      socket
-     |> assign(search_query: query, active_type: nil)
+     |> assign(
+       search_query: query,
+       active_type: nil,
+       page: 0,
+       has_more: length(results) >= @page_size
+     )
      |> stream(:entries, results, reset: true)}
   end
 
@@ -75,15 +91,52 @@ defmodule LoomkinWeb.VaultBrowserLive do
 
     entries =
       if active_type do
-        Index.list(socket.assigns.slug, entry_type: active_type, limit: 100)
+        Index.list(socket.assigns.slug,
+          entry_type: active_type,
+          limit: @page_size,
+          order_by: {:desc, :updated_at}
+        )
       else
-        Index.list(socket.assigns.slug, limit: 50, order_by: {:desc, :updated_at})
+        Index.list(socket.assigns.slug, limit: @page_size, order_by: {:desc, :updated_at})
       end
 
     {:noreply,
      socket
-     |> assign(active_type: active_type, search_query: "")
+     |> assign(
+       active_type: active_type,
+       search_query: "",
+       page: 0,
+       has_more: length(entries) >= @page_size
+     )
      |> stream(:entries, entries, reset: true)}
+  end
+
+  def handle_event("load_more", _params, socket) do
+    next_page = socket.assigns.page + 1
+    offset = next_page * @page_size
+    slug = socket.assigns.slug
+
+    entries =
+      cond do
+        socket.assigns.search_query != "" ->
+          Vault.search(slug, socket.assigns.search_query, limit: @page_size, offset: offset)
+
+        socket.assigns.active_type ->
+          Index.list(slug,
+            entry_type: socket.assigns.active_type,
+            limit: @page_size,
+            offset: offset,
+            order_by: {:desc, :updated_at}
+          )
+
+        true ->
+          Index.list(slug, limit: @page_size, offset: offset, order_by: {:desc, :updated_at})
+      end
+
+    {:noreply,
+     socket
+     |> assign(page: next_page, has_more: length(entries) >= @page_size)
+     |> stream(:entries, entries)}
   end
 
   @impl true
@@ -247,8 +300,8 @@ defmodule LoomkinWeb.VaultBrowserLive do
             </div>
           </div>
 
-          <%!-- Entry list --%>
-          <div :if={@search_query != "" or @active_type != nil or @recent != []} class="mb-3 mt-4">
+          <%!-- Entry list heading --%>
+          <div class="mb-3 mt-4">
             <div class="flex items-center gap-2">
               <div class="w-5 h-px" style="background: var(--brand); opacity: 0.4;" />
               <p
@@ -264,6 +317,15 @@ defmodule LoomkinWeb.VaultBrowserLive do
                     All entries
                 <% end %>
               </p>
+              <button
+                :if={@active_type}
+                phx-click="filter_type"
+                phx-value-type={@active_type}
+                class="text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors hover:bg-[var(--surface-2)]"
+                style="color: var(--text-muted);"
+              >
+                clear
+              </button>
               <div class="flex-1 h-px" style="background: var(--border-subtle);" />
             </div>
           </div>
@@ -275,6 +337,16 @@ defmodule LoomkinWeb.VaultBrowserLive do
               entry={entry}
               slug={@slug}
             />
+          </div>
+
+          <%!-- Load more --%>
+          <div :if={@has_more} class="flex justify-center py-6">
+            <button
+              phx-click="load_more"
+              class="loom-btn loom-btn-ghost text-xs"
+            >
+              load more
+            </button>
           </div>
 
           <%!-- Empty state --%>
