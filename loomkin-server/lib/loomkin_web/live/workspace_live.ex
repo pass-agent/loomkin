@@ -126,11 +126,11 @@ defmodule LoomkinWeb.WorkspaceLive do
               stored_session.project_path == project_path &&
                 (is_nil(user) or is_nil(stored_session.user_id) or
                    stored_session.user_id == user.id) ->
-              {:ok, push_navigate(socket, to: ~p"/sessions/#{stored_session.id}")}
+              {:ok, push_navigate(socket, to: "/sessions/#{stored_session.id}")}
 
             latest =
                 Loomkin.Session.Persistence.find_latest_active_session(project_path, user: user) ->
-              {:ok, push_navigate(socket, to: ~p"/sessions/#{latest.id}")}
+              {:ok, push_navigate(socket, to: "/sessions/#{latest.id}")}
 
             true ->
               session_id = Ecto.UUID.generate()
@@ -151,7 +151,7 @@ defmodule LoomkinWeb.WorkspaceLive do
           %{user_id: uid}
           when not is_nil(user) and not is_nil(uid) and uid != user.id ->
             # Session belongs to a different user — redirect away
-            {:ok, push_navigate(socket, to: ~p"/projects")}
+            {:ok, push_navigate(socket, to: "/projects")}
 
           %{project_path: path} when is_binary(path) ->
             {:ok, start_and_subscribe(socket, session_id, path)}
@@ -683,7 +683,7 @@ defmodule LoomkinWeb.WorkspaceLive do
   end
 
   def handle_event("select_session", %{"id" => id}, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/sessions/#{id}")}
+    {:noreply, push_navigate(socket, to: "/sessions/#{id}")}
   end
 
   def handle_event("deselect_file", _params, socket) do
@@ -2485,18 +2485,22 @@ defmodule LoomkinWeb.WorkspaceLive do
     project_path = socket.assigns[:project_path]
 
     if project_path do
-      {:noreply, push_navigate(socket, to: ~p"/sessions/new?#{%{project_path: project_path}}")}
+      {:noreply,
+       push_navigate(socket,
+         to: "/sessions/new?#{URI.encode_query(%{project_path: project_path})}"
+       )}
     else
-      {:noreply, push_navigate(socket, to: ~p"/projects")}
+      {:noreply, push_navigate(socket, to: "/projects")}
     end
   end
 
   def handle_info({:new_session_for_project, path}, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/sessions/new?#{%{project_path: path}}")}
+    {:noreply,
+     push_navigate(socket, to: "/sessions/new?#{URI.encode_query(%{project_path: path})}")}
   end
 
   def handle_info({:select_session, session_id}, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/sessions/#{session_id}")}
+    {:noreply, push_navigate(socket, to: "/sessions/#{session_id}")}
   end
 
   def handle_info({:permission_response, action, request_id}, socket) do
@@ -3858,7 +3862,7 @@ defmodule LoomkinWeb.WorkspaceLive do
 
             <%!-- Icon buttons --%>
             <.link
-              navigate={~p"/settings"}
+              navigate="/settings"
               class="header-icon-btn"
               data-tooltip="Settings"
               aria-label="Settings"

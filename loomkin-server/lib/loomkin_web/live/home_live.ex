@@ -1,30 +1,25 @@
 defmodule LoomkinWeb.HomeLive do
   @moduledoc """
-  Landing page. In local mode, redirects to the project picker.
-  In multi-tenant mode, shows the Night Loom — owl's perch and vault access.
+  Landing page. Shows the Night Loom — owl's perch, CLI setup, and vault access.
   """
   use LoomkinWeb, :live_view
 
   def mount(_params, _session, socket) do
-    unless Application.get_env(:loomkin, :multi_tenant) do
-      {:ok, push_navigate(socket, to: ~p"/projects")}
-    else
-      user = socket.assigns.current_scope && socket.assigns.current_scope.user
+    user = socket.assigns.current_scope && socket.assigns.current_scope.user
 
-      vaults =
-        if user do
-          load_user_vaults(user)
-        else
-          []
-        end
+    vaults =
+      if user do
+        load_user_vaults(user)
+      else
+        []
+      end
 
-      {:ok,
-       assign(socket,
-         page_title: "Loomkin",
-         user: user,
-         vaults: vaults
-       )}
-    end
+    {:ok,
+     assign(socket,
+       page_title: "Loomkin",
+       user: user,
+       vaults: vaults
+     )}
   end
 
   def render(assigns) do
@@ -329,55 +324,79 @@ defmodule LoomkinWeb.HomeLive do
           class="text-sm md:text-base font-light leading-relaxed"
           style="color: var(--text-secondary);"
         >
-          autonomous agent teams that build while you sleep
+          autonomous agent teams that build while you sleep — or on the move
         </p>
       </div>
 
-      <%!-- Three threads — what loomkin does, as woven strands --%>
+      <%!-- CLI setup --%>
       <div
-        class="mt-20 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-2xl"
+        class="mt-16 max-w-md w-full"
         style="animation: fadeUp 0.8s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;"
       >
-        <.thread_strand
-          color="var(--accent-amber)"
-          label="orchestrate"
-          desc="coordinate agent teams in real time"
-        />
-        <.thread_strand
-          color="var(--accent-cyan)"
-          label="delegate"
-          desc="route tasks to the right agent"
-        />
-        <.thread_strand color="var(--accent-emerald)" label="build" desc="ship code, autonomously" />
+        <div
+          class="rounded-xl p-6"
+          style="background: var(--surface-1); border: 1px solid var(--border-subtle);"
+        >
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-6 h-px" style="background: var(--brand); opacity: 0.4;" />
+            <span
+              class="font-mono text-[11px] tracking-wider"
+              style="color: var(--text-muted);"
+            >
+              get started
+            </span>
+          </div>
+
+          <p class="text-xs mb-4 leading-relaxed" style="color: var(--text-secondary);">
+            loomkin runs in your terminal. install the cli, authenticate, and point it at your project.
+          </p>
+
+          <div class="space-y-2">
+            <.cli_step number="1" command="bun add -g @loomkin/cli" />
+            <.cli_step number="2" command="loomkin --login" />
+            <.cli_step number="3" command="cd your-project && loomkin" />
+          </div>
+        </div>
       </div>
 
-      <%!-- CTA --%>
+      <%!-- Auth links --%>
       <div
-        class="mt-20 mb-8"
+        class="mt-10 mb-8 flex items-center gap-4"
         style="animation: fadeUp 0.8s 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;"
       >
         <.link href={~p"/users/register"} class="loom-btn loom-btn-outline">
-          enter the workshop
+          create account
+        </.link>
+        <.link
+          href={~p"/users/log-in"}
+          class="text-xs font-mono transition-colors"
+          style="color: var(--text-muted);"
+        >
+          log in
         </.link>
       </div>
     </div>
     """
   end
 
-  attr :color, :string, required: true
-  attr :label, :string, required: true
-  attr :desc, :string, required: true
+  attr :number, :string, required: true
+  attr :command, :string, required: true
 
-  defp thread_strand(assigns) do
+  defp cli_step(assigns) do
     ~H"""
-    <div class="text-center sm:text-left">
-      <div class="flex items-center gap-2 mb-2 justify-center sm:justify-start">
-        <div class="w-6 h-px" style={"background: #{@color}; opacity: 0.5;"} />
-        <span class="font-mono text-[11px] tracking-wider" style={"color: #{@color};"}>{@label}</span>
-      </div>
-      <p class="text-[11px] leading-relaxed pl-0 sm:pl-8" style="color: var(--text-muted);">
-        {@desc}
-      </p>
+    <div class="flex items-center gap-3">
+      <span
+        class="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono"
+        style="background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-subtle);"
+      >
+        {@number}
+      </span>
+      <code
+        class="text-[12px] font-mono px-2 py-1 rounded flex-1 select-all"
+        style="background: var(--surface-0); color: var(--accent-amber); border: 1px solid var(--border-subtle);"
+      >
+        {@command}
+      </code>
     </div>
     """
   end

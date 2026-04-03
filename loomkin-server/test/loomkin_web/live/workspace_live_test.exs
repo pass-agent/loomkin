@@ -11,6 +11,9 @@ defmodule LoomkinWeb.WorkspaceLiveTest do
   import Phoenix.LiveViewTest
 
   describe "live mount and component rendering" do
+    # Route commented out while LiveView orchestrator is disabled (CLI-first focus)
+    @describetag :skip
+
     test "mounting workspace renders all extracted components", %{conn: conn} do
       {:ok, _view, html} =
         case live(conn, "/sessions/new") do

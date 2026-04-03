@@ -119,6 +119,35 @@
             {msg}
           </.error>
         </div>
+        <div>
+          <label
+            for={@form[:password].id}
+            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
+            style="color: var(--text-muted);"
+          >
+            password
+          </label>
+          <input
+            type="password"
+            id={@form[:password].id}
+            name={@form[:password].name}
+            autocomplete="new-password"
+            spellcheck="false"
+            required
+            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
+            style={"color: var(--text-primary); caret-color: var(--accent-emerald); border-color: #{if @form[:password].errors != [], do: "var(--accent-rose)", else: "var(--border-default)"};"}
+            placeholder="••••••••••••"
+          />
+          <p class="mt-1 text-[10px] font-mono" style="color: var(--text-muted);">
+            12 characters minimum
+          </p>
+          <.error :for={
+            msg <-
+              Enum.map(@form[:password].errors, &LoomkinWeb.CoreComponents.translate_error/1)
+          }>
+            {msg}
+          </.error>
+        </div>
         <button type="submit" phx-disable-with="weaving..." class="loom-btn loom-btn-solid w-full">
           create account
         </button>

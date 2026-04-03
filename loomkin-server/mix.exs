@@ -68,6 +68,11 @@ defmodule Loomkin.MixProject do
         ],
         applications: [runtime_tools: :permanent],
         cookie: "loomkin_#{@version}"
+      ],
+      loomkin_server: [
+        steps: [:assemble],
+        applications: [runtime_tools: :permanent],
+        strip_beams: [keep: ["Docs"]]
       ]
     ]
   end

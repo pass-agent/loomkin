@@ -89,65 +89,6 @@
       </p>
     </div>
 
-    <div
-      :if={local_mail_adapter?()}
-      class="mb-6 py-2 px-3 text-[10px] font-mono flex items-center gap-2"
-      style="color: var(--text-muted); border-left: 2px solid var(--accent-cyan);"
-    >
-      local mail &mdash;
-      <.link
-        href="/dev/mailbox"
-        class="underline underline-offset-2"
-        style="color: var(--accent-cyan);"
-      >
-        mailbox
-      </.link>
-    </div>
-
-    <%!-- Email magic link --%>
-    <.form :let={f} for={@form} as={:user} id="login_form_magic" action={~p"/users/log-in"}>
-      <div class="space-y-5">
-        <div>
-          <label
-            for={f[:email].id}
-            class="block text-[10px] font-mono uppercase tracking-widest mb-1"
-            style="color: var(--text-muted);"
-          >
-            email
-          </label>
-          <input
-            type="email"
-            id={f[:email].id}
-            name={f[:email].name}
-            value={f[:email].value}
-            readonly={!!@current_scope}
-            autocomplete="username"
-            spellcheck="false"
-            required
-            phx-mounted={JS.focus()}
-            class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
-            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--brand);"
-            placeholder="you@example.com"
-          />
-        </div>
-        <button type="submit" class="loom-btn loom-btn-outline w-full">
-          send magic link
-        </button>
-      </div>
-    </.form>
-
-    <%!-- Divider --%>
-    <div class="flex items-center gap-4 my-8">
-      <div class="flex-1 h-px" style="background: var(--border-subtle);" />
-      <span
-        class="text-[9px] font-mono uppercase tracking-widest"
-        style="color: var(--text-muted);"
-      >
-        password
-      </span>
-      <div class="flex-1 h-px" style="background: var(--border-subtle);" />
-    </div>
-
     <%!-- Password form --%>
     <.form :let={f} for={@form} as={:user} id="login_form_password" action={~p"/users/log-in"}>
       <div class="space-y-5">
@@ -168,6 +109,7 @@
             autocomplete="username"
             spellcheck="false"
             required
+            phx-mounted={JS.focus()}
             class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
             style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--brand);"
             placeholder="you@example.com"

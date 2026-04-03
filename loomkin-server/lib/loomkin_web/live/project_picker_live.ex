@@ -111,7 +111,9 @@ defmodule LoomkinWeb.ProjectPickerLive do
 
       true ->
         {:noreply,
-         push_navigate(socket, to: ~p"/sessions/new?#{%{project_path: Path.expand(trimmed)}}")}
+         push_navigate(socket,
+           to: "/sessions/new?#{URI.encode_query(%{project_path: Path.expand(trimmed)})}"
+         )}
     end
   end
 
@@ -323,7 +325,7 @@ defmodule LoomkinWeb.ProjectPickerLive do
 
       <%!-- New session button --%>
       <.link
-        navigate={~p"/sessions/new?#{%{project_path: @selected_project}}"}
+        navigate={"/sessions/new?#{URI.encode_query(%{project_path: @selected_project})}"}
         class={[
           "flex items-center justify-center gap-2 w-full mb-4 px-4 py-3",
           "bg-brand hover:bg-brand/80 text-white text-sm font-medium",
@@ -341,7 +343,7 @@ defmodule LoomkinWeb.ProjectPickerLive do
         <.link
           :for={{id, session} <- @sessions}
           id={id}
-          navigate={~p"/sessions/#{session.id}"}
+          navigate={"/sessions/#{session.id}"}
           class={[
             "block bg-surface-1 border border-border-subtle rounded-lg p-4",
             "hover:bg-surface-2 hover:border-border-hover transition-all group"

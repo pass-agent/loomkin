@@ -98,6 +98,13 @@ defmodule Loomkin.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking user registration changes.
+  """
+  def change_user_registration(%User{} = user, attrs \\ %{}) do
+    User.registration_changeset(user, attrs, validate_unique: false)
+  end
+
   ## Settings
 
   @doc """

@@ -121,7 +121,7 @@ defmodule LoomkinWeb.ExploreLive do
       |> Enum.map(fn {k, v} -> {k, to_string(v)} end)
       |> Enum.into(%{})
 
-    ~p"/explore?#{query}"
+    "/explore?#{URI.encode_query(query)}"
   end
 
   def render(assigns) do
@@ -276,7 +276,7 @@ defmodule LoomkinWeb.ExploreLive do
 
     ~H"""
     <.link
-      navigate={~p"/@#{@username}/#{@snippet.slug}"}
+      navigate={"/@#{@username}/#{@snippet.slug}"}
       id={@id}
       class={[
         "glass-subtle rounded-lg p-4 hover:border-border-hover transition-all",

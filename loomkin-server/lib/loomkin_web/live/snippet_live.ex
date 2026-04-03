@@ -49,7 +49,7 @@ defmodule LoomkinWeb.SnippetLive do
       nil ->
         socket
         |> put_flash(:error, "Snippet not found.")
-        |> push_navigate(to: ~p"/explore")
+        |> push_navigate(to: "/explore")
 
       snippet ->
         snippet = Repo.preload(snippet, [:user, forked_from: :user])
@@ -144,7 +144,7 @@ defmodule LoomkinWeb.SnippetLive do
         {:noreply,
          socket
          |> put_flash(:info, "Snippet forked!")
-         |> push_navigate(to: ~p"/snippets/#{fork.id}/edit")}
+         |> push_navigate(to: "/snippets/#{fork.id}/edit")}
 
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, "Cannot fork a private snippet")}
@@ -344,7 +344,7 @@ defmodule LoomkinWeb.SnippetLive do
         {:noreply,
          socket
          |> put_flash(:info, "Snippet created!")
-         |> push_navigate(to: ~p"/@#{current_user.username}/#{snippet.slug}")}
+         |> push_navigate(to: "/@#{current_user.username}/#{snippet.slug}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
@@ -365,7 +365,7 @@ defmodule LoomkinWeb.SnippetLive do
         {:noreply,
          socket
          |> put_flash(:info, "Snippet updated!")
-         |> push_navigate(to: ~p"/@#{username}/#{updated.slug}")}
+         |> push_navigate(to: "/@#{username}/#{updated.slug}")}
 
       {:error, :unauthorized} ->
         {:noreply,
@@ -516,7 +516,7 @@ defmodule LoomkinWeb.SnippetLive do
               </.link>
               <span class="text-gray-600">/</span>
               <.link
-                navigate={~p"/@#{@owner_username}"}
+                navigate={"/@#{@owner_username}"}
                 class="text-gray-400 text-sm hover:text-brand transition-colors"
               >
                 @{@owner_username}
@@ -527,7 +527,7 @@ defmodule LoomkinWeb.SnippetLive do
             <div class="flex items-center gap-2">
               <%= if @is_owner do %>
                 <.link
-                  navigate={~p"/snippets/#{@snippet.id}/edit"}
+                  navigate={"/snippets/#{@snippet.id}/edit"}
                   class="text-sm text-gray-400 hover:text-white transition-colors"
                 >
                   Edit
@@ -557,7 +557,7 @@ defmodule LoomkinWeb.SnippetLive do
                 <span class="text-gray-500 text-xs">
                   by
                   <.link
-                    navigate={~p"/@#{@owner_username}"}
+                    navigate={"/@#{@owner_username}"}
                     class="text-brand hover:text-violet-300 transition-colors"
                   >
                     @{@owner_username}

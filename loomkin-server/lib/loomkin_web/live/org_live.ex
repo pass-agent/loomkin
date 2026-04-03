@@ -8,7 +8,7 @@ defmodule LoomkinWeb.OrgLive do
     user = socket.assigns.current_scope && socket.assigns.current_scope.user
 
     unless user do
-      {:ok, push_navigate(socket, to: ~p"/projects")}
+      {:ok, push_navigate(socket, to: "/projects")}
     else
       orgs = Organizations.list_user_organizations(user)
 

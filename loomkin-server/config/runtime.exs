@@ -14,9 +14,12 @@ if model = System.get_env("LOOMKIN_MODEL") do
 end
 
 if database_url = System.get_env("DATABASE_URL") do
+  maybe_ipv6 = if System.get_env("FLY_APP_NAME"), do: [:inet6], else: []
+
   config :loomkin, Loomkin.Repo,
     url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
+    socket_options: maybe_ipv6
 else
   # Inside the dev container, connect to the postgres service by hostname
   if System.get_env("HOSTNAME") == "loomkin-dev" do
@@ -44,8 +47,12 @@ if config_env() == :prod do
   port = String.to_integer(System.get_env("PORT") || "4200")
 
   config :loomkin, LoomkinWeb.Endpoint,
-    url: [host: host, port: port, scheme: "http"],
-    http: [ip: {127, 0, 0, 1}, port: port],
+    url: [host: host, port: 443, scheme: "https"],
+    http: [ip: {0, 0, 0, 0, 0, 0, 0, 0}, port: port],
     secret_key_base: secret_key_base,
-    server: true
+    server: true,
+    check_origin: [
+      "https://#{host}",
+      "https://loomkin.fly.dev"
+    ]
 end

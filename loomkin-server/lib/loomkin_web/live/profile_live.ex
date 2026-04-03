@@ -17,7 +17,7 @@ defmodule LoomkinWeb.ProfileLive do
         {:ok,
          socket
          |> put_flash(:error, "User not found.")
-         |> push_navigate(to: ~p"/explore")}
+         |> push_navigate(to: "/explore")}
 
       profile_user ->
         socket =
@@ -101,7 +101,7 @@ defmodule LoomkinWeb.ProfileLive do
               <span class="text-gray-300 text-sm font-medium">@{@profile_user.username}</span>
             </div>
             <.link
-              navigate={~p"/explore"}
+              navigate="/explore"
               class="text-sm text-gray-400 hover:text-white transition-colors"
             >
               Explore
@@ -222,7 +222,7 @@ defmodule LoomkinWeb.ProfileLive do
   defp profile_snippet_card(assigns) do
     ~H"""
     <.link
-      navigate={~p"/@#{@username}/#{@snippet.slug}"}
+      navigate={"/@#{@username}/#{@snippet.slug}"}
       id={@id}
       class={[
         "glass-subtle rounded-lg p-4 hover:border-border-hover transition-all block",

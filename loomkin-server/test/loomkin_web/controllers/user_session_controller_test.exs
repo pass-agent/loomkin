@@ -14,7 +14,6 @@ defmodule LoomkinWeb.UserSessionControllerTest do
       response = html_response(conn, 200)
       assert response =~ "sign in"
       assert response =~ ~p"/users/register"
-      assert response =~ "send magic link"
     end
 
     test "renders login page with email filled in (sudo mode)", %{conn: conn, user: user} do
@@ -25,9 +24,6 @@ defmodule LoomkinWeb.UserSessionControllerTest do
         |> html_response(200)
 
       assert html =~ "sign in"
-      assert html =~ "send magic link"
-
-      assert html =~ ~s(id="login_form_magic_email")
       assert html =~ ~s(value="#{user.email}")
     end
 
@@ -36,7 +32,6 @@ defmodule LoomkinWeb.UserSessionControllerTest do
       response = html_response(conn, 200)
       assert response =~ "sign in"
       assert response =~ ~p"/users/register"
-      assert response =~ "send magic link"
     end
   end
 

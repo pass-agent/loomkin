@@ -128,27 +128,29 @@ defmodule LoomkinWeb.Router do
   end
 
   # Public social routes — accessible without authentication
-  scope "/", LoomkinWeb do
-    pipe_through [:browser]
-
-    live_session :public_social,
-      on_mount: [{LoomkinWeb.UserAuth, :mount_current_scope}] do
-      live "/explore", ExploreLive, :index
-      live "/@:username", ProfileLive, :show
-      live "/@:username/:slug", SnippetLive, :show
-    end
-  end
+  # Re-enable when social features launch
+  # scope "/", LoomkinWeb do
+  #   pipe_through [:browser]
+  #
+  #   live_session :public_social,
+  #     on_mount: [{LoomkinWeb.UserAuth, :mount_current_scope}] do
+  #     live "/explore", ExploreLive, :index
+  #     live "/@:username", ProfileLive, :show
+  #     live "/@:username/:slug", SnippetLive, :show
+  #   end
+  # end
 
   # Authenticated social routes — require login in deployed mode, pass through in local mode
-  scope "/", LoomkinWeb do
-    pipe_through [:browser, :require_auth_if_multi_tenant]
-
-    live_session :authenticated_social,
-      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_if_multi_tenant}] do
-      live "/snippets/new", SnippetLive, :new
-      live "/snippets/:id/edit", SnippetLive, :edit
-    end
-  end
+  # Re-enable when social features launch
+  # scope "/", LoomkinWeb do
+  #   pipe_through [:browser, :require_auth_if_multi_tenant]
+  #
+  #   live_session :authenticated_social,
+  #     on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_if_multi_tenant}] do
+  #     live "/snippets/new", SnippetLive, :new
+  #     live "/snippets/:id/edit", SnippetLive, :edit
+  #   end
+  # end
 
   # Homepage — accessible to everyone (authenticated or not)
   # Shows community feed + trending for visitors, full dashboard for logged-in users
@@ -195,19 +197,20 @@ defmodule LoomkinWeb.Router do
     end
   end
 
-  # App routes — gated by multi-tenant auth (passes through in local mode)
-  scope "/", LoomkinWeb do
-    pipe_through [:browser, :require_auth_if_multi_tenant]
-
-    live_session :app,
-      on_mount: [{LoomkinWeb.UserAuth, :mount_current_scope}] do
-      live "/projects", ProjectPickerLive, :index
-      live "/sessions/new", WorkspaceLive, :new
-      live "/sessions/:session_id", WorkspaceLive, :show
-      live "/dashboard", CostDashboardLive, :index
-      live "/settings", SettingsLive, :index
-    end
-  end
+  # App routes — orchestration screens (projects, workspace, dashboard)
+  # Re-enable when LiveView workspace alternative launches
+  # scope "/", LoomkinWeb do
+  #   pipe_through [:browser, :require_auth_if_multi_tenant]
+  #
+  #   live_session :app,
+  #     on_mount: [{LoomkinWeb.UserAuth, :mount_current_scope}] do
+  #     live "/projects", ProjectPickerLive, :index
+  #     live "/sessions/new", WorkspaceLive, :new
+  #     live "/sessions/:session_id", WorkspaceLive, :show
+  #     live "/dashboard", CostDashboardLive, :index
+  #     live "/settings", SettingsLive, :index
+  #   end
+  # end
 
   if Mix.env() in [:dev, :test] do
     import Phoenix.LiveDashboard.Router

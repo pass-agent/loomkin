@@ -20,7 +20,7 @@ defmodule LoomkinWeb.UserRegistrationControllerTest do
 
   describe "POST /users/register" do
     @tag :capture_log
-    test "creates account but does not log in", %{conn: conn} do
+    test "creates account and logs the user in", %{conn: conn} do
       email = unique_user_email()
 
       conn =
@@ -28,11 +28,9 @@ defmodule LoomkinWeb.UserRegistrationControllerTest do
           "user" => valid_user_attributes(email: email)
         })
 
-      refute get_session(conn, :user_token)
-      assert redirected_to(conn) == ~p"/users/log-in"
-
-      assert conn.assigns.flash["info"] =~
-               ~r/An email was sent to .*, please access it to confirm your account/
+      assert get_session(conn, :user_token)
+      assert redirected_to(conn) == ~p"/"
+      assert conn.assigns.flash["info"] =~ "Account created successfully."
     end
 
     test "render errors for invalid data", %{conn: conn} do

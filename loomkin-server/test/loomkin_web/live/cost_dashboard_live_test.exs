@@ -3,6 +3,9 @@ defmodule LoomkinWeb.CostDashboardLiveTest do
 
   import Phoenix.LiveViewTest
 
+  # Route commented out while LiveView orchestrator is disabled (CLI-first focus)
+  @moduletag :skip
+
   describe "mount" do
     test "renders dashboard with core sections", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/dashboard")

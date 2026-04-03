@@ -3,6 +3,9 @@ defmodule LoomkinWeb.SettingsLiveTest do
 
   import Phoenix.LiveViewTest
 
+  # Route commented out while LiveView orchestrator is disabled (CLI-first focus)
+  @moduletag :skip
+
   setup do
     # Reset config to defaults so ETS pollution from other tests
     # (e.g., config_test writing agents.max_iterations = 50) doesn't
