@@ -328,3 +328,42 @@ export interface KindredBundle {
   status: string;
   item_count: number;
 }
+
+// --- Cloud / Device Code types ---
+
+export interface DeviceCodeResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface DeviceTokenResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  scope: string;
+}
+
+export interface DeviceTokenError {
+  error: "authorization_pending" | "slow_down" | "expired_token" | "access_denied";
+  error_description?: string;
+}
+
+export interface CloudVault {
+  vault_id: string;
+  name: string;
+  description: string | null;
+  storage_type: string;
+  entry_count: number;
+  organization_id: string | null;
+}
+
+export interface VaultSearchResult {
+  path: string;
+  title: string;
+  entry_type: string;
+  tags: string[];
+}

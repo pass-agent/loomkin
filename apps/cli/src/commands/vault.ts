@@ -1,9 +1,16 @@
 import pc from "picocolors";
+import { join } from "path";
 import { register, type CommandContext } from "./registry.js";
 import { getApiBaseUrl } from "../lib/urls.js";
+import { isCloudAuthenticated, getCloudAuth, clearCloudAuth } from "../lib/cloudConfig.js";
+import { listVaults, getVault, searchVault, getCloudBaseUrl } from "../lib/cloudApi.js";
+import { runDeviceCodeFlow } from "../lib/deviceCodeFlow.js";
 
-const SUBCOMMANDS = ["auth", "list", "attach", "detach", "search", "status"] as const;
+const SUBCOMMANDS = ["auth", "list", "attach", "detach", "search", "status", "logout"] as const;
 type Subcommand = (typeof SUBCOMMANDS)[number];
+
+const VAULT_CONFIG_NAME = "vault.json";
+const LOOMKIN_DIR = ".loomkin";
 
 function parseSubcommand(args: string): { sub: Subcommand | null; rest: string } {
   const [first, ...rest] = args.trim().split(/\s+/);
@@ -14,60 +21,109 @@ function parseSubcommand(args: string): { sub: Subcommand | null; rest: string }
   return { sub: null, rest: args };
 }
 
+function getVaultConfigPath(): string {
+  return join(process.cwd(), LOOMKIN_DIR, VAULT_CONFIG_NAME);
+}
+
+interface VaultConfig {
+  vault_id: string;
+  name: string;
+  server: string;
+  attached_at: string;
+}
+
+async function readVaultConfig(): Promise<VaultConfig | null> {
+  try {
+    const file = Bun.file(getVaultConfigPath());
+    if (!(await file.exists())) return null;
+    return (await file.json()) as VaultConfig;
+  } catch {
+    return null;
+  }
+}
+
+async function writeVaultConfig(config: VaultConfig): Promise<void> {
+  const dir = join(process.cwd(), LOOMKIN_DIR);
+  // Ensure .loomkin directory exists
+  const { mkdir } = await import("fs/promises");
+  await mkdir(dir, { recursive: true });
+  await Bun.write(getVaultConfigPath(), JSON.stringify(config, null, 2) + "\n");
+}
+
+async function removeVaultConfig(): Promise<boolean> {
+  try {
+    const { unlink } = await import("fs/promises");
+    await unlink(getVaultConfigPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // --- Subcommand handlers ---
 
 async function vaultAuth(ctx: CommandContext) {
-  const lines: string[] = [
-    pc.bold("Vault Authentication"),
-    "",
-    `This will open ${pc.cyan("loomkin.dev")} in your browser to sign in.`,
-    "",
-    pc.dim("Once authenticated, the CLI will store your token locally"),
-    pc.dim("and you can list and attach vaults."),
-    "",
-  ];
+  if (isCloudAuthenticated()) {
+    const auth = getCloudAuth();
+    ctx.addSystemMessage(
+      pc.green("Already authenticated with loomkin.dev") +
+        "\n" +
+        pc.dim(`Token expires: ${auth?.expiresAt}`) +
+        "\n\n" +
+        pc.dim("Run /vault logout to disconnect."),
+    );
+    return;
+  }
 
-  // TODO: implement OAuth flow once loomkin.dev API is live
-  lines.push(
-    pc.yellow("⚠ loomkin.dev API is not yet available."),
-    pc.dim("  This command will work once the remote API is deployed."),
-  );
+  await runDeviceCodeFlow((msg) => ctx.addSystemMessage(msg));
+}
 
-  ctx.addSystemMessage(lines.join("\n"));
+async function vaultLogout(ctx: CommandContext) {
+  if (!isCloudAuthenticated()) {
+    ctx.addSystemMessage(pc.dim("Not currently authenticated with loomkin.dev."));
+    return;
+  }
+
+  clearCloudAuth();
+  ctx.addSystemMessage(pc.green("Logged out of loomkin.dev."));
 }
 
 async function vaultList(ctx: CommandContext) {
-  const lines: string[] = [
-    pc.bold("Your Vaults"),
-    "",
-  ];
+  if (!isCloudAuthenticated()) {
+    ctx.addSystemMessage(
+      pc.yellow("Not authenticated with loomkin.dev.") +
+        "\n" +
+        pc.dim("Run /vault auth to connect."),
+    );
+    return;
+  }
 
-  // TODO: call GET /api/v1/vaults once loomkin.dev API is live
-  // For now, query local vaults via the Phoenix API
+  const lines: string[] = [pc.bold("Your Vaults"), ""];
+
   try {
-    const res = await fetch(`${getApiBaseUrl()}/api/vaults`, {
-      headers: { "content-type": "application/json" },
-    });
-
-    if (res.ok) {
-      const { vaults } = (await res.json()) as { vaults: VaultSummary[] };
-      if (vaults.length === 0) {
-        lines.push(pc.dim("  No vaults found."));
-        lines.push("");
-        lines.push(pc.dim("  Create a vault at loomkin.dev, then /vault attach <id>"));
-      } else {
-        for (const v of vaults) {
-          const storage = pc.dim(`[${v.storage_type}]`);
-          const entries = v.entry_count != null ? pc.dim(`${v.entry_count} entries`) : "";
-          lines.push(`  ${pc.cyan(v.vault_id)} ${v.name} ${storage} ${entries}`);
-        }
-      }
+    const { vaults } = await listVaults();
+    if (vaults.length === 0) {
+      lines.push(pc.dim("  No vaults found."));
+      lines.push("");
+      lines.push(pc.dim("  Create a vault at loomkin.dev, then /vault attach <id>"));
     } else {
-      lines.push(pc.dim("  Unable to fetch vaults from server."));
-      lines.push(pc.dim("  Make sure loomkin-server is running."));
+      // Table header
+      lines.push(
+        `  ${pc.bold(pc.underline("ID"))}${" ".repeat(34)}${pc.bold(pc.underline("Name"))}${" ".repeat(16)}${pc.bold(pc.underline("Type"))}${" ".repeat(6)}${pc.bold(pc.underline("Entries"))}`,
+      );
+      for (const v of vaults) {
+        const id = v.vault_id.padEnd(36);
+        const name = (v.name.length > 18 ? v.name.slice(0, 17) + "\u2026" : v.name).padEnd(20);
+        const storage = v.storage_type.padEnd(10);
+        const entries = String(v.entry_count);
+        lines.push(`  ${pc.cyan(id)}${name}${pc.dim(storage)}${entries}`);
+      }
     }
-  } catch {
-    lines.push(pc.dim("  Unable to connect to server."));
+  } catch (err) {
+    lines.push(
+      pc.red("  Failed to fetch vaults: ") +
+        (err instanceof Error ? err.message : "Unknown error"),
+    );
   }
 
   lines.push("");
@@ -84,32 +140,65 @@ async function vaultAttach(vaultId: string, ctx: CommandContext) {
     return;
   }
 
-  const lines: string[] = [
-    pc.bold("Attaching Vault"),
-    "",
-    `  Vault: ${pc.cyan(vaultId)}`,
-    "",
-  ];
+  if (!isCloudAuthenticated()) {
+    ctx.addSystemMessage(
+      pc.yellow("Not authenticated with loomkin.dev.") +
+        "\n" +
+        pc.dim("Run /vault auth first."),
+    );
+    return;
+  }
 
-  // TODO: verify vault exists via API, write .loomkin/vault.json
-  // For now, send as a message to the agent so it can use vault tools
-  lines.push(
-    pc.yellow("⚠ Remote vault attach is not yet implemented."),
-    "",
-    pc.dim("  For now, agents can use vault tools directly with this vault_id."),
-    pc.dim("  The vault must exist in the local database."),
+  // Verify vault exists and user has access
+  let vault;
+  try {
+    const result = await getVault(vaultId);
+    vault = result.vault;
+  } catch (err) {
+    ctx.addSystemMessage(
+      pc.red("Could not access vault: ") +
+        (err instanceof Error ? err.message : "Unknown error"),
+    );
+    return;
+  }
+
+  await writeVaultConfig({
+    vault_id: vault.vault_id,
+    name: vault.name,
+    server: getCloudBaseUrl(),
+    attached_at: new Date().toISOString(),
+  });
+
+  ctx.addSystemMessage(
+    [
+      pc.green(`Vault attached: ${vault.name}`),
+      "",
+      `  ${pc.dim("ID:")}     ${pc.cyan(vault.vault_id)}`,
+      `  ${pc.dim("Server:")} ${vault.storage_type}`,
+      `  ${pc.dim("Config:")} ${getVaultConfigPath()}`,
+      "",
+      pc.dim("Agents in this project can now access this vault."),
+    ].join("\n"),
   );
-
-  ctx.addSystemMessage(lines.join("\n"));
 }
 
 async function vaultDetach(ctx: CommandContext) {
-  // TODO: remove .loomkin/vault.json
-  ctx.addSystemMessage(
-    pc.yellow("⚠ Vault detach is not yet implemented.") +
-      "\n" +
-      pc.dim("  This will remove the vault attachment from the current project."),
-  );
+  const existing = await readVaultConfig();
+  if (!existing) {
+    ctx.addSystemMessage(pc.dim("No vault attached to this project."));
+    return;
+  }
+
+  const removed = await removeVaultConfig();
+  if (removed) {
+    ctx.addSystemMessage(
+      pc.green(`Vault detached: ${existing.name}`) +
+        "\n" +
+        pc.dim(`Removed ${getVaultConfigPath()}`),
+    );
+  } else {
+    ctx.addSystemMessage(pc.red("Failed to remove vault config."));
+  }
 }
 
 async function vaultSearch(query: string, ctx: CommandContext) {
@@ -118,52 +207,102 @@ async function vaultSearch(query: string, ctx: CommandContext) {
     return;
   }
 
-  // Send the search query as a user message so the agent can use vault_search
+  // Try cloud search if authenticated and vault is attached
+  const vaultConfig = await readVaultConfig();
+  if (isCloudAuthenticated() && vaultConfig) {
+    try {
+      const { results } = await searchVault(vaultConfig.vault_id, query);
+      if (results.length > 0) {
+        const lines = [
+          pc.bold(`Vault search: "${query}"`),
+          "",
+        ];
+        for (const r of results) {
+          const tags = r.tags.length > 0 ? pc.dim(` [${r.tags.join(", ")}]`) : "";
+          lines.push(`  ${pc.cyan(r.title)} ${pc.dim(`(${r.entry_type})`)}${tags}`);
+          lines.push(`    ${pc.dim(r.path)}`);
+        }
+        lines.push("");
+        ctx.addSystemMessage(lines.join("\n"));
+        return;
+      }
+    } catch {
+      // Fall through to agent-based search
+    }
+  }
+
+  // Delegate to agent
   ctx.sendMessage(`Search the vault for: ${query}`);
 }
 
 async function vaultStatus(ctx: CommandContext) {
-  const lines: string[] = [
-    pc.bold("Vault Status"),
-    "",
-  ];
+  const lines: string[] = [pc.bold("Vault Status"), ""];
 
-  // Check local server for vault info
+  // Cloud auth status
+  lines.push(pc.bold(pc.underline("  Authentication")));
+  if (isCloudAuthenticated()) {
+    const auth = getCloudAuth();
+    lines.push(`  ${pc.green("Connected")} to ${pc.cyan(auth?.serverUrl ?? "loomkin.dev")}`);
+    lines.push(`  ${pc.dim("Scope:")}   ${auth?.scope}`);
+    lines.push(`  ${pc.dim("Expires:")} ${auth?.expiresAt}`);
+  } else {
+    const auth = getCloudAuth();
+    if (auth && new Date(auth.expiresAt) <= new Date()) {
+      lines.push(`  ${pc.yellow("Token expired")} — run /vault auth to reconnect`);
+    } else {
+      lines.push(`  ${pc.dim("Not authenticated with loomkin.dev")}`);
+      lines.push(`  ${pc.dim("Run /vault auth to connect")}`);
+    }
+  }
+
+  lines.push("");
+
+  // Vault attachment status
+  lines.push(pc.bold(pc.underline("  Project Vault")));
+  const vaultConfig = await readVaultConfig();
+  if (vaultConfig) {
+    lines.push(`  ${pc.green("Attached")}: ${pc.cyan(vaultConfig.name)}`);
+    lines.push(`  ${pc.dim("ID:")}     ${vaultConfig.vault_id}`);
+    lines.push(`  ${pc.dim("Server:")} ${vaultConfig.server}`);
+    lines.push(`  ${pc.dim("Since:")}  ${vaultConfig.attached_at}`);
+
+    // Fetch live details if authenticated
+    if (isCloudAuthenticated()) {
+      try {
+        const { vault } = await getVault(vaultConfig.vault_id);
+        lines.push(`  ${pc.dim("Entries:")} ${vault.entry_count}`);
+        if (vault.description) {
+          lines.push(`  ${pc.dim("Desc:")}    ${vault.description}`);
+        }
+      } catch {
+        lines.push(`  ${pc.dim("(Could not fetch live details)")}`);
+      }
+    }
+  } else {
+    lines.push(`  ${pc.dim("No vault attached to this project.")}`);
+    lines.push(`  ${pc.dim("Run /vault attach <vault-id> to connect one.")}`);
+  }
+
+  // Also show local server vaults if reachable
   try {
     const res = await fetch(`${getApiBaseUrl()}/api/vaults`, {
       headers: { "content-type": "application/json" },
     });
-
     if (res.ok) {
       const { vaults } = (await res.json()) as { vaults: VaultSummary[] };
-      if (vaults.length === 0) {
-        lines.push(pc.dim("  No vaults configured."));
+      if (vaults.length > 0) {
         lines.push("");
-        lines.push(pc.dim("  1. Create a vault at loomkin.dev"));
-        lines.push(pc.dim("  2. Run /vault attach <vault-id>"));
-      } else {
         lines.push(pc.bold(pc.underline("  Local Vaults")));
         for (const v of vaults) {
           const storage = pc.dim(`[${v.storage_type}]`);
-          lines.push(`  ${pc.cyan(v.vault_id)} ${v.name} ${storage}`);
-          if (v.entry_count != null) {
-            lines.push(`    ${pc.dim(`${v.entry_count} entries`)}`);
-          }
+          const entries = v.entry_count != null ? pc.dim(`${v.entry_count} entries`) : "";
+          lines.push(`  ${pc.cyan(v.vault_id)} ${v.name} ${storage} ${entries}`);
         }
       }
-    } else {
-      lines.push(pc.dim("  Server not reachable."));
     }
   } catch {
-    lines.push(pc.dim("  Unable to connect to server."));
+    // Local server not running — that's fine
   }
-
-  // Auth status
-  lines.push("");
-  lines.push(pc.bold(pc.underline("  Authentication")));
-  // TODO: check ~/.config/loomkin/auth.json
-  lines.push(pc.dim("  Not authenticated with loomkin.dev"));
-  lines.push(pc.dim("  Run /vault auth to connect"));
 
   lines.push("");
   ctx.addSystemMessage(lines.join("\n"));
@@ -174,6 +313,7 @@ function showHelp(ctx: CommandContext) {
     pc.bold("Vault Commands"),
     "",
     `  ${pc.cyan("/vault auth")}     ${pc.dim("Authenticate with loomkin.dev")}`,
+    `  ${pc.cyan("/vault logout")}   ${pc.dim("Clear cloud authentication")}`,
     `  ${pc.cyan("/vault list")}     ${pc.dim("List accessible vaults")}`,
     `  ${pc.cyan("/vault attach")}   ${pc.dim("<vault-id> — Attach a vault to this project")}`,
     `  ${pc.cyan("/vault detach")}   ${pc.dim("Detach the current vault")}`,
@@ -206,6 +346,8 @@ register({
     switch (sub) {
       case "auth":
         return vaultAuth(ctx);
+      case "logout":
+        return vaultLogout(ctx);
       case "list":
         return vaultList(ctx);
       case "attach":

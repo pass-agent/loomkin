@@ -176,7 +176,7 @@ defmodule Loomkin.Teams.Manager do
       name: name,
       role: role,
       project_path: opts[:project_path] || get_team_project_path(team_id),
-      vault_id: opts[:vault_id] || resolve_team_vault_id(team_id),
+      vault_id: opts[:vault_id],
       model: opts[:model]
     ]
 
@@ -437,26 +437,6 @@ defmodule Loomkin.Teams.Manager do
 
     suffix = :crypto.strong_rand_bytes(4) |> Base.url_encode64(padding: false)
     "#{sanitized}-#{suffix}"
-  end
-
-  @doc "Resolve the vault_id for a team by finding its workspace."
-  @spec resolve_team_vault_id(String.t()) :: String.t() | nil
-  def resolve_team_vault_id(team_id) do
-    import Ecto.Query, only: [from: 2]
-
-    case Loomkin.Repo.one(from(w in Loomkin.Workspace, where: w.team_id == ^team_id, limit: 1)) do
-      nil ->
-        nil
-
-      workspace ->
-        case Loomkin.Vault.ensure_workspace_vault(workspace.id) do
-          {:ok, vault_id} -> vault_id
-        end
-    end
-  rescue
-    e ->
-      Logger.warning("[Manager] vault resolution failed team=#{team_id}: #{Exception.message(e)}")
-      nil
   end
 
   @doc "Get the project path for a team from ETS metadata."
