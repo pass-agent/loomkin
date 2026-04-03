@@ -190,6 +190,37 @@ defmodule Loomkin.Vault do
     |> Repo.exists?()
   end
 
+  @doc """
+  Ensure a vault exists for a workspace. Returns the vault_id.
+
+  If the workspace already has a vault, returns its vault_id.
+  Otherwise creates a local vault named after the workspace.
+  """
+  @spec ensure_workspace_vault(String.t()) :: {:ok, String.t()} | {:error, term()}
+  def ensure_workspace_vault(workspace_id) do
+    vault_id = "ws-#{workspace_id}"
+
+    case get_config(vault_id) do
+      {:ok, _config} ->
+        {:ok, vault_id}
+
+      {:error, :vault_not_found} ->
+        workspace = Repo.get(Loomkin.Workspace, workspace_id)
+        name = if workspace, do: workspace.name, else: "Workspace"
+
+        case create_vault(%{
+               vault_id: vault_id,
+               name: "#{name} Vault",
+               storage_type: "local",
+               workspace_id: workspace_id
+             }) do
+          {:ok, _config} -> {:ok, vault_id}
+          # Another process may have created it concurrently
+          {:error, %Ecto.Changeset{}} -> {:ok, vault_id}
+        end
+    end
+  end
+
   # --- Private helpers ---
 
   defp run_validators(%Entry{} = entry) do

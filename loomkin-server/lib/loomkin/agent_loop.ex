@@ -374,6 +374,7 @@ defmodule Loomkin.AgentLoop do
 
     context = %{
       project_path: effective_path,
+      vault_id: config[:vault_id],
       session_id: config.session_id,
       agent_name: config.agent_name,
       team_id: config.team_id,

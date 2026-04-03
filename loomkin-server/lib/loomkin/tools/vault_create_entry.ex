@@ -5,8 +5,9 @@ defmodule Loomkin.Tools.VaultCreateEntry do
     name: "vault_create_entry",
     description:
       "Create a new vault entry with automatic path resolution, frontmatter, and optional linking. " <>
-        "Supports types: note, topic, project, person, decision, meeting, checkin, idea, source, stream_idea, guest_profile. " <>
-        "Decisions get auto-incremented DR numbers. Meetings/checkins/decisions require entry_date.",
+        "Supports types: note, topic, project, person, decision, meeting, checkin, idea, source, stream_idea, guest_profile, spec, milestone. " <>
+        "Decisions get auto-incremented DR numbers. Meetings/checkins/decisions require entry_date. " <>
+        "Specs track implementation status (draft/approved/implemented). Milestones track delivery targets.",
     schema: [
       vault_id: [type: :string, required: true, doc: "Vault identifier"],
       title: [type: :string, required: true, doc: "Entry title, used for filename"],
@@ -14,7 +15,7 @@ defmodule Loomkin.Tools.VaultCreateEntry do
         type: :string,
         required: true,
         doc:
-          "Entry type: note, topic, project, person, decision, meeting, checkin, idea, source, stream_idea, guest_profile"
+          "Entry type: note, topic, project, person, decision, meeting, checkin, idea, source, stream_idea, guest_profile, spec, milestone"
       ],
       content: [type: :string, required: true, doc: "Markdown body (without frontmatter)"],
       tags: [type: {:list, :string}, doc: "List of tags"],
@@ -46,7 +47,7 @@ defmodule Loomkin.Tools.VaultCreateEntry do
   @date_required_types ~w(meeting checkin decision)
 
   @impl true
-  def run(params, _context) do
+  def run(params, context) do
     vault_id = param!(params, :vault_id)
     title = param!(params, :title)
     entry_type = param!(params, :entry_type)
@@ -58,11 +59,14 @@ defmodule Loomkin.Tools.VaultCreateEntry do
     entry_date = param(params, :entry_date)
     author = param(params, :author)
 
+    project_path = Map.get(context, :project_path)
+
     with :ok <- validate_date_required(entry_type, entry_date),
          :ok <- validate_author_required(entry_type, author),
          {:ok, extra_fm} <- parse_extra_frontmatter(extra_fm_json),
          {:ok, path, metadata} <-
            resolve_path_and_metadata(vault_id, entry_type, title, entry_date, author),
+         {:ok, path, metadata} <- maybe_wip_prefix(path, metadata, project_path),
          :ok <- check_no_duplicate(vault_id, path),
          entry <-
            build_entry(vault_id, path, title, entry_type, content, tags, metadata, extra_fm),
@@ -137,6 +141,14 @@ defmodule Loomkin.Tools.VaultCreateEntry do
     {:ok, "updates/#{slugify(author)}/#{date}.md", %{"date" => date, "author" => author}}
   end
 
+  defp resolve_path_and_metadata(_vault_id, "spec", title, _date, _author) do
+    {:ok, "specs/#{slugify(title)}.md", %{"status" => "draft"}}
+  end
+
+  defp resolve_path_and_metadata(_vault_id, "milestone", title, _date, _author) do
+    {:ok, "milestones/#{slugify(title)}.md", %{"status" => "planned"}}
+  end
+
   defp resolve_path_and_metadata(_vault_id, entry_type, title, _date, _author) do
     dir =
       case entry_type do
@@ -148,6 +160,8 @@ defmodule Loomkin.Tools.VaultCreateEntry do
         "source" -> "sources"
         "stream_idea" -> "ideas/streams"
         "guest_profile" -> "ideas/streams/guests"
+        "spec" -> "specs"
+        "milestone" -> "milestones"
         other -> other
       end
 
@@ -257,6 +271,34 @@ defmodule Loomkin.Tools.VaultCreateEntry do
       Enum.map(related_paths || [], fn p -> "\n         -> #{p} (related)" end)
 
     Enum.join(parts ++ related)
+  end
+
+  # --- WIP branch detection ---
+
+  @main_branches ~w(main master)
+
+  defp maybe_wip_prefix(path, metadata, project_path) do
+    case current_branch(project_path) do
+      {:ok, branch} when branch not in @main_branches ->
+        wip_path = "wip/#{branch}/#{path}"
+        wip_metadata = Map.merge(metadata, %{"status" => "draft", "branch" => branch})
+        {:ok, wip_path, wip_metadata}
+
+      _ ->
+        {:ok, path, metadata}
+    end
+  end
+
+  defp current_branch(nil), do: {:ok, "main"}
+
+  defp current_branch(project_path) do
+    case System.cmd("git", ["rev-parse", "--abbrev-ref", "HEAD"],
+           cd: project_path,
+           stderr_to_stdout: true
+         ) do
+      {branch, 0} -> {:ok, String.trim(branch)}
+      _ -> {:ok, "main"}
+    end
   end
 
   # --- Helpers ---

@@ -37,6 +37,7 @@ defmodule Loomkin.Teams.Agent do
     :status,
     :model,
     :project_path,
+    :vault_id,
     # Cached from KinAgent DB record at init to avoid a per-loop DB query.
     system_prompt_extra: nil,
     tools: [],
@@ -222,6 +223,7 @@ defmodule Loomkin.Teams.Agent do
     name = Keyword.fetch!(opts, :name)
     role = Keyword.fetch!(opts, :role)
     project_path = Keyword.get(opts, :project_path)
+    vault_id = Keyword.get(opts, :vault_id)
 
     permission_mode = Keyword.get(opts, :permission_mode, :auto)
     session_id = Keyword.get(opts, :session_id)
@@ -259,6 +261,7 @@ defmodule Loomkin.Teams.Agent do
           status: :idle,
           model: model,
           project_path: project_path,
+          vault_id: vault_id,
           tools: role_config.tools,
           permission_mode: permission_mode,
           subscription_ids: sub_ids,
@@ -2928,6 +2931,7 @@ defmodule Loomkin.Teams.Agent do
       system_prompt: system_prompt,
       project_path: state.project_path,
       project_path_resolver: project_path_resolver,
+      vault_id: state.vault_id,
       agent_name: state.name,
       team_id: state.team_id,
       session_id: state.session_id,

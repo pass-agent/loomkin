@@ -21,7 +21,7 @@ defmodule Loomkin.Schemas.VaultEntry do
   @required_fields ~w(vault_id path)a
   @optional_fields ~w(title entry_type body metadata tags checksum)a
 
-  @valid_entry_types ~w(note topic project person decision meeting checkin idea source stream_idea guest_profile okr)
+  @valid_entry_types ~w(note topic project person decision meeting checkin idea source stream_idea guest_profile okr spec milestone)
 
   def changeset(vault_entry, attrs) do
     vault_entry

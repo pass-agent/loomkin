@@ -119,6 +119,18 @@ defmodule Loomkin.Vault.Index do
     |> Repo.all()
   end
 
+  @doc "List vault entries whose path starts with a given prefix."
+  @spec list_by_prefix(String.t(), String.t()) :: [VaultEntry.t()]
+  def list_by_prefix(vault_id, prefix) do
+    like_pattern = prefix <> "%"
+
+    from(e in VaultEntry,
+      where: e.vault_id == ^vault_id and like(e.path, ^like_pattern),
+      order_by: [asc: e.path]
+    )
+    |> Repo.all()
+  end
+
   @doc "Count entries in a vault, optionally filtered by type."
   @spec count(String.t(), keyword()) :: non_neg_integer()
   def count(vault_id, opts \\ []) do

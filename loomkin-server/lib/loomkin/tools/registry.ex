@@ -28,7 +28,8 @@ defmodule Loomkin.Tools.Registry do
     Loomkin.Tools.VaultLink,
     Loomkin.Tools.VaultKanban,
     Loomkin.Tools.VaultDashboard,
-    Loomkin.Tools.VaultAudit
+    Loomkin.Tools.VaultAudit,
+    Loomkin.Tools.VaultPromote
   ]
 
   @peer_tools [
@@ -168,6 +169,7 @@ defmodule Loomkin.Tools.Registry do
     source_path target_path link_type display_text remove
     action assignee project_tag column filter_assignee filter_project filter_column
     dashboard_type days person fix
+    branch
   )a
 
   @known_param_key_map Map.new(@known_param_keys, fn atom -> {Atom.to_string(atom), atom} end)

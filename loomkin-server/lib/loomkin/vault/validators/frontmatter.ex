@@ -9,7 +9,9 @@ defmodule Loomkin.Vault.Validators.Frontmatter do
     "meeting" => ["date"],
     "checkin" => ["date", "author"],
     "person" => ["role"],
-    "okr" => ["cycle", "scope", "status"]
+    "okr" => ["cycle", "scope", "status"],
+    "spec" => ["status"],
+    "milestone" => ["status"]
   }
 
   @doc """

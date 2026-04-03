@@ -110,9 +110,14 @@
             required
             phx-mounted={JS.focus()}
             class="w-full bg-transparent border-0 border-b px-0 py-2 text-sm font-mono outline-none focus:ring-0"
-            style="color: var(--text-primary); border-color: var(--border-default); caret-color: var(--accent-emerald);"
+            style={"color: var(--text-primary); caret-color: var(--accent-emerald); border-color: #{if @form[:email].errors != [], do: "var(--accent-rose)", else: "var(--border-default)"};"}
             placeholder="you@example.com"
           />
+          <.error :for={
+            msg <- Enum.map(@form[:email].errors, &LoomkinWeb.CoreComponents.translate_error/1)
+          }>
+            {msg}
+          </.error>
         </div>
         <button type="submit" phx-disable-with="weaving..." class="loom-btn loom-btn-solid w-full">
           create account
