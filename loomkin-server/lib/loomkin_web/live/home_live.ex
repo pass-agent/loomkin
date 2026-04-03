@@ -506,15 +506,6 @@ defmodule LoomkinWeb.HomeLive do
           >
             {@vault.description}
           </p>
-
-          <div class="flex items-center gap-2">
-            <span
-              class="text-[10px] font-mono px-2 py-0.5 rounded"
-              style="background: var(--surface-2); color: var(--text-muted);"
-            >
-              {@vault.storage_type}
-            </span>
-          </div>
         </div>
 
         <%!-- Arrow — appears on hover --%>

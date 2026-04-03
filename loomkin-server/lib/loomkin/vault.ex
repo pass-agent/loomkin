@@ -1,7 +1,7 @@
 defmodule Loomkin.Vault do
   @moduledoc """
   Vault context — the public API for vault operations.
-  Composes storage, index, sync, and parser into a unified interface.
+  All storage is PostgreSQL-backed via the index. No file storage adapters.
   """
 
   require Logger
@@ -15,8 +15,6 @@ defmodule Loomkin.Vault do
   alias Loomkin.Vault.Entry
   alias Loomkin.Vault.Index
   alias Loomkin.Vault.Parser
-  alias Loomkin.Vault.Storage
-  alias Loomkin.Vault.Sync
   alias Loomkin.Vault.Validators.Frontmatter
   alias Loomkin.Vault.Validators.TemporalLanguage
 
@@ -45,7 +43,7 @@ defmodule Loomkin.Vault do
   end
 
   @doc """
-  Write a vault entry. Persists to both storage AND index.
+  Write a vault entry to PostgreSQL.
   Accepts either raw markdown content or an Entry struct.
   """
   @spec write(String.t(), String.t(), String.t() | Entry.t()) ::
@@ -56,10 +54,7 @@ defmodule Loomkin.Vault do
   end
 
   def write(vault_id, path, content) when is_binary(content) do
-    with {:ok, config} <- get_config(vault_id),
-         {adapter, opts} <- resolve_storage(config),
-         :ok <- adapter.put(path, content, opts),
-         {:ok, %Entry{} = parsed} <- Parser.parse(content) do
+    with {:ok, %Entry{} = parsed} <- Parser.parse(content) do
       checksum = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
 
       attrs = %{
@@ -77,7 +72,6 @@ defmodule Loomkin.Vault do
         {:ok, _} ->
           entry_with_id = %Entry{parsed | vault_id: vault_id, path: path}
           run_validators(entry_with_id)
-          Loomkin.Vault.FileSync.on_vault_write(vault_id, path, entry_with_id)
           {:ok, entry_with_id}
 
         {:error, reason} ->
@@ -92,15 +86,10 @@ defmodule Loomkin.Vault do
     write(vault_id, path, entry)
   end
 
-  @doc "Delete a vault entry from both storage and index."
+  @doc "Delete a vault entry from the index."
   @spec delete(String.t(), String.t()) :: :ok | {:error, term()}
   def delete(vault_id, path) do
-    with {:ok, config} <- get_config(vault_id),
-         {adapter, opts} <- resolve_storage(config),
-         :ok <- adapter.delete(path, opts) do
-      Index.delete(vault_id, path)
-      :ok
-    end
+    Index.delete(vault_id, path)
   end
 
   @doc "Search vault entries using full-text search."
@@ -128,24 +117,6 @@ defmodule Loomkin.Vault do
       total_entries: Index.count(vault_id),
       by_type: count_by_type(vault_id)
     }
-  end
-
-  @doc "Run a full sync from storage to index."
-  @spec sync(String.t()) :: {:ok, map()} | {:error, term()}
-  def sync(vault_id) do
-    with {:ok, config} <- get_config(vault_id),
-         {adapter, opts} <- resolve_storage(config) do
-      Sync.full_sync(vault_id, adapter, opts)
-    end
-  end
-
-  @doc "Check sync status between storage and index."
-  @spec check_sync(String.t()) :: {:ok, map()} | {:error, term()}
-  def check_sync(vault_id) do
-    with {:ok, config} <- get_config(vault_id),
-         {adapter, opts} <- resolve_storage(config) do
-      Sync.check_sync(vault_id, adapter, opts)
-    end
   end
 
   @doc "Get a vault config by vault_id."
@@ -236,28 +207,6 @@ defmodule Loomkin.Vault do
   defp collect_warning(warnings, :missing_frontmatter, {:warn, info}, path) do
     Logger.warning("[Vault] Missing frontmatter in #{path}: #{inspect(info)}")
     [{:missing_frontmatter, info} | warnings]
-  end
-
-  defp resolve_storage(%VaultConfig{storage_type: type, storage_config: config}) do
-    adapter = Storage.adapter(type)
-    opts = storage_config_to_opts(type, config)
-    {adapter, opts}
-  end
-
-  defp storage_config_to_opts("local", config) do
-    [root: config["root"] || config[:root] || "./vault"]
-  end
-
-  defp storage_config_to_opts("s3", config) do
-    [
-      bucket: config["bucket"] || config[:bucket],
-      prefix: config["prefix"] || config[:prefix] || "vault/",
-      region: config["region"] || config[:region] || "auto",
-      endpoint: config["endpoint"] || config[:endpoint],
-      access_key_id: config["access_key_id"] || config[:access_key_id],
-      secret_access_key: config["secret_access_key"] || config[:secret_access_key]
-    ]
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
   end
 
   defp count_by_type(vault_id) do

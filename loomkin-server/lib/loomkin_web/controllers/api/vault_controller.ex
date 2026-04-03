@@ -21,7 +21,6 @@ defmodule LoomkinWeb.Api.VaultController do
             vault_id: vc.vault_id,
             name: vc.name,
             description: vc.description,
-            storage_type: vc.storage_type,
             organization_id: vc.organization_id,
             entry_count: Vault.Index.count(vc.vault_id)
           }
@@ -46,7 +45,6 @@ defmodule LoomkinWeb.Api.VaultController do
           vault_id: config.vault_id,
           name: config.name,
           description: config.description,
-          storage_type: config.storage_type,
           organization_id: config.organization_id
         },
         stats: stats
