@@ -356,7 +356,6 @@ export interface CloudVault {
   vault_id: string;
   name: string;
   description: string | null;
-  storage_type: string;
   entry_count: number;
   organization_id: string | null;
 }

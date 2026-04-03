@@ -109,14 +109,13 @@ async function vaultList(ctx: CommandContext) {
     } else {
       // Table header
       lines.push(
-        `  ${pc.bold(pc.underline("ID"))}${" ".repeat(34)}${pc.bold(pc.underline("Name"))}${" ".repeat(16)}${pc.bold(pc.underline("Type"))}${" ".repeat(6)}${pc.bold(pc.underline("Entries"))}`,
+        `  ${pc.bold(pc.underline("ID"))}${" ".repeat(34)}${pc.bold(pc.underline("Name"))}${" ".repeat(16)}${pc.bold(pc.underline("Entries"))}`,
       );
       for (const v of vaults) {
         const id = v.vault_id.padEnd(36);
         const name = (v.name.length > 18 ? v.name.slice(0, 17) + "\u2026" : v.name).padEnd(20);
-        const storage = v.storage_type.padEnd(10);
         const entries = String(v.entry_count);
-        lines.push(`  ${pc.cyan(id)}${name}${pc.dim(storage)}${entries}`);
+        lines.push(`  ${pc.cyan(id)}${name}${entries}`);
       }
     }
   } catch (err) {
@@ -174,7 +173,7 @@ async function vaultAttach(vaultId: string, ctx: CommandContext) {
       pc.green(`Vault attached: ${vault.name}`),
       "",
       `  ${pc.dim("ID:")}     ${pc.cyan(vault.vault_id)}`,
-      `  ${pc.dim("Server:")} ${vault.storage_type}`,
+      `  ${pc.dim("Server:")} ${getCloudBaseUrl()}`,
       `  ${pc.dim("Config:")} ${getVaultConfigPath()}`,
       "",
       pc.dim("Agents in this project can now access this vault."),
@@ -294,9 +293,8 @@ async function vaultStatus(ctx: CommandContext) {
         lines.push("");
         lines.push(pc.bold(pc.underline("  Local Vaults")));
         for (const v of vaults) {
-          const storage = pc.dim(`[${v.storage_type}]`);
           const entries = v.entry_count != null ? pc.dim(`${v.entry_count} entries`) : "";
-          lines.push(`  ${pc.cyan(v.vault_id)} ${v.name} ${storage} ${entries}`);
+          lines.push(`  ${pc.cyan(v.vault_id)} ${v.name} ${entries}`);
         }
       }
     }
@@ -329,7 +327,6 @@ function showHelp(ctx: CommandContext) {
 interface VaultSummary {
   vault_id: string;
   name: string;
-  storage_type: string;
   entry_count?: number;
 }
 
