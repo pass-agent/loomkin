@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { logger } from "./logger.js";
 
 export interface HookDef {
   event: "PreToolUse" | "PostToolUse" | "SessionStart" | "SubagentStart";
@@ -48,7 +49,7 @@ export function loadHooks(): HookDef[] {
   try {
     const stat = Bun.file(HOOKS_CONFIG_PATH);
     if (stat.size > MAX_HOOKS_FILE_SIZE) {
-      console.error(`[hooks] config exceeds ${MAX_HOOKS_FILE_SIZE} bytes — skipping`);
+      logger.debug(`[hooks] config exceeds ${MAX_HOOKS_FILE_SIZE} bytes — skipping`);
       return [];
     }
     const raw = readFileSync(HOOKS_CONFIG_PATH, "utf-8");

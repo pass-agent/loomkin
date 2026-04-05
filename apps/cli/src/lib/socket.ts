@@ -1,6 +1,7 @@
 import { Socket, Channel } from "phoenix";
 import { getWsUrl } from "./urls.js";
 import { useAppStore } from "../stores/appStore.js";
+import { logger } from "./logger.js";
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 
@@ -9,7 +10,7 @@ const activeChannels = new Map<string, Channel>();
 
 function log(...args: unknown[]) {
   if (useAppStore.getState().verbose) {
-    console.error("[socket]", ...args);
+    logger.debug("[socket]", ...args);
   }
 }
 

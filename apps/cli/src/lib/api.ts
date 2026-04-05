@@ -2,6 +2,7 @@ import { getApiUrl } from "./urls.js";
 import { getConfig } from "./config.js";
 import { useAppStore } from "../stores/appStore.js";
 import { withRetry } from "./retry.js";
+import { logger } from "./logger.js";
 import type {
   AuthResponse,
   LoginRequest,
@@ -91,7 +92,7 @@ async function requestOnce<T>(
   }
 
   if (useAppStore.getState().verbose) {
-    console.error(`[api] ${options.method ?? "GET"} ${url}`);
+    logger.debug(`[api] ${options.method ?? "GET"} ${url}`);
   }
 
   const response = await fetch(url, { ...options, headers });
@@ -99,7 +100,7 @@ async function requestOnce<T>(
   if (!response.ok) {
     const body = await response.text();
     if (useAppStore.getState().verbose) {
-      console.error(`[api] ${response.status} ${body}`);
+      logger.debug(`[api] ${response.status} ${body}`);
     }
     throw new ApiError(response.status, body);
   }
@@ -117,7 +118,7 @@ async function request<T>(
     maxDelayMs: 10_000,
     onRetry: (attempt, _err) => {
       if (useAppStore.getState().verbose) {
-        console.error(`[api] retry attempt ${attempt}/3 for ${options.method ?? "GET"} ${path}`);
+        logger.debug(`[api] retry attempt ${attempt}/3 for ${options.method ?? "GET"} ${path}`);
       }
       useAppStore.getState().setRetryState({ attempt, total: 3, path });
     },

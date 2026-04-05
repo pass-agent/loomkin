@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import type { KeyBinding } from "./keymap.js";
+import { logger } from "./logger.js";
 
 export interface KeybindingOverride {
   [action: string]: string; // e.g. "submit": "ctrl+enter"
@@ -59,14 +60,14 @@ export function loadKeybindings(): KeybindingOverride {
 
       // Refuse to rebind protected keys
       if (PROTECTED_KEYS.has(normalizedCombo)) {
-        console.error(
+        logger.debug(
           `[keybindings] cannot rebind protected key "${combo}" for action "${action}" — skipped`,
         );
         continue;
       }
       // Refuse to rebind protected actions
       if (PROTECTED_ACTIONS.has(action.toLowerCase())) {
-        console.error(
+        logger.debug(
           `[keybindings] cannot rebind protected action "${action}" — skipped`,
         );
         continue;

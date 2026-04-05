@@ -16,6 +16,7 @@ export const defaultKeymap: KeyBinding[] = [
   { key: "k", ctrl: true, action: "scrollUp" },
   { key: "j", ctrl: true, action: "scrollDown" },
   { key: "t", ctrl: true, action: "toggleSplit" },
+  { key: "v", ctrl: true, action: "toggleVerboseToolOutput" },
   { key: "tab", action: "switchFocus" },
   { key: "]", action: "nextAgent" },
   { key: "[", action: "prevAgent" },
@@ -64,6 +65,7 @@ export const vimNormalKeymap: KeyBinding[] = [
   { key: "c", ctrl: true, action: "quit" },
   { key: "d", ctrl: true, action: "quit" },
   { key: "t", ctrl: true, action: "toggleSplit" },
+  { key: "v", ctrl: true, action: "toggleVerboseToolOutput" },
 ];
 
 /**
@@ -76,6 +78,7 @@ export const vimInsertKeymap: KeyBinding[] = [
   { key: "c", ctrl: true, action: "quit" },
   { key: "d", ctrl: true, action: "quit" },
   { key: "t", ctrl: true, action: "toggleSplit" },
+  { key: "v", ctrl: true, action: "toggleVerboseToolOutput" },
 ];
 
 export function matchKey(

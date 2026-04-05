@@ -14,7 +14,7 @@ interface Props {
 export function MessageSkeleton({ maxWidth = 60 }: Props) {
   return (
     <Box flexDirection="column">
-      <SkeletonText lines={2} maxWidth={maxWidth} mode="sweep" />
+      <SkeletonText lines={1} maxWidth={maxWidth} mode="sweep" />
     </Box>
   );
 }

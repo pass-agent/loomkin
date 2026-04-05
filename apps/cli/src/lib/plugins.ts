@@ -3,6 +3,7 @@ import { join } from "path";
 import { homedir } from "os";
 import { register, BUILTIN_COMMANDS, markCurrentAsBuiltins } from "../commands/registry.js";
 import type { SlashCommand } from "../commands/registry.js";
+import { logger } from "./logger.js";
 
 export interface LoadedPlugin {
   filePath: string;
@@ -52,7 +53,7 @@ export async function loadPlugins(): Promise<void> {
 
   const MAX_PLUGIN_FILES = 50;
   if (files.length > MAX_PLUGIN_FILES) {
-    console.error(
+    logger.debug(
       `[plugins] found ${files.length} plugin files — loading first ${MAX_PLUGIN_FILES} only`,
     );
     files = files.slice(0, MAX_PLUGIN_FILES);
@@ -66,7 +67,7 @@ export async function loadPlugins(): Promise<void> {
     // Ensure resolved path stays within the plugins directory (prevent symlink escape)
     const resolved = await Bun.resolve(filePath, ".");
     if (!resolved.startsWith(resolvedDir)) {
-      console.error(`[plugins] ${file}: path escapes plugins directory — skipping`);
+      logger.debug(`[plugins] ${file}: path escapes plugins directory — skipping`);
       continue;
     }
 
@@ -87,7 +88,7 @@ export async function loadPlugins(): Promise<void> {
 
       for (const candidate of candidates) {
         if (!isValidCommand(candidate)) {
-          console.error(`[plugins] ${file}: skipping invalid command (missing name or handler)`);
+          logger.debug(`[plugins] ${file}: skipping invalid command (missing name or handler)`);
           continue;
         }
 
@@ -95,7 +96,7 @@ export async function loadPlugins(): Promise<void> {
 
         // Protect built-in commands from being overridden
         if (BUILTIN_COMMANDS.has(cmd.name)) {
-          console.error(
+          logger.debug(
             `[plugins] ${file}: skipping "${cmd.name}" — conflicts with built-in command`,
           );
           continue;
@@ -110,7 +111,7 @@ export async function loadPlugins(): Promise<void> {
       plugin.status = "error";
       plugin.error = err instanceof Error ? err.message : String(err);
       loadedPlugins.push(plugin);
-      console.error(`[plugins] failed to load ${file}: ${plugin.error}`);
+      logger.debug(`[plugins] failed to load ${file}: ${plugin.error}`);
     }
   }
 }

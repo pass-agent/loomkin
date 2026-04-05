@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { MarkdownText } from "./MarkdownText.js";
 import { ToolCallDisplay } from "./ToolCallDisplay.js";
+import { GroupedToolDisplay } from "./GroupedToolDisplay.js";
 import { MessageSkeleton } from "./skeleton/MessageSkeleton.js";
-import type { Message as MessageType, ToolCall } from "../lib/types.js";
+import type { Message as MessageType, ToolCall, GroupedToolUse } from "../lib/types.js";
 
 interface Props {
   message: MessageType;
@@ -91,13 +92,29 @@ export function Message({
           ) : (
             isStreaming && <MessageSkeleton maxWidth={60} />
           )}
-          {tool_calls?.map((tc) => (
-            <ToolCallDisplay
-              key={tc.id}
-              toolCall={tc}
-              isPending={pendingToolCalls.some((p) => p.id === tc.id)}
-            />
-          ))}
+          {(() => {
+            if (!tool_calls || tool_calls.length === 0) return null;
+            const pendingSet = new Set(pendingToolCalls.map((p) => p.id));
+            const allInProgress = tool_calls.length >= 2 && tool_calls.every((tc) => pendingSet.has(tc.id));
+            if (allInProgress) {
+              const grouped: GroupedToolUse[] = tool_calls.map((tc) => ({
+                toolUseId: tc.id,
+                toolName: tc.renderer?.userFacingName(tc.arguments) || tc.name,
+                input: tc.arguments,
+                isResolved: false,
+                isError: false,
+                isInProgress: true,
+              }));
+              return <GroupedToolDisplay toolUses={grouped} />;
+            }
+            return tool_calls.map((tc) => (
+              <ToolCallDisplay
+                key={tc.id}
+                toolCall={tc}
+                isPending={pendingSet.has(tc.id)}
+              />
+            ));
+          })()}
         </Box>
       )}
 

@@ -15,6 +15,7 @@ export interface SessionState {
   messages: Message[];
   isStreaming: boolean;
   isPendingResponse: boolean;
+  currentStreamingMessageId: string | null;
   pendingToolCalls: ToolCall[];
   pendingPermissions: PermissionRequest[];
   pendingQuestions: AskUserQuestion[];
@@ -39,6 +40,9 @@ export interface SessionState {
   lastExtractionTokenCount: number;
   toolCallsSinceExtraction: number;
   extractionInProgress: boolean;
+
+  // Hook progress tracking
+  inProgressHookCounts: Map<string, number>;
 
   setSessionId: (id: string | null) => void;
   addMessage: (message: Message) => void;
@@ -75,6 +79,8 @@ export interface SessionState {
   incrementToolCallsForExtraction: () => void;
   setExtractionInProgress: (v: boolean) => void;
   recordExtraction: (currentTokenCount: number) => void;
+  hookStarted: (toolUseId: string) => void;
+  hookCompleted: (toolUseId: string) => void;
 }
 
 export const sessionStore = createStore<SessionState>((set, _get) => ({
@@ -82,6 +88,7 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
   messages: [],
   isStreaming: false,
   isPendingResponse: false,
+  currentStreamingMessageId: null,
   pendingToolCalls: [],
   pendingPermissions: [],
   pendingQuestions: [],
@@ -98,6 +105,7 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
   lastExtractionTokenCount: 0,
   toolCallsSinceExtraction: 0,
   extractionInProgress: false,
+  inProgressHookCounts: new Map(),
 
   setSessionId: (sessionId) => set({ sessionId }),
 
@@ -115,12 +123,14 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
 
   clearMessages: () => set({ messages: [], scrollOffset: 0 }),
 
-  setStreaming: (isStreaming) => set({ isStreaming }),
+  setStreaming: (isStreaming) =>
+    set(isStreaming ? { isStreaming } : { isStreaming, currentStreamingMessageId: null }),
 
   setPendingResponse: (isPendingResponse) => set({ isPendingResponse }),
 
   startStreamingMessage: (id) =>
     set((state) => ({
+      currentStreamingMessageId: id,
       messages: [
         ...state.messages,
         {
@@ -249,6 +259,21 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
 
   recordExtraction: (currentTokenCount) =>
     set({ lastExtractionTokenCount: currentTokenCount, toolCallsSinceExtraction: 0 }),
+
+  hookStarted: (toolUseId) =>
+    set((state) => {
+      const next = new Map(state.inProgressHookCounts);
+      next.set(toolUseId, (next.get(toolUseId) ?? 0) + 1);
+      return { inProgressHookCounts: next };
+    }),
+
+  hookCompleted: (toolUseId) =>
+    set((state) => {
+      const next = new Map(state.inProgressHookCounts);
+      const current = next.get(toolUseId) ?? 0;
+      next.set(toolUseId, Math.max(0, current - 1));
+      return { inProgressHookCounts: next };
+    }),
 }));
 
 export const useSessionStore = sessionStore;

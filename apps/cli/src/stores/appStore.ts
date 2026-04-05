@@ -27,6 +27,7 @@ export interface AppState {
   token: string | null;
   mode: Mode;
   model: string;
+  fastModel: string;
   modelProviderStatus: "idle" | "loading" | "loaded" | "error";
   configuredProviderIds: Set<string>;
   connectionState: ConnectionState;
@@ -68,6 +69,10 @@ export interface AppState {
   // Update available (version string or null)
   updateAvailable: string | null;
 
+  // Verbose tool output (condensed mode when false)
+  verboseToolOutput: boolean;
+  toggleVerboseToolOutput: () => void;
+
   // Plan mode
   planMode: boolean;
 
@@ -96,6 +101,7 @@ export interface AppState {
   incrementReconnectAttempts: () => void;
   setMode: (mode: Mode) => void;
   setModel: (model: string) => void;
+  setFastModel: (model: string) => void;
   setToken: (token: string | null) => void;
   addError: (error: AppError) => void;
   dismissError: (index: number) => void;
@@ -137,6 +143,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   token: config.token,
   mode: (config.defaultMode as Mode) || "code",
   model: config.defaultModel || "",
+  fastModel: "",
   modelProviderStatus: "idle" as const,
   configuredProviderIds: new Set<string>(),
   connectionState: "disconnected",
@@ -171,6 +178,9 @@ export const appStore = createStore<AppState>((set, get) => ({
   customKeybindings: {},
 
   updateAvailable: null,
+
+  verboseToolOutput: true,
+  toggleVerboseToolOutput: () => set((state) => ({ verboseToolOutput: !state.verboseToolOutput })),
 
   planMode: false,
 
@@ -213,6 +223,7 @@ export const appStore = createStore<AppState>((set, get) => ({
 
   setMode: (mode) => set({ mode }),
   setModel: (model) => set({ model }),
+  setFastModel: (fastModel) => set({ fastModel }),
   setToken: (token) => set({ token }),
 
   addError: (error) =>

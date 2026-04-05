@@ -1,3 +1,5 @@
+import type React from "react";
+
 export interface User {
   id: string;
   email: string;
@@ -37,6 +39,8 @@ export interface ToolCall {
   name: string;
   arguments: Record<string, unknown>;
   output?: string;
+  renderer?: ToolRenderer;
+  messageId?: string;
 }
 
 export interface PermissionRequest {
@@ -365,4 +369,69 @@ export interface VaultSearchResult {
   title: string;
   entry_type: string;
   tags: string[];
+}
+
+// ── Hook Progress ─────────────────────────────────────────────────────────
+
+export interface HookProgressEvent {
+  toolUseId: string
+  hookEvent: 'pre_tool_use' | 'post_tool_use'
+  status: 'running' | 'complete' | 'error'
+  message?: string
+}
+
+// ── Tool Result States ────────────────────────────────────────────────────
+
+export const TOOL_CANCEL_MESSAGE = '__cancel__'
+export const TOOL_REJECT_MESSAGE = '__reject__'
+export const TOOL_INTERRUPT_MESSAGE = '__interrupt__'
+export const TOOL_REJECT_WITH_REASON_PREFIX = '__reject_reason__:'
+
+export type ToolResultState = 'success' | 'error' | 'rejected' | 'canceled' | 'interrupted'
+
+export function getToolResultState(result: {
+  isError?: boolean
+  content?: string
+}): ToolResultState {
+  const c = result.content ?? ''
+  if (c === TOOL_CANCEL_MESSAGE) return 'canceled'
+  if (c === TOOL_INTERRUPT_MESSAGE) return 'interrupted'
+  if (c === TOOL_REJECT_MESSAGE) return 'rejected'
+  if (c.startsWith(TOOL_REJECT_WITH_REASON_PREFIX)) return 'rejected'
+  if (result.isError) return 'error'
+  return 'success'
+}
+
+// ── Tool Self-Rendering Protocol ──────────────────────────────────────────
+
+export interface RenderOptions {
+  verbose: boolean;
+  width?: number;
+}
+
+export interface ToolRenderer {
+  /** Human-readable name shown in UI. Return '' to use raw tool name. */
+  userFacingName(input?: unknown): string;
+  /** Render the tool invocation (args). Called when tool starts. */
+  renderToolUseMessage(input: unknown, options: RenderOptions): React.ReactNode;
+  /** Render the tool result. Return null if result surfaces elsewhere. */
+  renderToolResultMessage?(output: unknown, options: RenderOptions): React.ReactNode;
+  /** Render a group of parallel tool uses together. */
+  renderGroupedToolUse?(toolUses: GroupedToolUse[], options: RenderOptions): React.ReactNode;
+}
+
+export function buildToolRenderer(def: ToolRenderer): ToolRenderer {
+  return def;
+}
+
+// ── Grouped Tool Display ──────────────────────────────────────────────────
+
+export interface GroupedToolUse {
+  toolUseId: string
+  toolName: string
+  input: unknown
+  isResolved: boolean
+  isError: boolean
+  isInProgress: boolean
+  output?: unknown
 }

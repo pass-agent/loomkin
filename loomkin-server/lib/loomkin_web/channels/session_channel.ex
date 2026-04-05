@@ -129,6 +129,15 @@ defmodule LoomkinWeb.SessionChannel do
     end
   end
 
+  def handle_in("set_fast_model", %{"model" => model}, socket) do
+    session_id = socket.assigns.session_id
+
+    case Session.update_fast_model(session_id, model) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
+    end
+  end
+
   def handle_in("list_kindreds", _params, socket) do
     session = Persistence.get_session(socket.assigns.session_id)
 

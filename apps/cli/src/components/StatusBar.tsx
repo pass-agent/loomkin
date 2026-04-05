@@ -50,6 +50,7 @@ export function StatusBar() {
   const gitBranch = useStore(useAppStore, (s) => s.gitBranch);
   const updateAvailable = useStore(useAppStore, (s) => s.updateAvailable);
   const autoCompact = useStore(useAppStore, (s) => s.autoCompact);
+  const verboseToolOutput = useStore(useAppStore, (s) => s.verboseToolOutput);
   const activeConversation = useStore(useConversationStore, (s) => s.getActive());
   const extractionInProgress = useStore(useSessionStore, (s) => s.extractionInProgress);
 
@@ -129,6 +130,7 @@ export function StatusBar() {
           </Text>
         )}
         {!autoCompact && <Text dimColor>no-ac</Text>}
+        {!verboseToolOutput && <Text dimColor>▪ condensed</Text>}
         {extractionInProgress && <Text dimColor>mem:saving</Text>}
         {hasActivityGroup && <Text dimColor>│</Text>}
         {agentCount > 0 && (

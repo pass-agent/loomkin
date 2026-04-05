@@ -12,6 +12,7 @@ import { PlanApprovalPrompt } from "./components/PlanApprovalPrompt.js";
 import { InputArea } from "./components/InputArea.js";
 import { ProcessingStatus } from "./components/ProcessingStatus.js";
 import { ConnectionSkeleton } from "./components/skeleton/ConnectionSkeleton.js";
+import { SkeletonTimerProvider } from "./hooks/useSkeletonAnimation.js";
 import { useConnection } from "./hooks/useConnection.js";
 import { useChannelLifecycle } from "./hooks/useChannelLifecycle.js";
 import { useSessionChannel } from "./hooks/useSessionChannel.js";
@@ -30,6 +31,7 @@ import "./commands/help.js";
 import "./commands/clear.js";
 import "./commands/mode.js";
 import "./commands/model.js";
+import "./commands/fast-model.js";
 import "./commands/compact.js";
 import "./commands/session.js";
 import "./commands/quit.js";
@@ -107,6 +109,7 @@ export function App() {
     pendingQuestions,
     sendMessage,
     setModel,
+    setFastModel,
     respondPermission,
     answerQuestion,
     respondApproval,
@@ -176,13 +179,35 @@ export function App() {
       case "scrollUp":
         if (pane.splitMode && pane.focusedPane === "right") {
           pane.setRightScrollOffset(pane.rightScrollOffset + 5);
+        } else if (!pane.splitMode) {
+          const s = useSessionStore.getState();
+          s.setScrollOffset(s.scrollOffset + 5);
         }
         break;
       case "scrollDown":
         if (pane.splitMode && pane.focusedPane === "right") {
           pane.setRightScrollOffset(pane.rightScrollOffset - 5);
+        } else if (!pane.splitMode) {
+          const s = useSessionStore.getState();
+          s.setScrollOffset(Math.max(0, s.scrollOffset - 5));
         }
         break;
+      case "toggleVerboseToolOutput":
+        useAppStore.getState().toggleVerboseToolOutput();
+        break;
+    }
+  });
+
+  // PageUp/PageDown scrolling
+  useInput((_input, key) => {
+    if (!key.pageUp && !key.pageDown) return;
+    const pane = usePaneStore.getState();
+    const delta = key.pageUp ? 10 : -10;
+    if (pane.splitMode && pane.focusedPane === "right") {
+      pane.setRightScrollOffset(Math.max(0, pane.rightScrollOffset + delta));
+    } else {
+      const s = useSessionStore.getState();
+      s.setScrollOffset(Math.max(0, s.scrollOffset + delta));
     }
   });
 
@@ -213,8 +238,9 @@ export function App() {
       clearMessages,
       exit,
       setSessionModel: setModel,
+      setSessionFastModel: setFastModel,
     }),
-    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel],
+    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel, setFastModel],
   );
 
   const handleSubmit = useCallback(
@@ -232,9 +258,11 @@ export function App() {
   );
 
   return (
-    <Box flexDirection="column" height={termHeight} width={termWidth}>
+    <Box flexDirection="column" height={termHeight - 1} width={termWidth} overflow="hidden">
       {appState.connectionState === "connecting" ? (
-        <ConnectionSkeleton width={termWidth} height={termHeight - 6} />
+        <SkeletonTimerProvider>
+          <ConnectionSkeleton width={termWidth} />
+        </SkeletonTimerProvider>
       ) : splitMode ? (
         <SplitPaneLayout
           messages={messages}
@@ -247,6 +275,7 @@ export function App() {
           pendingToolCalls={pendingToolCalls}
           isStreaming={isStreaming}
           maxLines={termHeight - 6}
+          scrollOffset={sessionState.scrollOffset}
         />
       )}
       {latestError && <ErrorBanner error={latestError} />}
@@ -294,7 +323,7 @@ export function App() {
             onRespond={respondPlan}
           />
         )}
-      <InputArea onSubmit={handleSubmit} commandContext={commandContext} />
+      <InputArea onSubmit={handleSubmit} commandContext={commandContext} termWidth={termWidth} />
       <ProcessingStatus />
       <StatusBar />
     </Box>
