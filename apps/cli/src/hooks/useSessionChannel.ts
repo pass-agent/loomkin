@@ -365,6 +365,12 @@ export function useSessionChannel() {
     ch.push("set_model", { model });
   }, []);
 
+  const setFastModel = useCallback((model: string) => {
+    const ch = useChannelStore.getState().getChannel();
+    if (!ch) return;
+    ch.push("set_fast_model", { model });
+  }, []);
+
   const respondPermission = useCallback(
     (requestId: string, action: "allow_once" | "allow_always" | "deny") => {
       const ch = useChannelStore.getState().getChannel();
@@ -504,6 +510,7 @@ export function useSessionChannel() {
     pendingQuestions,
     sendMessage,
     setModel,
+    setFastModel,
     respondPermission,
     answerQuestion,
     respondApproval,

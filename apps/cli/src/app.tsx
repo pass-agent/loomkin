@@ -31,6 +31,7 @@ import "./commands/help.js";
 import "./commands/clear.js";
 import "./commands/mode.js";
 import "./commands/model.js";
+import "./commands/fast-model.js";
 import "./commands/compact.js";
 import "./commands/session.js";
 import "./commands/quit.js";
@@ -108,6 +109,7 @@ export function App() {
     pendingQuestions,
     sendMessage,
     setModel,
+    setFastModel,
     respondPermission,
     answerQuestion,
     respondApproval,
@@ -236,8 +238,9 @@ export function App() {
       clearMessages,
       exit,
       setSessionModel: setModel,
+      setSessionFastModel: setFastModel,
     }),
-    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel],
+    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel, setFastModel],
   );
 
   const handleSubmit = useCallback(

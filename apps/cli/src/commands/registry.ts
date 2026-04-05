@@ -25,6 +25,8 @@ export interface CommandContext {
   exit: () => void;
   showModelPicker?: (providers: ModelProvider[]) => void;
   setSessionModel?: (model: string) => void;
+  showFastModelPicker?: (providers: ModelProvider[]) => void;
+  setSessionFastModel?: (model: string) => void;
   captureNextInput?: (callback: (input: string) => void) => void;
   showListPicker?: (options: ListPickerOptions) => void;
 }

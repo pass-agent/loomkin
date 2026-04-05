@@ -46,6 +46,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResultIndex, setSearchResultIndex] = useState(0);
   const modelPickerAutoRef = useRef(false);
+  const modelPickerIsFastRef = useRef(false);
   const undoStack = useRef<string[]>([]);
   const skipSubmitRef = useRef(false);
   const pendingInputCaptureRef = useRef<((input: string) => void) | null>(null);
@@ -435,6 +436,12 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
     ...commandContext,
     showModelPicker: (providers) => {
       modelPickerAutoRef.current = false;
+      modelPickerIsFastRef.current = false;
+      setModelPickerProviders(providers);
+    },
+    showFastModelPicker: (providers) => {
+      modelPickerAutoRef.current = false;
+      modelPickerIsFastRef.current = true;
       setModelPickerProviders(providers);
     },
     captureNextInput: (callback) => {
@@ -560,13 +567,22 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
       ) : modelPickerProviders ? (
         <ModelPicker
           providers={modelPickerProviders}
-          currentModel={commandContext.appStore.model}
+          currentModel={
+            modelPickerIsFastRef.current
+              ? commandContext.appStore.fastModel
+              : commandContext.appStore.model
+          }
           onSelect={(id, label) => {
-            commandContext.appStore.setModel(id);
-            commandContext.setSessionModel?.(id);
-            commandContext.addSystemMessage(
-              `Switched to model ${label} (${id}).`,
-            );
+            if (modelPickerIsFastRef.current) {
+              commandContext.appStore.setFastModel(id);
+              commandContext.setSessionFastModel?.(id);
+              commandContext.addSystemMessage(`Fast model set to ${label} (${id}).`);
+            } else {
+              commandContext.appStore.setModel(id);
+              commandContext.setSessionModel?.(id);
+              commandContext.addSystemMessage(`Switched to model ${label} (${id}).`);
+            }
+            modelPickerIsFastRef.current = false;
             modelPickerAutoRef.current = false;
             setModelPickerProviders(null);
           }}
