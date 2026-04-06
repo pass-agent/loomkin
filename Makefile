@@ -15,9 +15,11 @@ help:          ## Show available targets
 	@grep -E '^[a-zA-Z_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 setup:         ## Install all dependencies and configure the project
+ifeq ($(shell uname -s),Darwin)
 	brew bundle
-	localias start
+endif
 	mise install
+	$(MAKE) localias
 	pnpm install
 	lefthook install
 	$(MAKE) db.up
@@ -28,10 +30,19 @@ setup:         ## Install all dependencies and configure the project
 	@echo "  eval \"\$$(mise activate bash)\"  # bash"
 	@echo "Then open a new terminal or run: eval \"\$$(mise activate zsh)\""
 
-dev:           ## Start the dev server
+localias:      ## Start localias proxy
+	@if pgrep -x localias > /dev/null 2>&1; then \
+		echo "localias is already running"; \
+	elif [ "$$(uname -s)" = "Darwin" ]; then \
+		localias start; \
+	else \
+		localias start || (echo ""; echo "localias failed to bind ports 443/80 — run with sudo:"; echo "  sudo $$(which localias) start"; echo ""); \
+	fi
+
+dev: localias  ## Start the dev server
 	cd $(SERVER_DIR) && mix phx.server
 
-self-edit:     ## Start in self-edit mode (code reloader off for agent edits)
+self-edit: localias ## Start in self-edit mode (code reloader off for agent edits)
 	cd $(SERVER_DIR) && LOOMKIN_SELF_EDIT=1 mix phx.server
 
 test:          ## Run the test suite
