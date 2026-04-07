@@ -254,6 +254,8 @@ defmodule Loomkin.AgentLoop do
          config,
          iteration
        ) do
+    log_tool_plan(config, iteration, classified.tool_calls)
+
     emit(config, :tool_calls_received, %{
       tool_calls: classified.tool_calls,
       text: classified.text
@@ -761,6 +763,61 @@ defmodule Loomkin.AgentLoop do
   defp maybe_track_read_file(_tool_name, _tool_args, _project_path, _result_text), do: :ok
 
   # -- Cycle detection ---------------------------------------------------------
+
+  defp log_tool_plan(config, iteration, tool_calls) do
+    summaries =
+      tool_calls
+      |> Enum.map(&summarize_tool_call/1)
+      |> Enum.join(" | ")
+
+    Logger.info(
+      "[Kin:loop] tool_plan agent=#{config.agent_name || "-"} team=#{config.team_id || "-"} iteration=#{iteration} count=#{length(tool_calls)} tools=#{summaries}"
+    )
+  end
+
+  defp summarize_tool_call(tool_call) do
+    name = tool_call[:name] || tool_call["name"] || "unknown"
+    args = tool_call[:arguments] || tool_call["arguments"] || %{}
+    "#{name}(#{tool_arg_preview(args)})"
+  end
+
+  defp tool_arg_preview(args) when is_map(args) do
+    interesting_keys =
+      ~w(query query_type search_term title topic node_type purpose team_name limit)a
+
+    preview_parts =
+      args
+      |> Enum.filter(fn {key, _value} ->
+        key in interesting_keys or to_string(key) in Enum.map(interesting_keys, &to_string/1)
+      end)
+      |> Enum.take(3)
+      |> Enum.map(fn {key, value} -> "#{key}=#{preview_tool_value(value)}" end)
+
+    case preview_parts do
+      [] ->
+        args
+        |> Map.keys()
+        |> Enum.map(&to_string/1)
+        |> Enum.sort()
+        |> Enum.take(3)
+        |> Enum.join(",")
+
+      parts ->
+        Enum.join(parts, ", ")
+    end
+  end
+
+  defp tool_arg_preview(_args), do: "-"
+
+  defp preview_tool_value(value) when is_binary(value) do
+    value
+    |> String.replace(~r/\s+/, " ")
+    |> String.slice(0, 40)
+  end
+
+  defp preview_tool_value(value) when is_list(value), do: "list[#{length(value)}]"
+  defp preview_tool_value(value) when is_map(value), do: "map(keys=#{map_size(value)})"
+  defp preview_tool_value(value), do: inspect(value, limit: 20)
 
   @cycle_warning "You already called the same tool(s) with identical arguments " <>
                    "in the previous iteration and got the same results. Do NOT repeat " <>

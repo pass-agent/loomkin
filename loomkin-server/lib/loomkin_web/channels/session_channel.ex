@@ -538,7 +538,7 @@ defmodule LoomkinWeb.SessionChannel do
     if sig.data[:team_id] == socket.assigns[:team_id] do
       push(socket, "agent_error", %{
         agent_name: sig.data[:agent_name],
-        error: to_string(sig.data[:error] || sig.data[:message] || "unknown")
+        error: format_agent_error(sig.data)
       })
     end
 
@@ -847,6 +847,32 @@ defmodule LoomkinWeb.SessionChannel do
   def handle_info(%Jido.Signal{}, socket), do: {:noreply, socket}
 
   # --- Serialization ---
+
+  defp format_agent_error(data) do
+    payload = data[:payload]
+
+    cond do
+      present_string?(data[:error]) ->
+        to_string(data[:error])
+
+      present_string?(data[:message]) ->
+        to_string(data[:message])
+
+      is_map(payload) && is_integer(payload[:max]) ->
+        "Exceeded max iterations (#{payload[:max]})"
+
+      is_map(payload) && present_string?(payload[:reason]) ->
+        to_string(payload[:reason])
+
+      is_map(payload) && present_string?(payload[:error]) ->
+        to_string(payload[:error])
+
+      true ->
+        "unknown"
+    end
+  end
+
+  defp present_string?(value), do: is_binary(value) and String.trim(value) != ""
 
   defp ensure_session_started(session) do
     opts =

@@ -34,6 +34,12 @@ defmodule LoomkinWeb.SessionChannelTest do
     {:ok, _, socket} =
       subscribe_and_join(socket, SessionChannel, "session:#{session.id}")
 
+    receive do
+      {:email, _email} -> :ok
+    after
+      0 -> :ok
+    end
+
     signal =
       Loomkin.Signals.Collaboration.PeerMessage.new!(%{
         from: "system",
@@ -56,6 +62,48 @@ defmodule LoomkinWeb.SessionChannelTest do
       to: "concierge",
       content: "spawned researcher",
       team_id: "team-123"
+    }
+  end
+
+  test "formats max-iteration agent errors for cli consumers", %{user: user, scope: scope} do
+    {:ok, session} =
+      Persistence.create_session(%{
+        model: "anthropic:claude-sonnet-4-5",
+        project_path: "/tmp",
+        team_id: "team-123",
+        user_id: user.id
+      })
+
+    socket = socket(LoomkinWeb.UserSocket, "user_socket:#{user.id}", %{current_scope: scope})
+
+    {:ok, _, socket} =
+      subscribe_and_join(socket, SessionChannel, "session:#{session.id}")
+
+    receive do
+      {:email, _email} -> :ok
+    after
+      0 -> :ok
+    end
+
+    signal =
+      Loomkin.Signals.Agent.Error.new!(%{
+        agent_name: "concierge",
+        team_id: "team-123"
+      })
+
+    signal = %{
+      signal
+      | data:
+          Map.merge(signal.data, %{
+            payload: %{iterations: 30, max: 30}
+          })
+    }
+
+    send(socket.channel_pid, signal)
+
+    assert_push "agent_error", %{
+      agent_name: "concierge",
+      error: "Exceeded max iterations (30)"
     }
   end
 end

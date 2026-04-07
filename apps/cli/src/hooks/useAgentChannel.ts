@@ -287,8 +287,12 @@ export function useAgentChannel() {
           ...payload,
           received_at: Date.now(),
         });
-        const roleNames = payload.roles.map((r) => r.role).join(", ");
-        notify(`🔒 ${payload.agent_name} wants to spawn: ${roleNames} ($${payload.estimated_cost.toFixed(4)})`);
+        const roleNames = payload.roles
+          .map((r) => (r.name ? `${r.name} (${r.role})` : r.role))
+          .filter(Boolean)
+          .join(", ");
+        const summary = roleNames || payload.team_name || payload.purpose || "new team";
+        notify(`🔒 ${payload.agent_name} wants to spawn: ${summary} ($${payload.estimated_cost.toFixed(4)})`);
       },
     );
 
