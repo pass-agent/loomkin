@@ -41,7 +41,7 @@ defmodule Loomkin.AgentLoop do
   @coordination_warning_threshold 2
   @coordination_abort_threshold 6
   @concierge_coordination_warning_threshold 1
-  @concierge_coordination_abort_threshold 5
+  @concierge_coordination_abort_threshold 7
   @research_warning_threshold 3
   @coordination_warning """
   You have spent multiple consecutive iterations on coordination/context tools.

@@ -477,8 +477,29 @@ defmodule Loomkin.AgentLoopTest do
       assert_received {:event, :coordination_loop_stopped, %{streak: 6}}
     end
 
-    test "concierge stops earlier than other roles" do
-      Process.put(:loomkin_coordination_streak, 5)
+    test "concierge gets more room before the hard stop" do
+      Process.put(:loomkin_coordination_streak, 6)
+
+      config = %{
+        role: :concierge,
+        agent_name: "concierge",
+        team_id: "team-123",
+        on_event: fn _, _ -> :ok end
+      }
+
+      response = %Response{
+        id: "resp_123",
+        model: "openai:gpt-5.4",
+        context: ReqLLM.Context.new([]),
+        usage: %{input_tokens: 10, output_tokens: 20, total_cost: 0.12}
+      }
+
+      assert {:continue, []} =
+               AgentLoop.maybe_stop_coordination_loop([], config, response)
+    end
+
+    test "concierge still stops after an extended coordination streak" do
+      Process.put(:loomkin_coordination_streak, 7)
 
       config = %{
         role: :concierge,
