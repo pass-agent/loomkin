@@ -964,7 +964,7 @@ defmodule Loomkin.AgentLoop do
     Process.put(:loomkin_prev_tool_signature, current_sig)
 
     if prev_sig == current_sig and prev_sig != nil do
-      warning_msg = %{role: :user, content: @cycle_warning}
+      warning_msg = %{role: :system, content: @cycle_warning}
       emit(config, :cycle_detected, %{signature: current_sig})
       emit(config, :new_message, warning_msg)
       messages ++ [warning_msg]
@@ -991,7 +991,7 @@ defmodule Loomkin.AgentLoop do
         )
 
         warning_msg = %{
-          role: :user,
+          role: :system,
           content: warning_content
         }
 
@@ -1031,7 +1031,7 @@ defmodule Loomkin.AgentLoop do
         )
 
         warning_msg = %{
-          role: :user,
+          role: :system,
           content: String.trim(@research_warning)
         }
 

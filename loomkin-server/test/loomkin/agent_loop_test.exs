@@ -285,7 +285,7 @@ defmodule Loomkin.AgentLoopTest do
 
       assert sig_a == sig_b
       assert length(messages) == 1
-      assert hd(messages).role == :user
+      assert hd(messages).role == :system
       assert hd(messages).content =~ "Do NOT repeat"
     end
 
@@ -352,7 +352,7 @@ defmodule Loomkin.AgentLoopTest do
 
       if prev_sig == current_sig and prev_sig != nil do
         warning_msg = %{
-          role: :user,
+          role: :system,
           content:
             "You already called the same tool(s) with identical arguments " <>
               "in the previous iteration and got the same results. Do NOT repeat " <>
@@ -401,7 +401,7 @@ defmodule Loomkin.AgentLoopTest do
       refute_received {:event, :coordination_loop_detected, _}
 
       messages = AgentLoop.maybe_inject_coordination_warning([], tools, config)
-      assert [%{role: :user, content: content}] = messages
+      assert [%{role: :system, content: content}] = messages
       assert content =~ "Stop planning and move the task forward"
 
       assert_received {:event, :coordination_loop_detected,
@@ -421,7 +421,7 @@ defmodule Loomkin.AgentLoopTest do
       tools = [%{name: "decision_query", arguments: %{"query_type" => "pulse"}}]
 
       messages = AgentLoop.maybe_inject_coordination_warning([], tools, config)
-      assert [%{role: :user, content: content}] = messages
+      assert [%{role: :system, content: content}] = messages
       assert content =~ "Stay available for the human"
       assert content =~ "spawn a specialist or team"
       assert content =~ "do NOT ask what they want next"
@@ -556,7 +556,7 @@ defmodule Loomkin.AgentLoopTest do
       assert [] == AgentLoop.maybe_inject_research_warning([], tools, config)
 
       messages = AgentLoop.maybe_inject_research_warning([], tools, config)
-      assert [%{role: :user, content: content}] = messages
+      assert [%{role: :system, content: content}] = messages
       assert content =~ "You are a researcher"
       assert content =~ "context_offload"
       assert content =~ "peer_complete_task"
