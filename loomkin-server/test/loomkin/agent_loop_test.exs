@@ -253,10 +253,6 @@ defmodule Loomkin.AgentLoopTest do
     end
 
     test "tool_call_signature produces deterministic, order-independent signatures" do
-      # Access the private function indirectly by testing the process dict behavior.
-      # We verify that the signature mechanism works by running two loops and
-      # checking the process dictionary state.
-
       # Two calls with same tools in different order should produce same signature
       calls_a = [
         %{name: "file_read", arguments: %{"path" => "/a.txt"}},
@@ -275,12 +271,12 @@ defmodule Loomkin.AgentLoopTest do
       config = %{on_event: fn _, _ -> :ok end}
 
       # First call sets the signature
-      messages = apply_cycle_check(calls_a, [], config)
+      messages = AgentLoop.maybe_inject_cycle_warning([], calls_a, config)
       sig_a = Process.get(:loomkin_prev_tool_signature)
       assert messages == []
 
       # Second call with reordered tools should detect a cycle
-      messages = apply_cycle_check(calls_b, [], config)
+      messages = AgentLoop.maybe_inject_cycle_warning([], calls_b, config)
       sig_b = Process.get(:loomkin_prev_tool_signature)
 
       assert sig_a == sig_b
@@ -294,16 +290,16 @@ defmodule Loomkin.AgentLoopTest do
       config = %{on_event: fn _, _ -> :ok end}
 
       _messages =
-        apply_cycle_check(
-          [%{name: "file_read", arguments: %{"path" => "/a.txt"}}],
+        AgentLoop.maybe_inject_cycle_warning(
           [],
+          [%{name: "file_read", arguments: %{"path" => "/a.txt"}}],
           config
         )
 
       messages =
-        apply_cycle_check(
-          [%{name: "file_read", arguments: %{"path" => "/b.txt"}}],
+        AgentLoop.maybe_inject_cycle_warning(
           [],
+          [%{name: "file_read", arguments: %{"path" => "/b.txt"}}],
           config
         )
 
@@ -324,48 +320,45 @@ defmodule Loomkin.AgentLoopTest do
       calls = [%{name: "grep", arguments: %{"pattern" => "foo"}}]
 
       # First call — no cycle
-      apply_cycle_check(calls, [], config)
+      AgentLoop.maybe_inject_cycle_warning([], calls, config)
       refute_received {:event, :cycle_detected, _}
 
       # Second call — cycle detected
-      apply_cycle_check(calls, [], config)
+      AgentLoop.maybe_inject_cycle_warning([], calls, config)
       assert_received {:event, :cycle_detected, %{signature: sig}}
       assert is_binary(sig)
       assert sig =~ "grep"
     end
 
-    # Helper that mirrors the private maybe_inject_cycle_warning logic
-    defp apply_cycle_check(tool_calls, messages, config) do
-      prev_sig = Process.get(:loomkin_prev_tool_signature)
+    test "cycle warning preserves existing history instead of replacing it" do
+      Process.put(:loomkin_prev_tool_signature, nil)
 
-      current_sig =
-        tool_calls
-        |> Enum.map(fn tc ->
-          name = tc[:name] || tc["name"] || ""
-          args = tc[:arguments] || tc["arguments"] || %{}
-          "#{name}:#{inspect(args)}"
-        end)
-        |> Enum.sort()
-        |> Enum.join("|")
+      existing_messages = [
+        %{role: :user, content: "Please investigate vault ingestion"},
+        %{
+          role: :assistant,
+          content: "",
+          tool_calls: [%{id: "call_1", name: "search_keepers", arguments: %{}}]
+        },
+        %{role: :tool, content: "found prior work", tool_call_id: "call_1"}
+      ]
 
-      Process.put(:loomkin_prev_tool_signature, current_sig)
+      repeated_tools = [
+        %{name: "search_keepers", arguments: %{"query" => "vault ingestion"}}
+      ]
 
-      if prev_sig == current_sig and prev_sig != nil do
-        warning_msg = %{
-          role: :system,
-          content:
-            "You already called the same tool(s) with identical arguments " <>
-              "in the previous iteration and got the same results. Do NOT repeat " <>
-              "the same calls. Either use the results you already have to form a " <>
-              "final answer, or try a different approach."
-        }
+      config = %{on_event: fn _, _ -> :ok end}
 
-        config.on_event.(:cycle_detected, %{signature: current_sig})
-        config.on_event.(:new_message, warning_msg)
-        messages ++ [warning_msg]
-      else
-        messages
-      end
+      assert existing_messages ==
+               AgentLoop.maybe_inject_cycle_warning(existing_messages, repeated_tools, config)
+
+      updated_messages =
+        AgentLoop.maybe_inject_cycle_warning(existing_messages, repeated_tools, config)
+
+      assert length(updated_messages) == length(existing_messages) + 1
+      assert Enum.take(updated_messages, length(existing_messages)) == existing_messages
+      assert List.last(updated_messages).role == :system
+      assert List.last(updated_messages).content =~ "Do NOT repeat"
     end
   end
 

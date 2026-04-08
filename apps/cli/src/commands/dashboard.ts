@@ -9,6 +9,28 @@ import { useAppStore } from "../stores/appStore.js";
 import { formatTokens, formatCost } from "../lib/format.js";
 import { getSession } from "../lib/api.js";
 
+function agentDetail(agent: {
+  currentTool?: string;
+  currentTask?: string;
+  currentThought?: string;
+  lastThought?: string;
+}): string {
+  if (agent.currentTool) {
+    return `— ${agent.currentTool}`;
+  }
+
+  const thought = (agent.currentThought ?? agent.lastThought ?? "").replace(/\s+/g, " ").trim();
+  if (thought) {
+    return `— thinking: ${thought.slice(0, 40)}${thought.length > 40 ? "…" : ""}`;
+  }
+
+  if (agent.currentTask) {
+    return `— ${agent.currentTask.slice(0, 40)}${agent.currentTask.length > 40 ? "…" : ""}`;
+  }
+
+  return "Idle";
+}
+
 async function renderDashboard(ctx: CommandContext) {
   const { sessionId } = useSessionStore.getState();
   const { agents } = useAgentStore.getState();
@@ -47,7 +69,7 @@ async function renderDashboard(ctx: CommandContext) {
         (agent.publishedFindingsCount ?? 0) > 0
           ? ` ${pc.green(`[pub:${agent.publishedFindingsCount}]`)}`
           : "";
-      const agentLine = `  ${agent.status === 'working' ? pc.green('●') : pc.dim('○')} ${pc.bold(agent.name)} ${pc.cyan(`[${agent.role}]`)}${published} ${pc.dim(agent.currentTask ? `— ${agent.currentTask.slice(0, 40)}...` : 'Idle')}`;
+      const agentLine = `  ${agent.status === 'working' ? pc.green('●') : pc.dim('○')} ${pc.bold(agent.name)} ${pc.cyan(`[${agent.role}]`)}${published} ${pc.dim(agentDetail(agent))}`;
       lines.push(pc.bold(pc.cyan("┃")) + agentLine + " ".repeat(78 - stripAnsi(agentLine).length) + pc.bold(pc.cyan("┃")));
     });
   }

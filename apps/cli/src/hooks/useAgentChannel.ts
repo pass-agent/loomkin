@@ -26,6 +26,14 @@ function makeNotifyMessage(content: string, counter: { current: number }): Messa
   };
 }
 
+const MAX_THOUGHT_CHARS = 280;
+
+function appendThought(existing: string | undefined, token: string): string {
+  const next = `${existing ?? ""}${token}`;
+  if (next.length <= MAX_THOUGHT_CHARS) return next;
+  return next.slice(-MAX_THOUGHT_CHARS);
+}
+
 /**
  * Subscribes to agent-related events on the shared Phoenix channel.
  * The channel lifecycle is owned by useChannelLifecycle — this hook
@@ -70,9 +78,20 @@ export function useAgentChannel() {
     // --- Agent events ---
 
     on<{ agent_name: string; status: string; pause_queued?: boolean }>("agent_status", (payload) => {
+      const clearTransientState = ["idle", "done", "completed", "error"].includes(
+        payload.status,
+      );
+
       useAgentStore.getState().upsertAgent(payload.agent_name, {
         status: payload.status,
         pauseQueued: payload.pause_queued,
+        ...(clearTransientState
+          ? {
+              currentTool: undefined,
+              currentTask: undefined,
+              currentThought: undefined,
+            }
+          : {}),
       });
       if (payload.status === "done" || payload.status === "completed") {
         notify(`✓ ${payload.agent_name} finished`);
@@ -89,8 +108,12 @@ export function useAgentChannel() {
     });
 
     on<{ agent_name: string; tool_name: string }>("agent_tool_executing", (payload) => {
+      const existing = useAgentStore.getState().agents.get(payload.agent_name);
+
       useAgentStore.getState().upsertAgent(payload.agent_name, {
         currentTool: payload.tool_name,
+        currentThought: undefined,
+        lastThought: existing?.currentThought ?? existing?.lastThought,
         status: "working",
       });
     });
@@ -98,6 +121,33 @@ export function useAgentChannel() {
     on<{ agent_name: string; tool_name: string }>("agent_tool_complete", (payload) => {
       useAgentStore.getState().upsertAgent(payload.agent_name, {
         currentTool: undefined,
+      });
+    });
+
+    on<{ agent_name: string; team_id: string }>("agent_stream_start", (payload) => {
+      useAgentStore.getState().upsertAgent(payload.agent_name, {
+        status: "working",
+        currentThought: "",
+      });
+    });
+
+    on<{ agent_name: string; team_id: string; token: string }>("agent_stream_delta", (payload) => {
+      const existing = useAgentStore.getState().agents.get(payload.agent_name);
+      const currentThought = appendThought(existing?.currentThought, payload.token);
+
+      useAgentStore.getState().upsertAgent(payload.agent_name, {
+        status: "working",
+        currentThought,
+        lastThought: currentThought,
+      });
+    });
+
+    on<{ agent_name: string; team_id: string }>("agent_stream_end", (payload) => {
+      const existing = useAgentStore.getState().agents.get(payload.agent_name);
+
+      useAgentStore.getState().upsertAgent(payload.agent_name, {
+        currentThought: undefined,
+        lastThought: existing?.currentThought ?? existing?.lastThought,
       });
     });
 
@@ -164,6 +214,14 @@ export function useAgentChannel() {
         role: payload.role,
       }).catch(() => {});
     });
+
+    on<{ child_team_id: string; team_name: string; depth: number }>(
+      "child_team_created",
+      (payload) => {
+        const label = payload.team_name || payload.child_team_id;
+        notify(`🧭 Child team ready: ${label} (${payload.child_team_id})`);
+      },
+    );
 
     // --- Collaboration events ---
 
@@ -270,8 +328,13 @@ export function useAgentChannel() {
       "team_task_update",
       (payload) => {
         if (payload.agent_name && payload.task) {
+          const clearTask = ["idle", "done", "completed", "cancelled"].includes(
+            payload.status ?? "",
+          );
+
           useAgentStore.getState().upsertAgent(payload.agent_name, {
-            currentTask: payload.task,
+            currentTask: clearTask ? undefined : payload.task,
+            ...(payload.status ? { status: payload.status } : {}),
           });
         }
       },

@@ -958,7 +958,8 @@ defmodule Loomkin.AgentLoop do
                    "the same calls. Either use the results you already have to form a " <>
                    "final answer, or try a different approach."
 
-  defp maybe_inject_cycle_warning(tool_calls, messages, config) do
+  @doc false
+  def maybe_inject_cycle_warning(messages, tool_calls, config) do
     prev_sig = Process.get(:loomkin_prev_tool_signature)
     current_sig = tool_call_signature(tool_calls)
     Process.put(:loomkin_prev_tool_signature, current_sig)

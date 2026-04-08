@@ -27,6 +27,10 @@ function formatAgent(agent: AgentInfo, indent = ""): string {
   let detail = "";
   if (agent.currentTool) {
     detail = pc.dim(` → ${agent.currentTool}`);
+  } else if (agent.currentThought || agent.lastThought) {
+    const thought = (agent.currentThought ?? agent.lastThought ?? "").replace(/\s+/g, " ").trim();
+    const preview = thought.length > 50 ? thought.slice(0, 50) + "…" : thought;
+    detail = pc.dim(` — thinking: ${preview}`);
   } else if (agent.currentTask) {
     const taskPreview =
       agent.currentTask.length > 50

@@ -67,16 +67,18 @@ export function Message({
     );
   }
 
-  const roleLabel = agent_name ? `${role}:${agent_name}` : role;
+  const roleLabel = agent_name || "assistant";
 
   return (
     <Box flexDirection="column" marginBottom={1}>
       {role === "user" && (
-        <Box>
-          <Text color="blue" bold>
-            {">"}{" "}
+        <Box flexDirection="column">
+          <Text color="blue" bold dimColor>
+            you
           </Text>
-          <Text>{content}</Text>
+          {(content ?? "").split("\n").map((line, i) => (
+            <Text key={i}>{line}</Text>
+          ))}
         </Box>
       )}
 

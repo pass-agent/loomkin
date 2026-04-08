@@ -547,6 +547,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
     placeholder.length > availableWidth
       ? placeholder.slice(0, Math.max(0, availableWidth - 1)) + "…"
       : placeholder;
+  const dividerWidth = Math.max(10, termWidth - 2);
 
   const wasAuto = modelPickerAutoRef.current;
 
@@ -615,6 +616,9 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
         />
       ) : (
         <>
+          <Box paddingX={1}>
+            <Text dimColor>{"─".repeat(dividerWidth)}</Text>
+          </Box>
           <Box borderStyle="single" borderColor={promptColor} paddingX={1}>
             <Text color={promptColor} bold>
               {promptChar}{" "}

@@ -3296,12 +3296,30 @@ defmodule Loomkin.Teams.Agent do
               []
 
             _ ->
+              Logger.info(
+                "[Kin:research] awaiting findings agent=#{agent_name} team=#{team_id} expected=#{researcher_count} timeout_ms=120000"
+              )
+
               # Block in receive loop collecting findings from researchers
-              collect_research_findings(researcher_count, 120_000, [])
+              collect_research_findings(researcher_count, 120_000, [], %{
+                agent_name: agent_name,
+                team_id: team_id,
+                expected: researcher_count
+              })
           end
 
         # Exit awaiting_synthesis; agent returns to :working
         GenServer.cast(agent_pid, :exit_awaiting_synthesis)
+
+        if findings == [] do
+          Logger.warning(
+            "[Kin:research] no findings received agent=#{agent_name} team=#{team_id} expected=#{researcher_count}"
+          )
+        else
+          Logger.info(
+            "[Kin:research] findings collected agent=#{agent_name} team=#{team_id} received=#{length(findings)} expected=#{researcher_count}"
+          )
+        end
 
         summary =
           findings
@@ -3312,15 +3330,23 @@ defmodule Loomkin.Teams.Agent do
     end
   end
 
-  defp collect_research_findings(0, _timeout_ms, acc), do: Enum.reverse(acc)
+  defp collect_research_findings(0, _timeout_ms, acc, _meta), do: Enum.reverse(acc)
 
-  defp collect_research_findings(count, timeout_ms, acc) when count > 0 do
+  defp collect_research_findings(count, timeout_ms, acc, meta) when count > 0 do
     receive do
       {:research_findings, from, content} ->
-        collect_research_findings(count - 1, timeout_ms, [{from, content} | acc])
+        Logger.info(
+          "[Kin:research] finding received agent=#{meta.agent_name} team=#{meta.team_id} from=#{from} remaining=#{count - 1}"
+        )
+
+        collect_research_findings(count - 1, timeout_ms, [{from, content} | acc], meta)
     after
       timeout_ms ->
         # partial findings on timeout — proceed with what arrived
+        Logger.warning(
+          "[Kin:research] findings timeout agent=#{meta.agent_name} team=#{meta.team_id} remaining=#{count} received=#{length(acc)} expected=#{meta.expected}"
+        )
+
         Enum.reverse(acc)
     end
   end
@@ -3528,7 +3554,8 @@ defmodule Loomkin.Teams.Agent do
          team_id,
          agent_name
        ) do
-    result = AgentLoop.default_run_tool(tool_module, tool_args, context)
+    atomized_args = Loomkin.Tools.Registry.atomize_keys(tool_args)
+    result = Jido.Exec.run(tool_module, atomized_args, context, timeout: 60_000)
 
     if gate_id do
       # Publish GateResolved for approved path (human gate)
@@ -3548,11 +3575,62 @@ defmodule Loomkin.Teams.Agent do
       {:ok, %{team_id: child_team_id}} ->
         send(agent_pid, {:child_team_spawned, child_team_id})
 
+        bootstrap_message = build_spawn_work_order(tool_args, context)
+
+        case Loomkin.Tools.TeamSpawn.bootstrap_spawned_team(child_team_id, bootstrap_message,
+               from: to_string(agent_name)
+             ) do
+          {:ok, %{name: bootstrap_agent}} ->
+            Logger.info(
+              "[Kin:team_spawn] bootstrapped child_team=#{child_team_id} parent_team=#{team_id} parent_agent=#{agent_name} target=#{bootstrap_agent}"
+            )
+
+          {:error, reason} ->
+            Logger.warning(
+              "[Kin:team_spawn] bootstrap failed child_team=#{child_team_id} parent_team=#{team_id} parent_agent=#{agent_name} reason=#{inspect(reason)}"
+            )
+        end
+
       _ ->
         :ok
     end
 
     result
+  end
+
+  defp build_spawn_work_order(tool_args, context) do
+    team_name =
+      Map.get(tool_args, "team_name", Map.get(tool_args, :team_name, "child-team"))
+
+    purpose =
+      Map.get(tool_args, "purpose", Map.get(tool_args, :purpose, "Handle the assigned work."))
+
+    requesting_agent = context[:agent_name] || "parent-agent"
+    requester_team_id = context[:team_id]
+
+    reporting_instructions =
+      if is_binary(requester_team_id) and requester_team_id != "" do
+        """
+        When you have progress, blockers, or final findings, send them back immediately with:
+        - `peer_message`
+        - `team_id: "#{requester_team_id}"`
+        - `to: "#{requesting_agent}"`
+        """
+      else
+        "When you have progress, blockers, or final findings, send them back to the requesting agent immediately."
+      end
+
+    """
+    [Spawn Work Order]
+    Team: #{team_name}
+    Requested by: #{requesting_agent}
+
+    #{purpose}
+
+    Start working now. Do not wait for another prompt.
+    #{reporting_instructions}
+    """
+    |> String.trim()
   end
 
   @string_to_atom_keys %{

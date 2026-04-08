@@ -1,6 +1,8 @@
 defmodule Loomkin.Tools.TeamSpawn do
   @moduledoc "Spawn a team with agents."
 
+  require Logger
+
   @valid_roles Loomkin.Teams.Role.built_in_roles() |> Enum.map(&Atom.to_string/1)
 
   use Jido.Action,
@@ -88,6 +90,7 @@ defmodule Loomkin.Tools.TeamSpawn do
     purpose = param!(params, :purpose)
     project_path = param(params, :project_path) || param(context, :project_path)
     parent_team_id = param(context, :parent_team_id)
+    requester_team_id = param(context, :team_id) || parent_team_id
     session_id = param(context, :session_id)
     model = param(context, :model)
     vault_id = param(context, :vault_id)
@@ -100,11 +103,43 @@ defmodule Loomkin.Tools.TeamSpawn do
         roles,
         project_path,
         parent_team_id,
+        requester_team_id,
         session_id,
         model,
         vault_id,
         agent_name
       )
+    end
+  end
+
+  @doc false
+  def bootstrap_spawned_team(team_id, work_order, opts \\ [])
+      when is_binary(team_id) and is_binary(work_order) do
+    from = opts[:from] || "system"
+
+    case pick_bootstrap_agent(team_id) do
+      nil ->
+        Logger.warning("[Kin:team_spawn] bootstrap skipped team=#{team_id} reason=no_agents")
+        {:error, :no_agents}
+
+      %{name: agent_name, role: role} = agent ->
+        case Manager.find_agent(team_id, agent_name) do
+          {:ok, pid} ->
+            Agent.peer_message(pid, from, work_order)
+
+            Logger.info(
+              "[Kin:team_spawn] bootstrap team=#{team_id} target=#{agent_name} role=#{role} from=#{from}"
+            )
+
+            {:ok, agent}
+
+          :error ->
+            Logger.warning(
+              "[Kin:team_spawn] bootstrap skipped team=#{team_id} reason=agent_not_found target=#{agent_name}"
+            )
+
+            {:error, :agent_not_found}
+        end
     end
   end
 
@@ -154,13 +189,12 @@ defmodule Loomkin.Tools.TeamSpawn do
          roles,
          project_path,
          parent_team_id,
+         requester_team_id,
          session_id,
          model,
          vault_id,
          agent_name
        ) do
-    require Logger
-
     Logger.info(
       "[Kin:team_spawn] team=#{team_name} roles=#{inspect(roles)} parent=#{inspect(parent_team_id)}"
     )
@@ -186,11 +220,11 @@ defmodule Loomkin.Tools.TeamSpawn do
           purpose,
           roles,
           project_path,
+          requester_team_id,
           session_id,
           model,
           vault_id,
-          agent_name,
-          parent_team_id
+          agent_name
         )
     end
   end
@@ -201,14 +235,12 @@ defmodule Loomkin.Tools.TeamSpawn do
          purpose,
          roles,
          project_path,
+         requester_team_id,
          session_id,
          model,
          vault_id,
-         requesting_agent,
-         parent_team_id
+         requesting_agent
        ) do
-    require Logger
-
     spawn_opts =
       [project_path: project_path]
       |> then(fn opts -> if session_id, do: [{:session_id, session_id} | opts], else: opts end)
@@ -271,7 +303,7 @@ defmodule Loomkin.Tools.TeamSpawn do
           purpose,
           other_agents,
           requesting_agent,
-          parent_team_id
+          requester_team_id
         )
 
       case Manager.find_agent(team_id, spawned_name) do
@@ -301,7 +333,7 @@ defmodule Loomkin.Tools.TeamSpawn do
          purpose,
          teammates,
          requesting_agent,
-         parent_team_id
+         requester_team_id
        ) do
     teammate_lines =
       teammates
@@ -312,12 +344,13 @@ defmodule Loomkin.Tools.TeamSpawn do
       |> Enum.join("\n")
 
     requester_section =
-      if requesting_agent && parent_team_id do
+      if requesting_agent && requester_team_id do
         """
 
-        **Spawned by:** #{requesting_agent} (in parent team #{parent_team_id}).
-        Report your results back to #{requesting_agent} via cross_team_query or peer_complete_task.
-        If you need clarification on your task, ask #{requesting_agent} directly.
+        **Spawned by:** #{requesting_agent} (team #{requester_team_id}).
+        Start working immediately. Send progress and final findings back to #{requesting_agent}
+        using `peer_message` with `team_id: "#{requester_team_id}"` and `to: "#{requesting_agent}"`.
+        If you complete a tracked task, also use `peer_complete_task` with structured findings.
         """
       else
         ""
@@ -336,6 +369,11 @@ defmodule Loomkin.Tools.TeamSpawn do
 
   defp communication_hint(:lead), do: " — your team lead"
   defp communication_hint(_), do: ""
+
+  defp pick_bootstrap_agent(team_id) do
+    agents = Manager.list_agents(team_id)
+    Enum.find(agents, fn agent -> agent.role == :lead end) || List.first(agents)
+  end
 
   # Resolve a role string to either a built-in role atom or a custom role description.
   # Returns {:built_in, atom} for known roles, {:custom, string} for unknown descriptions.

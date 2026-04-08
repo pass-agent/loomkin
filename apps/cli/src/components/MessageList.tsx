@@ -11,22 +11,35 @@ interface Props {
   maxLines?: number;
   scrollOffset?: number;
   agentFilter?: string | null;
+  estimatedWidth?: number;
+}
+
+function estimateWrappedLines(text: string | null | undefined, width: number): number {
+  const wrapWidth = Math.max(20, width);
+  const lines = (text ?? "").split("\n");
+
+  return lines.reduce((total, line) => {
+    const length = Math.max(1, line.length);
+    return total + Math.max(1, Math.ceil(length / wrapWidth));
+  }, 0);
 }
 
 // Rough line-height estimate for a message (content lines + 1 margin row).
-function estimateHeight(msg: MessageType): number {
+function estimateHeight(msg: MessageType, estimatedWidth = 80): number {
   const margin = 1;
+  const contentWidth = Math.max(20, estimatedWidth - 4);
+
   switch (msg.role) {
     case "system":
-      return (msg.content ?? "").split("\n").length + margin;
+      return estimateWrappedLines(msg.content, contentWidth) + margin;
     case "user":
-      return 1 + margin;
+      return 1 + estimateWrappedLines(msg.content, contentWidth) + margin;
     case "tool":
-      return 2 + margin;
+      return 1 + estimateWrappedLines((msg.content ?? "").slice(0, 300), contentWidth) + margin;
     case "assistant": {
-      const contentLines = Math.max(1, Math.ceil((msg.content?.length ?? 0) / 80));
+      const contentLines = estimateWrappedLines(msg.content, contentWidth);
       const toolLines = (msg.tool_calls?.length ?? 0) * 2;
-      return contentLines + toolLines + margin;
+      return 1 + contentLines + toolLines + margin;
     }
     default:
       return 2;
@@ -41,6 +54,7 @@ export function MessageList({
   maxLines,
   scrollOffset = 0,
   agentFilter,
+  estimatedWidth = 80,
 }: Props) {
   // Filter by agent if specified
   const filtered =
@@ -59,7 +73,7 @@ export function MessageList({
     let budget = maxLines;
     const kept: MessageType[] = [];
     for (let i = recent.length - 1; i >= 0; i--) {
-      const h = estimateHeight(recent[i]);
+      const h = estimateHeight(recent[i], estimatedWidth);
       if (budget - h < 0 && kept.length > 0) break;
       budget -= h;
       kept.unshift(recent[i]);

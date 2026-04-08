@@ -420,11 +420,15 @@ defmodule LoomkinWeb.SessionChannel do
         {:stream_start, _sid} ->
           push(socket, "stream_start", %{})
 
-        {:stream_delta, _sid, %{content: content}} when is_binary(content) ->
-          push(socket, "stream_token", %{token: content})
-
         {:stream_delta, _sid, %{tool_call: tool_call}} ->
           push(socket, "tool_call_started", %{tool_call: tool_call})
+
+        {:stream_delta, _sid, payload} when is_map(payload) ->
+          content = payload[:content] || payload[:text]
+
+          if is_binary(content) do
+            push(socket, "stream_token", %{token: content})
+          end
 
         {:stream_end, _sid} ->
           push(socket, "stream_end", %{})
@@ -489,89 +493,117 @@ defmodule LoomkinWeb.SessionChannel do
   # --- Agent signal forwarding (filtered by team_id) ---
 
   def handle_info(%Jido.Signal{type: "agent.status"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_status", %{
-        agent_name: sig.data[:agent_name],
-        status: to_string(sig.data[:status]),
-        previous_status: to_string(sig.data[:previous_status] || ""),
-        pause_queued: sig.data[:pause_queued] || false
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_status", %{
+          agent_name: sig.data[:agent_name],
+          status: to_string(sig.data[:status]),
+          previous_status: to_string(sig.data[:previous_status] || ""),
+          pause_queued: sig.data[:pause_queued] || false
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.role.changed"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_role_changed", %{
-        agent_name: sig.data[:agent_name],
-        old_role: to_string(sig.data[:old_role]),
-        new_role: to_string(sig.data[:new_role])
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_role_changed", %{
+          agent_name: sig.data[:agent_name],
+          old_role: to_string(sig.data[:old_role]),
+          new_role: to_string(sig.data[:new_role])
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.tool.executing"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_tool_executing", %{
-        agent_name: sig.data[:agent_name],
-        tool_name: sig.data[:tool_name]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_tool_executing", %{
+          agent_name: sig.data[:agent_name],
+          tool_name: sig.data[:tool_name]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.tool.complete"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_tool_complete", %{
-        agent_name: sig.data[:agent_name],
-        tool_name: sig.data[:tool_name]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_tool_complete", %{
+          agent_name: sig.data[:agent_name],
+          tool_name: sig.data[:tool_name]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.error"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_error", %{
-        agent_name: sig.data[:agent_name],
-        error: format_agent_error(sig.data)
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_error", %{
+          agent_name: sig.data[:agent_name],
+          error: format_agent_error(sig.data)
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.usage"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "agent_usage", %{
-        agent_name: sig.data[:agent_name],
-        tokens_used: sig.data[:tokens_used],
-        cost_usd: sig.data[:cost_usd]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_usage", %{
+          agent_name: sig.data[:agent_name],
+          tokens_used: sig.data[:tokens_used],
+          cost_usd: sig.data[:cost_usd]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "context.offloaded"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      payload = sig.data[:payload] || %{}
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        payload = sig.data[:payload] || %{}
 
-      push(socket, "agent_findings_published", %{
-        agent_name: sig.data[:agent_name],
-        team_id: sig.data[:team_id],
-        topic: payload[:topic] || payload["topic"],
-        source: to_string(payload[:source] || payload["source"] || "context_offload"),
-        task_id: payload[:task_id] || payload["task_id"]
-      })
+        push(socket, "agent_findings_published", %{
+          agent_name: sig.data[:agent_name],
+          team_id: sig.data[:team_id],
+          topic: payload[:topic] || payload["topic"],
+          source: to_string(payload[:source] || payload["source"] || "context_offload"),
+          task_id: payload[:task_id] || payload["task_id"]
+        })
+
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
     end
-
-    {:noreply, socket}
   end
 
   def handle_info(%Jido.Signal{type: "team.task." <> _} = sig, socket) do
@@ -594,6 +626,23 @@ defmodule LoomkinWeb.SessionChannel do
     })
 
     {:noreply, socket}
+  end
+
+  def handle_info(%Jido.Signal{type: "team.child.created"} = sig, socket) do
+    case team_event_socket(socket, sig.data[:parent_team_id]) do
+      {:ok, socket} ->
+        push(socket, "child_team_created", %{
+          child_team_id: sig.data[:team_id],
+          parent_team_id: sig.data[:parent_team_id],
+          team_name: sig.data[:team_name] || "",
+          depth: sig.data[:depth] || 0
+        })
+
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "team.dissolved"} = sig, socket) do
@@ -682,182 +731,263 @@ defmodule LoomkinWeb.SessionChannel do
   # --- Agent streaming signals — forwarded to CLI/mobile clients ---
 
   def handle_info(%Jido.Signal{type: "agent.stream.start"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "stream_start", %{})
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_stream_start", %{
+          agent_name: sig.data[:agent_name],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        if sig.data[:team_id] == current_root_team_id(socket) do
+          push(socket, "stream_start", %{})
+        end
+
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.stream.delta"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      token = get_in(sig.data, [:payload, :text]) || ""
-      if token != "", do: push(socket, "stream_token", %{token: token})
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        token = get_in(sig.data, [:payload, :text]) || ""
 
-    {:noreply, socket}
+        if token != "" do
+          push(socket, "agent_stream_delta", %{
+            agent_name: sig.data[:agent_name],
+            team_id: sig.data[:team_id],
+            token: token
+          })
+
+          if sig.data[:team_id] == current_root_team_id(socket) do
+            push(socket, "stream_token", %{token: token})
+          end
+        end
+
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.stream.end"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "stream_end", %{})
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "agent_stream_end", %{
+          agent_name: sig.data[:agent_name],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        if sig.data[:team_id] == current_root_team_id(socket) do
+          push(socket, "stream_end", %{})
+        end
+
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   # --- Conversation turn-level signals (filtered by team_id) ---
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.turn"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_turn", %{
-        conversation_id: sig.data[:conversation_id],
-        speaker: sig.data[:speaker],
-        content: sig.data[:content],
-        round: sig.data[:round],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_turn", %{
+          conversation_id: sig.data[:conversation_id],
+          speaker: sig.data[:speaker],
+          content: sig.data[:content],
+          round: sig.data[:round],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.reaction"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_reaction", %{
-        conversation_id: sig.data[:conversation_id],
-        agent_name: sig.data[:agent_name],
-        reaction_type: to_string(sig.data[:reaction_type] || ""),
-        brief: sig.data[:brief] || "",
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_reaction", %{
+          conversation_id: sig.data[:conversation_id],
+          agent_name: sig.data[:agent_name],
+          reaction_type: to_string(sig.data[:reaction_type] || ""),
+          brief: sig.data[:brief] || "",
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.yield"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_yield", %{
-        conversation_id: sig.data[:conversation_id],
-        agent_name: sig.data[:agent_name],
-        reason: sig.data[:reason] || "",
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_yield", %{
+          conversation_id: sig.data[:conversation_id],
+          agent_name: sig.data[:agent_name],
+          reason: sig.data[:reason] || "",
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.round_started"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_round_started", %{
-        conversation_id: sig.data[:conversation_id],
-        round: sig.data[:round],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_round_started", %{
+          conversation_id: sig.data[:conversation_id],
+          round: sig.data[:round],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(
         %Jido.Signal{type: "collaboration.conversation.round_complete"} = sig,
         socket
       ) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_round_complete", %{
-        conversation_id: sig.data[:conversation_id],
-        round: sig.data[:round],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_round_complete", %{
+          conversation_id: sig.data[:conversation_id],
+          round: sig.data[:round],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.summarizing"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_summarizing", %{
-        conversation_id: sig.data[:conversation_id],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_summarizing", %{
+          conversation_id: sig.data[:conversation_id],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "collaboration.conversation.budget_warning"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "conversation_budget_warning", %{
-        conversation_id: sig.data[:conversation_id],
-        tokens_used: sig.data[:tokens_used],
-        max_tokens: sig.data[:max_tokens],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "conversation_budget_warning", %{
+          conversation_id: sig.data[:conversation_id],
+          tokens_used: sig.data[:tokens_used],
+          max_tokens: sig.data[:max_tokens],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   # --- Gate signal forwarding ---
 
   def handle_info(%Jido.Signal{type: "agent.approval.requested"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "approval_requested", %{
-        gate_id: sig.data[:gate_id],
-        agent_name: sig.data[:agent_name],
-        question: sig.data[:question] || "",
-        timeout_ms: sig.data[:timeout_ms] || 300_000,
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "approval_requested", %{
+          gate_id: sig.data[:gate_id],
+          agent_name: sig.data[:agent_name],
+          question: sig.data[:question] || "",
+          timeout_ms: sig.data[:timeout_ms] || 300_000,
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.approval.resolved"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "approval_resolved", %{
-        gate_id: sig.data[:gate_id],
-        agent_name: sig.data[:agent_name],
-        outcome: to_string(sig.data[:outcome] || ""),
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "approval_resolved", %{
+          gate_id: sig.data[:gate_id],
+          agent_name: sig.data[:agent_name],
+          outcome: to_string(sig.data[:outcome] || ""),
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.spawn.gate.requested"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "spawn_gate_requested", %{
-        gate_id: sig.data[:gate_id],
-        agent_name: sig.data[:agent_name],
-        team_name: sig.data[:team_name] || "",
-        roles: sig.data[:roles] || [],
-        estimated_cost: sig.data[:estimated_cost] || 0,
-        purpose: sig.data[:purpose],
-        timeout_ms: sig.data[:timeout_ms] || 300_000,
-        limit_warning: sig.data[:limit_warning],
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "spawn_gate_requested", %{
+          gate_id: sig.data[:gate_id],
+          agent_name: sig.data[:agent_name],
+          team_name: sig.data[:team_name] || "",
+          roles: sig.data[:roles] || [],
+          estimated_cost: sig.data[:estimated_cost] || 0,
+          purpose: sig.data[:purpose],
+          timeout_ms: sig.data[:timeout_ms] || 300_000,
+          limit_warning: sig.data[:limit_warning],
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info(%Jido.Signal{type: "agent.spawn.gate.resolved"} = sig, socket) do
-    if sig.data[:team_id] == socket.assigns[:team_id] do
-      push(socket, "spawn_gate_resolved", %{
-        gate_id: sig.data[:gate_id],
-        agent_name: sig.data[:agent_name],
-        outcome: to_string(sig.data[:outcome] || ""),
-        team_id: sig.data[:team_id]
-      })
-    end
+    case team_event_socket(socket, sig.data[:team_id]) do
+      {:ok, socket} ->
+        push(socket, "spawn_gate_resolved", %{
+          gate_id: sig.data[:gate_id],
+          agent_name: sig.data[:agent_name],
+          outcome: to_string(sig.data[:outcome] || ""),
+          team_id: sig.data[:team_id]
+        })
 
-    {:noreply, socket}
+        {:noreply, socket}
+
+      :error ->
+        {:noreply, socket}
+    end
   end
 
   # Catch-all for unhandled signals
@@ -890,6 +1020,68 @@ defmodule LoomkinWeb.SessionChannel do
   end
 
   defp present_string?(value), do: is_binary(value) and String.trim(value) != ""
+
+  defp team_event_socket(socket, signal_team_id)
+       when is_binary(signal_team_id) and signal_team_id != "" do
+    root_team_id = current_root_team_id(socket)
+
+    cond do
+      is_nil(root_team_id) ->
+        :error
+
+      signal_team_id == root_team_id ->
+        {:ok, assign_root_team_id(socket, root_team_id)}
+
+      signal_team_id in descendant_team_ids(root_team_id) ->
+        {:ok, assign_root_team_id(socket, root_team_id)}
+
+      true ->
+        :error
+    end
+  end
+
+  defp team_event_socket(_socket, _signal_team_id), do: :error
+
+  defp current_root_team_id(socket) do
+    persisted_session_team_id(socket) || socket.assigns[:team_id]
+  end
+
+  defp assign_root_team_id(socket, root_team_id) do
+    if socket.assigns[:team_id] == root_team_id do
+      socket
+    else
+      assign(socket, :team_id, root_team_id)
+    end
+  end
+
+  defp descendant_team_ids(root_team_id) when is_binary(root_team_id) and root_team_id != "" do
+    collect_descendant_team_ids([root_team_id], MapSet.new())
+    |> MapSet.delete(root_team_id)
+    |> MapSet.to_list()
+  end
+
+  defp descendant_team_ids(_root_team_id), do: []
+
+  defp collect_descendant_team_ids([], seen), do: seen
+
+  defp collect_descendant_team_ids([team_id | rest], seen) do
+    if MapSet.member?(seen, team_id) do
+      collect_descendant_team_ids(rest, seen)
+    else
+      children = Loomkin.Teams.Manager.get_child_teams(team_id)
+      collect_descendant_team_ids(rest ++ children, MapSet.put(seen, team_id))
+    end
+  end
+
+  defp persisted_session_team_id(%{assigns: %{session_id: session_id}})
+       when is_binary(session_id) and session_id != "" do
+    case Persistence.get_session(session_id) do
+      %{team_id: team_id} when is_binary(team_id) and team_id != "" -> team_id
+      _ -> nil
+    end
+  end
+
+  defp persisted_session_team_id(_socket), do: nil
 
   defp ensure_session_started(session) do
     opts =

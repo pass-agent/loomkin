@@ -8,6 +8,8 @@ export interface AgentInfo {
   teamId?: string;
   currentTool?: string;
   currentTask?: string;
+  currentThought?: string;
+  lastThought?: string;
   tokensUsed?: number;
   costUsd?: number;
   lastError?: string;

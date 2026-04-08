@@ -268,6 +268,7 @@ export function App() {
           messages={messages}
           pendingToolCalls={pendingToolCalls}
           isStreaming={isStreaming}
+          termWidth={termWidth}
         />
       ) : (
         <MessageList
@@ -276,6 +277,7 @@ export function App() {
           isStreaming={isStreaming}
           maxLines={termHeight - 6}
           scrollOffset={sessionState.scrollOffset}
+          estimatedWidth={termWidth - 4}
         />
       )}
       {latestError && <ErrorBanner error={latestError} />}

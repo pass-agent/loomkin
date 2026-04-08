@@ -314,20 +314,7 @@ defmodule Loomkin.Session.Architect do
 
   # Find and message the lead agent (or first agent) in a newly spawned team.
   defp bootstrap_team_lead(team_id, user_text) do
-    alias Loomkin.Teams.Agent
-    alias Loomkin.Teams.Manager
-
-    agents = Manager.list_agents(team_id)
-
-    lead =
-      Enum.find(agents, fn a -> a.role == :lead end) ||
-        List.first(agents)
-
-    if lead do
-      Task.Supervisor.start_child(Loomkin.Teams.TaskSupervisor, fn ->
-        Agent.send_message(lead.pid, user_text)
-      end)
-    end
+    Loomkin.Tools.TeamSpawn.bootstrap_spawned_team(team_id, user_text, from: "user")
   end
 
   defp conversational_fallback(user_text, state, model, opts \\ []) do

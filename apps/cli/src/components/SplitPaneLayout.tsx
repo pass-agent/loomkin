@@ -12,12 +12,14 @@ interface Props {
   messages: Message[];
   pendingToolCalls: ToolCall[];
   isStreaming?: boolean;
+  termWidth: number;
 }
 
 export function SplitPaneLayout({
   messages,
   pendingToolCalls,
   isStreaming = false,
+  termWidth,
 }: Props) {
   const focusedPane = useStore(usePaneStore, (s) => s.focusedPane);
   const selectedAgent = useStore(usePaneStore, (s) => s.selectedAgent);
@@ -34,6 +36,7 @@ export function SplitPaneLayout({
   const rightTitle = showConversation
     ? `Conversation`
     : selectedAgent ?? "No agent";
+  const paneWidth = Math.max(20, Math.floor(termWidth / 2) - 4);
 
   return (
     <Box flexDirection="row" flexGrow={1}>
@@ -54,6 +57,7 @@ export function SplitPaneLayout({
           isStreaming={isStreaming}
           agentFilter={null}
           scrollOffset={leftScrollOffset}
+          estimatedWidth={paneWidth}
         />
       </Box>
       <Box
@@ -76,6 +80,7 @@ export function SplitPaneLayout({
             isStreaming={isStreaming}
             agentFilter={selectedAgent}
             scrollOffset={rightScrollOffset}
+            estimatedWidth={paneWidth}
           />
         )}
       </Box>

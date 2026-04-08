@@ -176,7 +176,7 @@ defmodule Loomkin.Tools.TeamSpawnTest do
   end
 
   describe "team manifest" do
-    test "spawning agents sends peer_message briefing to each" do
+    test "spawning agents sends a system briefing to each" do
       {:ok, parent_team_id} = Manager.create_team(name: "manifest-parent")
 
       params = %{
@@ -200,22 +200,104 @@ defmodule Loomkin.Tools.TeamSpawnTest do
       {:ok, result} = TeamSpawn.run(params, context)
       team_id = result.team_id
 
-      # Give peer_messages time to be delivered (they are casts)
+      # Give briefings time to be delivered (they are casts)
       Process.sleep(200)
 
-      # Check each agent received a manifest via peer_message in their messages
+      # Check each agent received a manifest briefing in their messages
       for agent_name <- ["r1", "c1", "w1"] do
         {:ok, pid} = Manager.find_agent(team_id, agent_name)
         state = :sys.get_state(pid)
 
         manifest_msgs =
           Enum.filter(state.messages, fn msg ->
-            msg.role == :user and String.contains?(msg.content, "[Team Briefing]")
+            msg.role == :system and String.contains?(msg.content, "[Team Briefing]")
           end)
 
         assert length(manifest_msgs) >= 1,
-               "Expected #{agent_name} to receive a team manifest peer_message"
+               "Expected #{agent_name} to receive a team manifest briefing"
       end
+
+      on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
+    end
+
+    test "manifest tells spawned agents exactly how to report back to the requester" do
+      {:ok, parent_team_id} = Manager.create_team(name: "manifest-reporting-parent")
+
+      params = %{
+        team_name: "reporting-test",
+        roles: [%{name: "alice", role: "researcher"}],
+        purpose: "investigate the vault pipeline"
+      }
+
+      context = %{
+        parent_team_id: parent_team_id,
+        team_id: "requester-team-123",
+        project_path: nil,
+        session_id: nil,
+        model: nil,
+        agent_name: "lead-1"
+      }
+
+      {:ok, result} = TeamSpawn.run(params, context)
+      {:ok, alice_pid} = Manager.find_agent(result.team_id, "alice")
+
+      Process.sleep(50)
+
+      alice_state = :sys.get_state(alice_pid)
+
+      manifest =
+        Enum.find(alice_state.messages, fn msg ->
+          msg.role == :system and String.contains?(msg.content, "[Team Briefing]")
+        end)
+
+      assert manifest
+      assert manifest.content =~ "team requester-team-123"
+      assert manifest.content =~ "peer_message"
+      assert manifest.content =~ ~s(team_id: "requester-team-123")
+      assert manifest.content =~ ~s(to: "lead-1")
+
+      on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
+    end
+
+    test "bootstrap_spawned_team queues a wake-up work order for the spawned team" do
+      {:ok, parent_team_id} = Manager.create_team(name: "bootstrap-helper-parent")
+
+      params = %{
+        team_name: "bootstrap-helper-test",
+        roles: [%{name: "researcher-1", role: "researcher"}],
+        purpose: "inspect the streaming pipeline"
+      }
+
+      context = %{
+        parent_team_id: parent_team_id,
+        team_id: "requester-team-456",
+        project_path: nil,
+        session_id: nil,
+        model: nil,
+        agent_name: "lead-2"
+      }
+
+      {:ok, result} = TeamSpawn.run(params, context)
+
+      assert {:ok, %{name: "researcher-1"}} =
+               TeamSpawn.bootstrap_spawned_team(
+                 result.team_id,
+                 "Start working now and report back with peer_message.",
+                 from: "lead-2"
+               )
+
+      {:ok, researcher_pid} = Manager.find_agent(result.team_id, "researcher-1")
+      Process.sleep(50)
+      researcher_state = :sys.get_state(researcher_pid)
+
+      peer_messages =
+        Enum.filter(researcher_state.messages, fn msg ->
+          msg.role == :user and String.contains?(msg.content, "[Peer lead-2]")
+        end)
+
+      assert length(peer_messages) == 1
+      assert Enum.any?(peer_messages, &String.contains?(&1.content, "Start working now"))
+      assert researcher_state.wake_ref != nil
 
       on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
     end
@@ -251,7 +333,7 @@ defmodule Loomkin.Tools.TeamSpawnTest do
 
       alice_manifest =
         Enum.find(alice_state.messages, fn msg ->
-          msg.role == :user and String.contains?(msg.content, "[Team Briefing]")
+          msg.role == :system and String.contains?(msg.content, "[Team Briefing]")
         end)
 
       assert alice_manifest.content =~ "bob"
@@ -266,7 +348,7 @@ defmodule Loomkin.Tools.TeamSpawnTest do
 
       bob_manifest =
         Enum.find(bob_state.messages, fn msg ->
-          msg.role == :user and String.contains?(msg.content, "[Team Briefing]")
+          msg.role == :system and String.contains?(msg.content, "[Team Briefing]")
         end)
 
       assert bob_manifest.content =~ "alice"

@@ -65,23 +65,14 @@ export function useSessionChannel() {
       const store = useSessionStore.getState();
       store.setPendingResponse(false);
       store.setStreaming(true);
-      if (payload.message_id) {
-        store.startStreamingMessage(payload.message_id);
-      }
+      store.ensureStreamingMessage(payload.message_id);
     });
 
     on("stream_token", (raw) => {
       const payload = raw as { message_id?: string; token: string };
       const store = useSessionStore.getState();
-      if (payload.message_id) {
-        store.appendStreamContent(payload.message_id, payload.token);
-      } else {
-        const msgs = store.messages;
-        const last = msgs[msgs.length - 1];
-        if (last?.role === "assistant") {
-          store.appendStreamContent(last.id, payload.token);
-        }
-      }
+      const streamId = store.ensureStreamingMessage(payload.message_id);
+      store.appendStreamContent(streamId, payload.token);
     });
 
     on("stream_end", (raw) => {

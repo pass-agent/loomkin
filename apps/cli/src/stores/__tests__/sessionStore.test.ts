@@ -30,6 +30,7 @@ beforeEach(() => {
     sessionId: null,
     messages: [],
     isStreaming: false,
+    currentStreamingMessageId: null,
     pendingToolCalls: [],
     scrollOffset: 0,
   });
@@ -110,6 +111,27 @@ test("startStreamingMessage creates a placeholder assistant message", () => {
   expect(messages[0].id).toBe("stream-1");
   expect(messages[0].role).toBe("assistant");
   expect(messages[0].content).toBe("");
+});
+
+test("ensureStreamingMessage creates a placeholder when the server does not send a message id", () => {
+  const streamId = sessionStore.getState().ensureStreamingMessage();
+  const state = sessionStore.getState();
+
+  expect(streamId).toBeTruthy();
+  expect(state.currentStreamingMessageId).toBe(streamId);
+  expect(state.messages).toHaveLength(1);
+  expect(state.messages[0].id).toBe(streamId);
+  expect(state.messages[0].role).toBe("assistant");
+});
+
+test("ensureStreamingMessage reuses the active placeholder instead of duplicating it", () => {
+  const firstId = sessionStore.getState().ensureStreamingMessage();
+  const secondId = sessionStore.getState().ensureStreamingMessage();
+  const state = sessionStore.getState();
+
+  expect(secondId).toBe(firstId);
+  expect(state.messages).toHaveLength(1);
+  expect(state.messages[0].id).toBe(firstId);
 });
 
 test("appendStreamContent concatenates tokens to existing message", () => {

@@ -10,6 +10,23 @@ import type {
 } from "../lib/types.js";
 import { calculateCost } from "../lib/costTracker.js";
 
+function makeStreamingMessage(id: string): Message {
+  return {
+    id,
+    role: "assistant",
+    content: "",
+    tool_calls: null,
+    tool_call_id: null,
+    token_count: null,
+    agent_name: null,
+    inserted_at: new Date().toISOString(),
+  };
+}
+
+function generateStreamingMessageId(): string {
+  return `stream-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export interface SessionState {
   sessionId: string | null;
   messages: Message[];
@@ -52,6 +69,7 @@ export interface SessionState {
   setStreaming: (streaming: boolean) => void;
   setPendingResponse: (pending: boolean) => void;
   startStreamingMessage: (id: string) => void;
+  ensureStreamingMessage: (id?: string | null) => string;
   appendStreamContent: (id: string, token: string) => void;
   addPendingToolCall: (toolCall: ToolCall) => void;
   removePendingToolCall: (id: string) => void;
@@ -131,20 +149,25 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
   startStreamingMessage: (id) =>
     set((state) => ({
       currentStreamingMessageId: id,
-      messages: [
-        ...state.messages,
-        {
-          id,
-          role: "assistant" as const,
-          content: "",
-          tool_calls: null,
-          tool_call_id: null,
-          token_count: null,
-          agent_name: null,
-          inserted_at: new Date().toISOString(),
-        },
-      ],
+      messages: [...state.messages, makeStreamingMessage(id)],
     })),
+
+  ensureStreamingMessage: (id) => {
+    const state = _get();
+    const streamId = id ?? state.currentStreamingMessageId ?? generateStreamingMessageId();
+    const hasMessage = state.messages.some((message) => message.id === streamId);
+
+    if (!hasMessage || state.currentStreamingMessageId !== streamId) {
+      set({
+        currentStreamingMessageId: streamId,
+        messages: hasMessage
+          ? state.messages
+          : [...state.messages, makeStreamingMessage(streamId)],
+      });
+    }
+
+    return streamId;
+  },
 
   appendStreamContent: (id, token) =>
     set((state) => ({
