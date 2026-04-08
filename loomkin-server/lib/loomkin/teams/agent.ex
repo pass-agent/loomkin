@@ -1765,7 +1765,11 @@ defmodule Loomkin.Teams.Agent do
   # Agent errors — log at warning level for visibility
   def handle_info(%Jido.Signal{type: "agent.error"} = sig, state) do
     agent = sig.data[:agent_name] || "unknown"
-    reason = sig.data[:reason] || sig.data[:error] || "unknown"
+    payload = sig.data[:payload] || %{}
+
+    reason =
+      sig.data[:reason] || sig.data[:error] || payload[:error] || payload["error"] ||
+        payload[:message] || payload["message"] || "unknown"
 
     Logger.warning(
       "[Kin:signal] agent.error agent=#{agent} reason=#{inspect(reason, limit: 200)}"
@@ -3226,9 +3230,7 @@ defmodule Loomkin.Teams.Agent do
   @default_max_agents_per_team 10
 
   defp run_spawn_gate_intercept(agent_pid, tool_module, tool_args, context, team_id, agent_name) do
-    spawn_type = Map.get(tool_args, "spawn_type", Map.get(tool_args, :spawn_type))
-
-    if spawn_type in [:research, "research"] do
+    if Loomkin.Tools.TeamSpawn.research_spawn?(tool_args, context) do
       run_research_spawn(agent_pid, tool_module, tool_args, context, team_id, agent_name)
     else
       run_human_or_auto_spawn_gate(
@@ -3243,7 +3245,12 @@ defmodule Loomkin.Teams.Agent do
   end
 
   defp run_research_spawn(agent_pid, tool_module, tool_args, context, team_id, agent_name) do
-    roles = tool_args |> Map.get("roles", Map.get(tool_args, :roles, [])) |> atomize_role_keys()
+    roles =
+      case Loomkin.Tools.TeamSpawn.resolve_roles(tool_args, context) do
+        {:ok, resolved_roles} -> atomize_role_keys(resolved_roles)
+        {:error, _reason} -> []
+      end
+
     estimated_cost = estimate_spawn_cost(roles)
     researcher_count = length(roles)
 

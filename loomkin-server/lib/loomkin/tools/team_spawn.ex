@@ -11,7 +11,8 @@ defmodule Loomkin.Tools.TeamSpawn do
         "reviewer (code review), tester (run tests), lead (coordination), " <>
         "concierge (user-facing orchestration). " <>
         "You can also specify custom specialist roles by description (e.g. 'database-migration-specialist'). " <>
-        "You MUST provide a roles list with name and role for each agent. " <>
+        "Provide a roles list with name and role for each agent. " <>
+        "If spawn_type is 'research' and roles are omitted, Loomkin will infer a minimal research team. " <>
         "Returns a team status summary with team_id and agent list.",
     schema: [
       team_name: [type: :string, required: true, doc: "Human-readable team name"],
@@ -23,16 +24,16 @@ defmodule Loomkin.Tools.TeamSpawn do
       ],
       roles: [
         type: {:list, :map},
-        required: true,
+        required: false,
         doc:
           "List of %{name, role} maps. role can be a standard role or a custom specialist description"
       ],
       project_path: [type: :string, doc: "Path to the project for agents to work on"],
       spawn_type: [
-        type: :atom,
+        type: :string,
         required: false,
         doc:
-          "Optional spawn type. Use :research for auto-approved research sub-teams (skips human gate, budget check still runs)."
+          "Optional spawn type. Use 'research' for auto-approved research sub-teams (skips human gate, budget check still runs)."
       ]
     ]
 
@@ -41,6 +42,45 @@ defmodule Loomkin.Tools.TeamSpawn do
   alias Loomkin.Teams.Agent
   alias Loomkin.Teams.Manager
   alias Loomkin.Teams.Role
+
+  @doc false
+  def resolve_roles(params, context \\ %{}) when is_map(params) and is_map(context) do
+    team_name = param!(params, :team_name)
+    purpose = param!(params, :purpose)
+    roles = param(params, :roles)
+    inferred_research? = research_spawn?(params, context)
+
+    cond do
+      is_list(roles) and roles != [] ->
+        {:ok, roles}
+
+      inferred_research? ->
+        {:ok, inferred_research_roles(team_name, purpose)}
+
+      true ->
+        {:error, "team_spawn requires a non-empty roles list unless spawn_type is 'research'"}
+    end
+  end
+
+  @doc false
+  def research_spawn?(params, context \\ %{}) when is_map(params) and is_map(context) do
+    spawn_type = normalize_spawn_type(param(params, :spawn_type))
+    roles = param(params, :roles)
+
+    cond do
+      spawn_type == :research ->
+        true
+
+      is_list(roles) and roles != [] ->
+        false
+
+      inferred_research_context?(context) ->
+        true
+
+      true ->
+        false
+    end
+  end
 
   @impl true
   def run(params, context) do
@@ -53,20 +93,60 @@ defmodule Loomkin.Tools.TeamSpawn do
     vault_id = param(context, :vault_id)
     agent_name = param(context, :agent_name) || "architect"
 
-    roles = param!(params, :roles)
-
-    spawn_from_roles(
-      team_name,
-      purpose,
-      roles,
-      project_path,
-      parent_team_id,
-      session_id,
-      model,
-      vault_id,
-      agent_name
-    )
+    with {:ok, roles} <- resolve_roles(params, context) do
+      spawn_from_roles(
+        team_name,
+        purpose,
+        roles,
+        project_path,
+        parent_team_id,
+        session_id,
+        model,
+        vault_id,
+        agent_name
+      )
+    end
   end
+
+  defp normalize_spawn_type(spawn_type) when spawn_type in [:research, "research"], do: :research
+  defp normalize_spawn_type(_spawn_type), do: nil
+
+  defp inferred_research_context?(context) do
+    role = param(context, :role)
+    role in [:concierge, "concierge", :lead, "lead"]
+  end
+
+  defp inferred_research_roles(team_name, purpose) do
+    researcher_name =
+      case infer_agent_name(team_name) do
+        nil -> "researcher-1"
+        name -> name
+      end
+
+    [
+      %{
+        name: researcher_name,
+        role: "researcher",
+        focus: purpose
+      }
+    ]
+  end
+
+  defp infer_agent_name(team_name) when is_binary(team_name) do
+    slug =
+      team_name
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9]+/u, "-")
+      |> String.trim("-")
+
+    if slug == "" do
+      nil
+    else
+      "#{slug}-researcher"
+    end
+  end
+
+  defp infer_agent_name(_), do: nil
 
   defp spawn_from_roles(
          team_name,

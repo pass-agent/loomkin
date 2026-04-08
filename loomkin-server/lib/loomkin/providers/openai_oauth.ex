@@ -514,6 +514,7 @@ defmodule Loomkin.Providers.OpenAIOAuth do
       |> Map.put("stream", true)
 
     log_tool_resume_shape(model_label, patched, previous_response_id)
+    log_empty_input_shape(model_label, patched)
     patched
   end
 
@@ -552,6 +553,27 @@ defmodule Loomkin.Providers.OpenAIOAuth do
     end
 
     Map.put(body_map, "input", Enum.reverse(filtered_input))
+  end
+
+  defp log_empty_input_shape(model_label, body_map) when is_map(body_map) do
+    input = Map.get(body_map, "input", [])
+
+    cond do
+      input == [] ->
+        Logger.warning(
+          "[Kin:openai_oauth] codex request has empty input model=#{inspect(model_label)} instructions_present=#{Map.has_key?(body_map, "instructions")}"
+        )
+
+      Enum.all?(input, fn item ->
+        is_map(item) and Map.get(item, "type") == "function_call_output"
+      end) ->
+        Logger.warning(
+          "[Kin:openai_oauth] codex request has tool-output-only input model=#{inspect(model_label)} count=#{length(input)}"
+        )
+
+      true ->
+        :ok
+    end
   end
 
   defp maybe_put_instructions(body_map, ""), do: body_map

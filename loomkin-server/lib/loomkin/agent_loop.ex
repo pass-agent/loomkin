@@ -1204,9 +1204,11 @@ defmodule Loomkin.AgentLoop do
 
   @doc false
   def normalize_history_messages(messages) when is_list(messages) do
+    tool_result_ids = extract_tool_result_ids(messages)
+
     messages
     |> Enum.reduce([], fn msg, acc ->
-      normalize_history_message(msg, acc)
+      normalize_history_message(msg, acc, tool_result_ids)
     end)
     |> Enum.reverse()
   end
@@ -1293,18 +1295,18 @@ defmodule Loomkin.AgentLoop do
     nil
   end
 
-  defp normalize_history_message(nil, acc) do
+  defp normalize_history_message(nil, acc, _tool_result_ids) do
     Logger.warning("[Kin:data] dropping nil message from agent history")
     acc
   end
 
-  defp normalize_history_message(%{} = msg, acc) do
+  defp normalize_history_message(%{} = msg, acc, tool_result_ids) do
     cond do
       valid_history_role?(msg[:role] || msg["role"]) ->
         [normalize_regular_history_message(msg) | acc]
 
       raw_tool_call_message?(msg) ->
-        attach_or_drop_orphan_tool_call(msg, acc)
+        attach_or_rebuild_or_drop_orphan_tool_call(msg, acc, tool_result_ids)
 
       true ->
         Logger.warning(
@@ -1315,7 +1317,7 @@ defmodule Loomkin.AgentLoop do
     end
   end
 
-  defp normalize_history_message(msg, acc) do
+  defp normalize_history_message(msg, acc, _tool_result_ids) do
     Logger.warning(
       "[Kin:data] dropping non-map message from agent history payload=#{inspect(msg, limit: 120)}"
     )
@@ -1359,7 +1361,11 @@ defmodule Loomkin.AgentLoop do
 
   defp raw_tool_call_message?(_), do: false
 
-  defp attach_or_drop_orphan_tool_call(msg, [%{role: role} = assistant | rest])
+  defp attach_or_rebuild_or_drop_orphan_tool_call(
+         msg,
+         [%{role: role} = assistant | rest],
+         _tool_result_ids
+       )
        when role in [:assistant, "assistant"] do
     normalized_tool_call = normalize_tool_call(msg)
     tool_calls = normalize_tool_calls(assistant[:tool_calls] || assistant["tool_calls"] || [])
@@ -1371,12 +1377,23 @@ defmodule Loomkin.AgentLoop do
     [Map.put(assistant, :tool_calls, tool_calls ++ [normalized_tool_call]) | rest]
   end
 
-  defp attach_or_drop_orphan_tool_call(msg, acc) do
-    Logger.warning(
-      "[Kin:data] dropping orphan tool_call from agent history payload=#{inspect(msg, limit: 120)}"
-    )
+  defp attach_or_rebuild_or_drop_orphan_tool_call(msg, acc, tool_result_ids) do
+    normalized_tool_call = normalize_tool_call(msg)
+    tool_call_id = normalized_tool_call[:id]
 
-    acc
+    if is_binary(tool_call_id) and MapSet.member?(tool_result_ids, tool_call_id) do
+      Logger.warning(
+        "[Kin:data] rebuilt orphan tool_call with synthetic assistant id=#{inspect(tool_call_id)} name=#{inspect(normalized_tool_call[:name])}"
+      )
+
+      [%{role: :assistant, content: "", tool_calls: [normalized_tool_call]} | acc]
+    else
+      Logger.warning(
+        "[Kin:data] dropping orphan tool_call from agent history payload=#{inspect(msg, limit: 120)}"
+      )
+
+      acc
+    end
   end
 
   defp normalize_tool_calls(tool_calls) when is_list(tool_calls) do
@@ -1393,6 +1410,23 @@ defmodule Loomkin.AgentLoop do
       name: tool_call[:name] || tool_call["name"],
       arguments: tool_call[:arguments] || tool_call["arguments"] || %{}
     }
+  end
+
+  defp extract_tool_result_ids(messages) when is_list(messages) do
+    messages
+    |> Enum.flat_map(fn
+      %{role: role, tool_call_id: tool_call_id}
+      when role in [:tool, "tool"] and is_binary(tool_call_id) ->
+        [tool_call_id]
+
+      %{"role" => role, "tool_call_id" => tool_call_id}
+      when role in [:tool, "tool"] and is_binary(tool_call_id) ->
+        [tool_call_id]
+
+      _ ->
+        []
+    end)
+    |> MapSet.new()
   end
 
   defp valid_history_role?(role),

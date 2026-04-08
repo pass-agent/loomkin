@@ -103,6 +103,76 @@ defmodule Loomkin.Tools.TeamSpawnTest do
 
       on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
     end
+
+    test "resolve_roles infers a minimal research team when spawn_type is research" do
+      params = %{
+        team_name: "vault-ingestion-assessment",
+        purpose: "Assess current vault ingestion support",
+        spawn_type: "research"
+      }
+
+      assert {:ok, [%{name: name, role: "researcher", focus: focus}]} =
+               TeamSpawn.resolve_roles(params)
+
+      assert name == "vault-ingestion-assessment-researcher"
+      assert focus == "Assess current vault ingestion support"
+    end
+
+    test "TeamSpawn.run/2 accepts research spawn without explicit roles" do
+      {:ok, parent_team_id} = Manager.create_team(name: "research-infer-parent")
+
+      params = %{
+        team_name: "vault-ingestion-assessment",
+        purpose: "Assess current vault ingestion support",
+        spawn_type: "research"
+      }
+
+      context = %{
+        parent_team_id: parent_team_id,
+        project_path: nil,
+        session_id: nil,
+        model: nil,
+        agent_name: "test-agent"
+      }
+
+      {:ok, result} = TeamSpawn.run(params, context)
+      assert result.result =~ "vault-ingestion-assessment-researcher (researcher): spawned"
+
+      on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
+    end
+
+    test "research_spawn? infers research delegation for concierge when roles are omitted" do
+      params = %{
+        team_name: "vault-ingestion-assessment",
+        purpose: "Assess current vault ingestion support"
+      }
+
+      assert TeamSpawn.research_spawn?(params, %{role: :concierge})
+      refute TeamSpawn.research_spawn?(params, %{role: :coder})
+    end
+
+    test "TeamSpawn.run/2 infers a research spawn for concierge without explicit roles" do
+      {:ok, parent_team_id} = Manager.create_team(name: "research-infer-concierge-parent")
+
+      params = %{
+        team_name: "vault-ingestion-assessment",
+        purpose: "Assess current vault ingestion support"
+      }
+
+      context = %{
+        parent_team_id: parent_team_id,
+        project_path: nil,
+        session_id: nil,
+        model: nil,
+        agent_name: "concierge",
+        role: :concierge
+      }
+
+      {:ok, result} = TeamSpawn.run(params, context)
+      assert result.result =~ "vault-ingestion-assessment-researcher (researcher): spawned"
+
+      on_exit(fn -> Manager.dissolve_team(parent_team_id) end)
+    end
   end
 
   describe "team manifest" do

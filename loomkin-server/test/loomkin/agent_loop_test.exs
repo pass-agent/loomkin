@@ -586,6 +586,28 @@ defmodule Loomkin.AgentLoopTest do
       assert tool_call.arguments == %{"team_name" => "vault-ingestion-assessment"}
     end
 
+    test "rebuilds orphan tool-call maps into a synthetic assistant when a tool result exists" do
+      messages = [
+        %{role: :user, content: "Please assess vault ingestion"},
+        %{id: "call_123", name: "team_spawn", arguments: %{"team_name" => "vault"}},
+        %{id: "call_456", name: "decision_log", arguments: %{"title" => "Delegate"}},
+        %{role: :tool, content: "spawn failed", tool_call_id: "call_123"},
+        %{role: :tool, content: "logged", tool_call_id: "call_456"}
+      ]
+
+      assert [
+               %{role: :user},
+               %{role: :assistant, tool_calls: [first_call, second_call]},
+               %{role: :tool, tool_call_id: "call_123"},
+               %{role: :tool, tool_call_id: "call_456"}
+             ] = AgentLoop.normalize_history_messages(messages)
+
+      assert first_call.id == "call_123"
+      assert first_call.name == "team_spawn"
+      assert second_call.id == "call_456"
+      assert second_call.name == "decision_log"
+    end
+
     test "drops unrepairable orphan tool-call maps" do
       messages = [
         %{id: "call_123", name: "team_spawn", arguments: %{"team_name" => "vault"}}
