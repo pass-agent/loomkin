@@ -18,8 +18,7 @@ export function getSocket(): Socket {
 
   socket = new Socket(WS_URL, {
     params: { token: token ?? "" },
-    reconnectAfterMs: (tries: number) =>
-      [1000, 2000, 5000, 10000][Math.min(tries - 1, 3)],
+    reconnectAfterMs: (tries: number) => [1000, 2000, 5000, 10000][Math.min(tries - 1, 3)],
   });
 
   socket.onError(() => {
@@ -38,10 +37,7 @@ export function getSocket(): Socket {
  * Join a Phoenix channel with the given topic.
  * Returns the existing channel if already joined.
  */
-export function joinChannel(
-  topic: string,
-  params: Record<string, unknown> = {}
-): Channel {
+export function joinChannel(topic: string, params: Record<string, unknown> = {}): Channel {
   const existing = activeChannels.get(topic);
   if (existing) return existing;
 

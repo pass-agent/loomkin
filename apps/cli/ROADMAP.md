@@ -92,17 +92,17 @@
 
 ## Architecture Decisions
 
-| Decision | Rationale |
-|---|---|
-| Bun runtime | Fast startup, native TypeScript, built-in fetch |
-| React Ink | Composable TUI components, React paradigm shared with mobile |
-| @clack/prompts | Elegant setup wizards outside the Ink render loop |
-| picocolors | Lightweight terminal colors (replaced chalk for smaller bundle) |
-| Zustand | Same state management as mobile, works outside React |
-| Phoenix JS client | Direct protocol compatibility with loomkin-server channels |
-| marked-terminal | Rich markdown rendering with syntax highlighting in terminal |
-| conf | Cross-platform config persistence with schema validation |
-| meow | Lightweight CLI argument parsing |
+| Decision          | Rationale                                                       |
+| ----------------- | --------------------------------------------------------------- |
+| Bun runtime       | Fast startup, native TypeScript, built-in fetch                 |
+| React Ink         | Composable TUI components, React paradigm shared with mobile    |
+| @clack/prompts    | Elegant setup wizards outside the Ink render loop               |
+| picocolors        | Lightweight terminal colors (replaced chalk for smaller bundle) |
+| Zustand           | Same state management as mobile, works outside React            |
+| Phoenix JS client | Direct protocol compatibility with loomkin-server channels      |
+| marked-terminal   | Rich markdown rendering with syntax highlighting in terminal    |
+| conf              | Cross-platform config persistence with schema validation        |
+| meow              | Lightweight CLI argument parsing                                |
 
 ## Future Considerations
 

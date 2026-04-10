@@ -9,7 +9,7 @@ env:
   API_BASE_URL: http://localhost:4200
   E2E_USER_EMAIL: e2e@loomkin.test
   E2E_USER_PASSWORD: e2e_test_password_123!
-  E2E_USER_TOKEN: ""  # Set by setup-auth flow
+  E2E_USER_TOKEN: "" # Set by setup-auth flow
 
 tags:
   - loomkin

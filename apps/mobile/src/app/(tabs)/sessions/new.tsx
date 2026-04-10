@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Alert,
-  ScrollView,
-  TextInput,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCreateSession } from "@/hooks/useSessions";
@@ -42,24 +34,16 @@ export default function NewSessionScreen() {
       });
       router.replace(`/(tabs)/sessions/${session.id}`);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.error ??
-        error?.message ??
-        "Failed to create session.";
+      const message = error?.response?.data?.error ?? error?.message ?? "Failed to create session.";
       Alert.alert("Error", message);
     }
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Model</Text>
-        <Text style={styles.sectionDescription}>
-          Choose the AI model for this session.
-        </Text>
+        <Text style={styles.sectionDescription}>Choose the AI model for this session.</Text>
         <ModelSelector
           selectedModelId={selectedModel}
           onSelect={(model: Model) => setSelectedModel(model.id)}
@@ -85,10 +69,7 @@ export default function NewSessionScreen() {
       </View>
 
       <Pressable
-        style={[
-          styles.createButton,
-          createSession.isPending && styles.createButtonDisabled,
-        ]}
+        style={[styles.createButton, createSession.isPending && styles.createButtonDisabled]}
         onPress={handleCreate}
         disabled={createSession.isPending}
         testID="new-session-create-button"

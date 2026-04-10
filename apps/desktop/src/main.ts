@@ -20,10 +20,7 @@ export function isTauri(): boolean {
  * Send a native desktop notification via Tauri.
  * Falls back silently if not running in Tauri.
  */
-export async function sendNotification(
-  title: string,
-  body: string
-): Promise<void> {
+export async function sendNotification(title: string, body: string): Promise<void> {
   if (!isTauri()) return;
 
   try {

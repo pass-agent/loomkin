@@ -12,42 +12,24 @@ interface SessionCardProps {
   testID?: string;
 }
 
-export function SessionCard({
-  session,
-  onPress,
-  testID = "session-card",
-}: SessionCardProps) {
+export function SessionCard({ session, onPress, testID = "session-card" }: SessionCardProps) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.container, pressed && styles.pressed]}
       onPress={() => onPress(session)}
       testID={testID}
     >
       <View style={styles.header}>
-        <Ionicons
-          name="chatbubbles-outline"
-          size={18}
-          color={COLORS.primary}
-        />
+        <Ionicons name="chatbubbles-outline" size={18} color={COLORS.primary} />
         <Text style={styles.title} numberOfLines={1}>
           {sessionTitle(session.title, session.id)}
         </Text>
-        <StatusBadge
-          status={session.status}
-          testID={`${testID}-status-badge`}
-        />
+        <StatusBadge status={session.status} testID={`${testID}-status-badge`} />
       </View>
 
       <View style={styles.details}>
         <View style={styles.detailItem}>
-          <Ionicons
-            name="cube-outline"
-            size={12}
-            color={COLORS.textMuted}
-          />
+          <Ionicons name="cube-outline" size={12} color={COLORS.textMuted} />
           <Text style={styles.detailText} numberOfLines={1}>
             {session.model}
           </Text>
@@ -55,20 +37,14 @@ export function SessionCard({
 
         {session.cost_usd != null && (
           <View style={styles.detailItem}>
-            <Ionicons
-              name="flash-outline"
-              size={12}
-              color={COLORS.warning}
-            />
+            <Ionicons name="flash-outline" size={12} color={COLORS.warning} />
             <Text style={[styles.detailText, { color: COLORS.warning }]}>
               {formatCost(session.cost_usd)}
             </Text>
           </View>
         )}
 
-        <Text style={styles.time}>
-          {formatRelativeTime(session.updated_at)}
-        </Text>
+        <Text style={styles.time}>{formatRelativeTime(session.updated_at)}</Text>
       </View>
     </Pressable>
   );

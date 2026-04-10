@@ -27,14 +27,9 @@ export function StatusBadge({ status, testID = "status-badge" }: StatusBadgeProp
   };
 
   return (
-    <View
-      style={[styles.badge, { backgroundColor: colors.bg }]}
-      testID={testID}
-    >
+    <View style={[styles.badge, { backgroundColor: colors.bg }]} testID={testID}>
       <View style={[styles.dot, { backgroundColor: colors.text }]} />
-      <Text style={[styles.text, { color: colors.text }]}>
-        {status}
-      </Text>
+      <Text style={[styles.text, { color: colors.text }]}>{status}</Text>
     </View>
   );
 }

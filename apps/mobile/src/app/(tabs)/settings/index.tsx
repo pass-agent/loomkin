@@ -1,13 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Alert,
-  RefreshControl,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/stores/authStore";
@@ -23,12 +15,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logoutAction = useAuthStore((s) => s.logout);
-  const {
-    data: settings,
-    isLoading,
-    refetch,
-    isRefetching,
-  } = useSettings();
+  const { data: settings, isLoading, refetch, isRefetching } = useSettings();
   const { data: providers } = useModelProviders();
 
   // Get unique section names from settings
@@ -80,15 +67,9 @@ export default function SettingsScreen() {
       >
         {/* Profile Section */}
         <View style={styles.profileCard}>
-          <Ionicons
-            name="person-circle-outline"
-            size={56}
-            color={COLORS.primary}
-          />
+          <Ionicons name="person-circle-outline" size={56} color={COLORS.primary} />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>
-              {user?.username ?? user?.email ?? "User"}
-            </Text>
+            <Text style={styles.profileName}>{user?.username ?? user?.email ?? "User"}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
           </View>
         </View>
@@ -119,17 +100,11 @@ export default function SettingsScreen() {
               <Pressable
                 key={sectionName}
                 style={styles.sectionRow}
-                onPress={() =>
-                  router.push(`/(tabs)/settings/${encodeURIComponent(sectionName)}`)
-                }
+                onPress={() => router.push(`/(tabs)/settings/${encodeURIComponent(sectionName)}`)}
                 testID={`settings-section-${sectionName}-button`}
               >
                 <Text style={styles.sectionRowText}>{sectionName}</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={20}
-                  color={COLORS.textMuted}
-                />
+                <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
               </Pressable>
             ))}
           </View>
@@ -137,11 +112,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Logout — fixed footer outside ScrollView */}
-      <Pressable
-        style={styles.logoutButton}
-        onPress={handleLogout}
-        testID="settings-logout-button"
-      >
+      <Pressable style={styles.logoutButton} onPress={handleLogout} testID="settings-logout-button">
         <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
         <Text style={styles.logoutText}>Sign Out</Text>
       </Pressable>

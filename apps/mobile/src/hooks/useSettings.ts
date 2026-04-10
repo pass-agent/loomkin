@@ -14,8 +14,7 @@ export function useUpdateSettings() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (settings: Record<string, unknown>) =>
-      settingsApi.update(settings),
+    mutationFn: (settings: Record<string, unknown>) => settingsApi.update(settings),
     onSuccess: (data) => {
       queryClient.setQueryData(QUERY_KEYS.settings, data);
     },

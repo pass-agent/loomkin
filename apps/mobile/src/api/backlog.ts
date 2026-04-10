@@ -8,30 +8,17 @@ export const backlogApi = {
   },
 
   async get(id: string): Promise<BacklogItem> {
-    const response = await apiClient.get<{ item: BacklogItem }>(
-      `/backlog/${id}`
-    );
+    const response = await apiClient.get<{ item: BacklogItem }>(`/backlog/${id}`);
     return response.data.item;
   },
 
-  async create(
-    data: Partial<BacklogItem>
-  ): Promise<BacklogItem> {
-    const response = await apiClient.post<{ item: BacklogItem }>(
-      "/backlog",
-      data
-    );
+  async create(data: Partial<BacklogItem>): Promise<BacklogItem> {
+    const response = await apiClient.post<{ item: BacklogItem }>("/backlog", data);
     return response.data.item;
   },
 
-  async update(
-    id: string,
-    data: Partial<BacklogItem>
-  ): Promise<BacklogItem> {
-    const response = await apiClient.put<{ item: BacklogItem }>(
-      `/backlog/${id}`,
-      data
-    );
+  async update(id: string, data: Partial<BacklogItem>): Promise<BacklogItem> {
+    const response = await apiClient.put<{ item: BacklogItem }>(`/backlog/${id}`, data);
     return response.data.item;
   },
 

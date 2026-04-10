@@ -5,7 +5,6 @@ tags:
   - smoke
 
 ---
-
 # Launch app fresh
 - launchApp:
     clearState: true

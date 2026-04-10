@@ -11,12 +11,7 @@ interface CostBadgeProps {
   testID?: string;
 }
 
-export function CostBadge({
-  costUsd,
-  tokens,
-  onPress,
-  testID = "cost-badge",
-}: CostBadgeProps) {
+export function CostBadge({ costUsd, tokens, onPress, testID = "cost-badge" }: CostBadgeProps) {
   if (onPress) {
     return (
       <Pressable
@@ -25,30 +20,18 @@ export function CostBadge({
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         testID={testID}
       >
-        <Ionicons
-          name="flash-outline"
-          size={12}
-          color={COLORS.warning}
-        />
+        <Ionicons name="flash-outline" size={12} color={COLORS.warning} />
         <Text style={styles.cost}>{formatCost(costUsd)}</Text>
-        {tokens != null && (
-          <Text style={styles.tokens}>({formatTokens(tokens)})</Text>
-        )}
+        {tokens != null && <Text style={styles.tokens}>({formatTokens(tokens)})</Text>}
       </Pressable>
     );
   }
 
   return (
     <View style={styles.container} testID={testID}>
-      <Ionicons
-        name="flash-outline"
-        size={12}
-        color={COLORS.warning}
-      />
+      <Ionicons name="flash-outline" size={12} color={COLORS.warning} />
       <Text style={styles.cost}>{formatCost(costUsd)}</Text>
-      {tokens != null && (
-        <Text style={styles.tokens}>({formatTokens(tokens)})</Text>
-      )}
+      {tokens != null && <Text style={styles.tokens}>({formatTokens(tokens)})</Text>}
     </View>
   );
 }

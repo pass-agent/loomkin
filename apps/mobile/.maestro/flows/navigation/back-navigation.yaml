@@ -4,7 +4,6 @@ tags:
   - navigation
 
 ---
-
 # Authenticate first
 - runFlow: ../../utils/setup-auth.yaml
 

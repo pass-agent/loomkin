@@ -12,9 +12,7 @@ const DEV_API_URL = Platform.select({
   default: "http://localhost:4200",
 });
 
-export const API_BASE_URL = __DEV__
-  ? DEV_API_URL
-  : "https://api.loomkin.dev";
+export const API_BASE_URL = __DEV__ ? DEV_API_URL : "https://api.loomkin.dev";
 
 export const API_URL = `${API_BASE_URL}/api/v1`;
 

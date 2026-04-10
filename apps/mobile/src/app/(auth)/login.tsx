@@ -43,14 +43,11 @@ export default function LoginScreen() {
         // Magic link flow — show informational alert
         Alert.alert(
           "Check Your Email",
-          response.message || "A login link has been sent to your email."
+          response.message || "A login link has been sent to your email.",
         );
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Login failed. Please try again.";
+      const message = error instanceof Error ? error.message : "Login failed. Please try again.";
       setErrorMessage(message);
     } finally {
       setIsLoading(false);
@@ -65,11 +62,7 @@ export default function LoginScreen() {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Ionicons
-            name="code-slash-outline"
-            size={56}
-            color={COLORS.primary}
-          />
+          <Ionicons name="code-slash-outline" size={56} color={COLORS.primary} />
           <Text style={styles.title}>Loomkin</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>

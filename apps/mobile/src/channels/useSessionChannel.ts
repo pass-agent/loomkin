@@ -23,13 +23,10 @@ export function useSessionChannel({
 }: UseSessionChannelOptions) {
   const channelRef = useRef<Channel | null>(null);
 
-  const sendMessage = useCallback(
-    (content: string) => {
-      if (!channelRef.current) return;
-      channelRef.current.push("new_message", { content });
-    },
-    []
-  );
+  const sendMessage = useCallback((content: string) => {
+    if (!channelRef.current) return;
+    channelRef.current.push("new_message", { content });
+  }, []);
 
   useEffect(() => {
     if (!sessionId || !enabled) return;

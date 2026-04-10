@@ -5,7 +5,6 @@ tags:
   - auth
 
 ---
-
 # Launch the app fresh
 - launchApp:
     clearState: true

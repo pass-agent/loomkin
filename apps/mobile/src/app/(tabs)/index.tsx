@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  RefreshControl,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,14 +17,8 @@ export default function DashboardScreen() {
   const { data: sessions, isLoading, refetch, isRefetching } = useSessions();
 
   const activeSessions = sessions?.filter((s) => s.status === "active") ?? [];
-  const totalCost = sessions?.reduce(
-    (sum, s) => sum + (s.cost_usd ?? 0),
-    0
-  );
-  const totalTokens = sessions?.reduce(
-    (sum, s) => sum + s.prompt_tokens + s.completion_tokens,
-    0
-  );
+  const totalCost = sessions?.reduce((sum, s) => sum + (s.cost_usd ?? 0), 0);
+  const totalTokens = sessions?.reduce((sum, s) => sum + s.prompt_tokens + s.completion_tokens, 0);
 
   const handleSessionPress = (session: Session) => {
     router.push(`/(tabs)/sessions/${session.id}`);
@@ -62,32 +49,20 @@ export default function DashboardScreen() {
             onPress={() => router.push("/(tabs)/settings")}
             testID="dashboard-profile-button"
           >
-            <Ionicons
-              name="person-circle-outline"
-              size={36}
-              color={COLORS.primary}
-            />
+            <Ionicons name="person-circle-outline" size={36} color={COLORS.primary} />
           </Pressable>
         </View>
 
         {/* Stats Cards */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Ionicons
-              name="chatbubbles-outline"
-              size={24}
-              color={COLORS.primary}
-            />
+            <Ionicons name="chatbubbles-outline" size={24} color={COLORS.primary} />
             <Text style={styles.statValue}>{activeSessions.length}</Text>
             <Text style={styles.statLabel}>Active Sessions</Text>
           </View>
 
           <View style={styles.statCard}>
-            <Ionicons
-              name="flash-outline"
-              size={24}
-              color={COLORS.warning}
-            />
+            <Ionicons name="flash-outline" size={24} color={COLORS.warning} />
             <Text style={styles.statValue}>
               {totalCost != null
                 ? totalCost < 1
@@ -99,11 +74,7 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Ionicons
-              name="analytics-outline"
-              size={24}
-              color={COLORS.info}
-            />
+            <Ionicons name="analytics-outline" size={24} color={COLORS.info} />
             <Text style={styles.statValue}>
               {totalTokens != null
                 ? totalTokens > 1000
@@ -124,11 +95,7 @@ export default function DashboardScreen() {
               onPress={() => router.push("/(tabs)/sessions/new")}
               testID="dashboard-new-session-button"
             >
-              <Ionicons
-                name="add-circle-outline"
-                size={24}
-                color={COLORS.primary}
-              />
+              <Ionicons name="add-circle-outline" size={24} color={COLORS.primary} />
               <Text style={styles.actionText}>New Session</Text>
             </Pressable>
 
@@ -137,11 +104,7 @@ export default function DashboardScreen() {
               onPress={() => router.push("/(tabs)/sessions")}
               testID="dashboard-all-sessions-button"
             >
-              <Ionicons
-                name="list-outline"
-                size={24}
-                color={COLORS.secondary}
-              />
+              <Ionicons name="list-outline" size={24} color={COLORS.secondary} />
               <Text style={styles.actionText}>All Sessions</Text>
             </Pressable>
 
@@ -150,11 +113,7 @@ export default function DashboardScreen() {
               onPress={() => router.push("/(tabs)/teams")}
               testID="dashboard-teams-button"
             >
-              <Ionicons
-                name="people-outline"
-                size={24}
-                color={COLORS.success}
-              />
+              <Ionicons name="people-outline" size={24} color={COLORS.success} />
               <Text style={styles.actionText}>Teams</Text>
             </Pressable>
           </View>
@@ -182,20 +141,20 @@ export default function DashboardScreen() {
                 onPress={() => router.push("/(tabs)/sessions/new")}
                 testID="dashboard-create-session-button"
               >
-                <Text style={styles.createButtonText}>
-                  Create your first session
-                </Text>
+                <Text style={styles.createButtonText}>Create your first session</Text>
               </Pressable>
             </View>
           ) : (
-            activeSessions.slice(0, 5).map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                onPress={handleSessionPress}
-                testID={`dashboard-session-card-${session.id}`}
-              />
-            ))
+            activeSessions
+              .slice(0, 5)
+              .map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onPress={handleSessionPress}
+                  testID={`dashboard-session-card-${session.id}`}
+                />
+              ))
           )}
         </View>
       </ScrollView>

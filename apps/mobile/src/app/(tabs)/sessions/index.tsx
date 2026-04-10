@@ -1,12 +1,5 @@
 import React, { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Pressable,
-  RefreshControl,
-} from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -34,7 +27,7 @@ export default function SessionsListScreen() {
     (session: Session) => {
       router.push(`/(tabs)/sessions/${session.id}`);
     },
-    [router]
+    [router],
   );
 
   const renderSession = useCallback(
@@ -45,7 +38,7 @@ export default function SessionsListScreen() {
         testID={`sessions-list-card-${item.id}`}
       />
     ),
-    [handleSessionPress]
+    [handleSessionPress],
   );
 
   if (isLoading) {
@@ -63,12 +56,7 @@ export default function SessionsListScreen() {
             onPress={() => setFilter(f)}
             testID={`sessions-filter-${f}-button`}
           >
-            <Text
-              style={[
-                styles.filterText,
-                filter === f && styles.filterTextActive,
-              ]}
-            >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>
           </Pressable>

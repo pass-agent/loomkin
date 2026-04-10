@@ -15,9 +15,7 @@ export default function ConfirmScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ token: string }>();
   const loginAction = useAuthStore((s) => s.login);
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -62,11 +60,7 @@ export default function ConfirmScreen() {
 
       {status === "success" && (
         <View style={styles.content}>
-          <Ionicons
-            name="checkmark-circle"
-            size={64}
-            color={COLORS.success}
-          />
+          <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
           <Text style={styles.title}>Login Confirmed</Text>
           <Text style={styles.description}>Redirecting...</Text>
         </View>
@@ -74,11 +68,7 @@ export default function ConfirmScreen() {
 
       {status === "error" && (
         <View style={styles.content}>
-          <Ionicons
-            name="alert-circle"
-            size={64}
-            color={COLORS.error}
-          />
+          <Ionicons name="alert-circle" size={64} color={COLORS.error} />
           <Text style={styles.title}>Confirmation Failed</Text>
           <Text style={styles.description}>{errorMessage}</Text>
         </View>

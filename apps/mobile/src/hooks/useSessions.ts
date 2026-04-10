@@ -43,13 +43,11 @@ export function useSendMessage(sessionId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (content: string) =>
-      messagesApi.send(sessionId, { content }),
+    mutationFn: (content: string) => messagesApi.send(sessionId, { content }),
     onSuccess: (newMessage) => {
       // Optimistically add the message to the cache
-      queryClient.setQueryData<Message[]>(
-        QUERY_KEYS.sessionMessages(sessionId),
-        (old) => (old ? [...old, newMessage] : [newMessage])
+      queryClient.setQueryData<Message[]>(QUERY_KEYS.sessionMessages(sessionId), (old) =>
+        old ? [...old, newMessage] : [newMessage],
       );
     },
   });

@@ -14,11 +14,7 @@ import {
 import { useLocalSearchParams, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useSession,
-  useSessionMessages,
-  useSendMessage,
-} from "@/hooks/useSessions";
+import { useSession, useSessionMessages, useSendMessage } from "@/hooks/useSessions";
 import { useSessionChannel } from "@/channels/useSessionChannel";
 import { ChatBubble } from "@/components/ChatBubble";
 import { CostBadge } from "@/components/CostBadge";
@@ -37,39 +33,30 @@ export default function SessionDetailScreen() {
   const [costModalVisible, setCostModalVisible] = useState(false);
 
   const { data: session, isLoading: sessionLoading } = useSession(id);
-  const {
-    data: messages,
-    isLoading: messagesLoading,
-  } = useSessionMessages(id);
+  const { data: messages, isLoading: messagesLoading } = useSessionMessages(id);
   const sendMessage = useSendMessage(id!);
 
   // Real-time channel subscription
   const handleNewMessage = useCallback(
     (message: Message) => {
-      queryClient.setQueryData<Message[]>(
-        QUERY_KEYS.sessionMessages(id!),
-        (old) => {
-          if (!old) return [message];
-          // Avoid duplicates
-          if (old.some((m) => m.id === message.id)) return old;
-          return [...old, message];
-        }
-      );
+      queryClient.setQueryData<Message[]>(QUERY_KEYS.sessionMessages(id!), (old) => {
+        if (!old) return [message];
+        // Avoid duplicates
+        if (old.some((m) => m.id === message.id)) return old;
+        return [...old, message];
+      });
     },
-    [id, queryClient]
+    [id, queryClient],
   );
 
   const handleMessageUpdate = useCallback(
     (message: Message) => {
-      queryClient.setQueryData<Message[]>(
-        QUERY_KEYS.sessionMessages(id!),
-        (old) => {
-          if (!old) return [message];
-          return old.map((m) => (m.id === message.id ? message : m));
-        }
-      );
+      queryClient.setQueryData<Message[]>(QUERY_KEYS.sessionMessages(id!), (old) => {
+        if (!old) return [message];
+        return old.map((m) => (m.id === message.id ? message : m));
+      });
     },
-    [id, queryClient]
+    [id, queryClient],
   );
 
   useSessionChannel({
@@ -103,12 +90,9 @@ export default function SessionDetailScreen() {
 
   const renderMessage = useCallback(
     ({ item }: { item: Message }) => (
-      <ChatBubble
-        message={item}
-        testID={`session-message-${item.id}`}
-      />
+      <ChatBubble message={item} testID={`session-message-${item.id}`} />
     ),
-    []
+    [],
   );
 
   const isLoading = sessionLoading || messagesLoading;
@@ -117,9 +101,7 @@ export default function SessionDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          title: session
-            ? sessionTitle(session.title, session.id)
-            : "Session",
+          title: session ? sessionTitle(session.title, session.id) : "Session",
           headerRight: () =>
             session ? (
               <CostBadge
@@ -145,11 +127,7 @@ export default function SessionDetailScreen() {
             {/* Model indicator */}
             {session && (
               <View style={styles.modelBar}>
-                <Ionicons
-                  name="cube-outline"
-                  size={14}
-                  color={COLORS.textMuted}
-                />
+                <Ionicons name="cube-outline" size={14} color={COLORS.textMuted} />
                 <Text style={styles.modelText}>{session.model}</Text>
               </View>
             )}
@@ -192,8 +170,7 @@ export default function SessionDetailScreen() {
                 <Pressable
                   style={[
                     styles.sendButton,
-                    (!inputText.trim() || sendMessage.isPending) &&
-                      styles.sendButtonDisabled,
+                    (!inputText.trim() || sendMessage.isPending) && styles.sendButtonDisabled,
                   ]}
                   onPress={handleSend}
                   disabled={!inputText.trim() || sendMessage.isPending}
@@ -202,11 +179,7 @@ export default function SessionDetailScreen() {
                   {sendMessage.isPending ? (
                     <LoadingSpinner size="small" />
                   ) : (
-                    <Ionicons
-                      name="send"
-                      size={20}
-                      color={COLORS.white}
-                    />
+                    <Ionicons name="send" size={20} color={COLORS.white} />
                   )}
                 </Pressable>
               </View>
@@ -222,16 +195,15 @@ export default function SessionDetailScreen() {
         animationType="fade"
         onRequestClose={() => setCostModalVisible(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setCostModalVisible(false)}
-        >
+        <Pressable style={styles.modalOverlay} onPress={() => setCostModalVisible(false)}>
           <View
             style={styles.modalContent}
             testID="cost-detail-modal"
             onStartShouldSetResponder={() => true}
           >
-            <Text style={styles.modalTitle} testID="cost-detail-modal-title">Cost Breakdown</Text>
+            <Text style={styles.modalTitle} testID="cost-detail-modal-title">
+              Cost Breakdown
+            </Text>
 
             {session && (
               <View style={styles.modalBody}>
@@ -241,28 +213,20 @@ export default function SessionDetailScreen() {
                 </View>
                 <View style={styles.costRow}>
                   <Text style={styles.costLabel}>Total Cost</Text>
-                  <Text style={styles.costValueHighlight}>
-                    {formatCost(session.cost_usd)}
-                  </Text>
+                  <Text style={styles.costValueHighlight}>{formatCost(session.cost_usd)}</Text>
                 </View>
                 <View style={styles.costRow}>
                   <Text style={styles.costLabel}>Prompt Tokens</Text>
-                  <Text style={styles.costValue}>
-                    {formatTokens(session.prompt_tokens)}
-                  </Text>
+                  <Text style={styles.costValue}>{formatTokens(session.prompt_tokens)}</Text>
                 </View>
                 <View style={styles.costRow}>
                   <Text style={styles.costLabel}>Completion Tokens</Text>
-                  <Text style={styles.costValue}>
-                    {formatTokens(session.completion_tokens)}
-                  </Text>
+                  <Text style={styles.costValue}>{formatTokens(session.completion_tokens)}</Text>
                 </View>
                 <View style={styles.costRow}>
                   <Text style={styles.costLabel}>Total Tokens</Text>
                   <Text style={styles.costValue}>
-                    {formatTokens(
-                      session.prompt_tokens + session.completion_tokens
-                    )}
+                    {formatTokens(session.prompt_tokens + session.completion_tokens)}
                   </Text>
                 </View>
               </View>

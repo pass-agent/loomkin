@@ -7,13 +7,8 @@ export const settingsApi = {
     return response.data.settings;
   },
 
-  async update(
-    settings: Record<string, unknown>
-  ): Promise<Setting[]> {
-    const response = await apiClient.put<{ values: Setting[] }>(
-      "/settings",
-      { settings }
-    );
+  async update(settings: Record<string, unknown>): Promise<Setting[]> {
+    const response = await apiClient.put<{ values: Setting[] }>("/settings", { settings });
     return response.data.values;
   },
 };

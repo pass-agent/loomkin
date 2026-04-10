@@ -9,15 +9,9 @@ export default function NotFoundScreen() {
     <>
       <Stack.Screen options={{ title: "Not Found" }} />
       <View style={styles.container}>
-        <Ionicons
-          name="warning-outline"
-          size={64}
-          color={COLORS.textMuted}
-        />
+        <Ionicons name="warning-outline" size={64} color={COLORS.textMuted} />
         <Text style={styles.title}>Page Not Found</Text>
-        <Text style={styles.description}>
-          The page you're looking for doesn't exist.
-        </Text>
+        <Text style={styles.description}>The page you're looking for doesn't exist.</Text>
         <Link href="/(tabs)" asChild>
           <Pressable style={styles.button} testID="not-found-home-button">
             <Text style={styles.buttonText}>Go Home</Text>

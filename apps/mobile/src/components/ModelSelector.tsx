@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Modal,
-  SectionList,
-} from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, SectionList } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONT_SIZES, SPACING } from "@/lib/constants";
 import { useModels, useModelProviders } from "@/hooks/useModels";
@@ -58,19 +51,11 @@ export function ModelSelector({
         onPress={() => setIsOpen(true)}
         testID={`${testID}-trigger-button`}
       >
-        <Ionicons
-          name="cube-outline"
-          size={16}
-          color={COLORS.primaryLight}
-        />
+        <Ionicons name="cube-outline" size={16} color={COLORS.primaryLight} />
         <Text style={styles.triggerText} numberOfLines={1}>
           {selectedModel?.label ?? selectedModelId ?? "Select model"}
         </Text>
-        <Ionicons
-          name="chevron-down"
-          size={14}
-          color={COLORS.textMuted}
-        />
+        <Ionicons name="chevron-down" size={14} color={COLORS.textMuted} />
       </Pressable>
 
       <Modal
@@ -87,15 +72,8 @@ export function ModelSelector({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Model</Text>
-              <Pressable
-                onPress={() => setIsOpen(false)}
-                testID={`${testID}-close-button`}
-              >
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={COLORS.text}
-                />
+              <Pressable onPress={() => setIsOpen(false)} testID={`${testID}-close-button`}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
               </Pressable>
             </View>
 
@@ -106,21 +84,13 @@ export function ModelSelector({
                 sections={sections}
                 keyExtractor={(item) => item.id}
                 renderSectionHeader={({ section }) => (
-                  <View
-                    style={styles.sectionHeader}
-                    testID={`${testID}-provider-${section.title}`}
-                  >
-                    <Text style={styles.sectionHeaderText}>
-                      {section.title}
-                    </Text>
+                  <View style={styles.sectionHeader} testID={`${testID}-provider-${section.title}`}>
+                    <Text style={styles.sectionHeaderText}>{section.title}</Text>
                   </View>
                 )}
                 renderItem={({ item }) => (
                   <Pressable
-                    style={[
-                      styles.modelItem,
-                      item.id === selectedModelId && styles.selectedItem,
-                    ]}
+                    style={[styles.modelItem, item.id === selectedModelId && styles.selectedItem]}
                     onPress={() => handleSelect(item)}
                     testID={`${testID}-model-${item.id}-button`}
                   >
@@ -128,17 +98,9 @@ export function ModelSelector({
                       <Text style={styles.modelLabel}>{item.label}</Text>
                       <Text style={styles.modelId}>{item.id}</Text>
                     </View>
-                    {item.context && (
-                      <Text style={styles.contextBadge}>
-                        {item.context}
-                      </Text>
-                    )}
+                    {item.context && <Text style={styles.contextBadge}>{item.context}</Text>}
                     {item.id === selectedModelId && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color={COLORS.primary}
-                      />
+                      <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
                     )}
                   </Pressable>
                 )}

@@ -9,9 +9,7 @@ export const modelsApi = {
   },
 
   async providers(): Promise<ModelProvider[]> {
-    const response = await apiClient.get<{ providers: ModelProvider[] }>(
-      "/models/providers"
-    );
+    const response = await apiClient.get<{ providers: ModelProvider[] }>("/models/providers");
     return response.data.providers;
   },
 };

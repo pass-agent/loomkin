@@ -12,7 +12,7 @@ type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 async function request<T>(
   method: HttpMethod,
   url: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
@@ -54,22 +54,18 @@ async function request<T>(
       }
       const message =
         errorData && typeof errorData === "object"
-          ? ("message" in errorData &&
-              typeof (errorData as { message: unknown }).message === "string"
-              ? (errorData as { message: string }).message
-              : "error" in errorData &&
-                  typeof (errorData as { error: unknown }).error === "string"
-                ? (errorData as { error: string }).error
-                : response.statusText)
+          ? "message" in errorData &&
+            typeof (errorData as { message: unknown }).message === "string"
+            ? (errorData as { message: string }).message
+            : "error" in errorData && typeof (errorData as { error: unknown }).error === "string"
+              ? (errorData as { error: string }).error
+              : response.statusText
           : response.statusText;
       throw new ApiError(response.status, message, errorData);
     }
 
     // Handle no-content responses (e.g. DELETE)
-    if (
-      response.status === 204 ||
-      response.headers.get("content-length") === "0"
-    ) {
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
       return { data: undefined as T };
     }
 

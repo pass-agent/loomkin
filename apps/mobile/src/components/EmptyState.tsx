@@ -22,16 +22,9 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <View style={styles.container} testID={testID}>
-      <Ionicons
-        name={icon}
-        size={64}
-        color={COLORS.textMuted}
-        style={styles.icon}
-      />
+      <Ionicons name={icon} size={64} color={COLORS.textMuted} style={styles.icon} />
       <Text style={styles.title}>{title}</Text>
-      {description && (
-        <Text style={styles.description}>{description}</Text>
-      )}
+      {description && <Text style={styles.description}>{description}</Text>}
       {actionLabel && onAction && (
         <Pressable
           style={styles.actionButton}

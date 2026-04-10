@@ -20,12 +20,8 @@ export function QueryProvider({ children }: QueryProviderProps) {
             retry: 1,
           },
         },
-      })
+      }),
   );
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

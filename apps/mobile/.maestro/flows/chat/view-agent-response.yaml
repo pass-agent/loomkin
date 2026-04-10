@@ -4,7 +4,6 @@ tags:
   - chat
 
 ---
-
 # Set up session (creates a session and opens chat)
 - runFlow: ../../utils/setup-session.yaml
 

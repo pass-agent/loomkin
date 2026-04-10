@@ -28,11 +28,7 @@ export function ChatBubble({ message, testID = "chat-bubble" }: ChatBubbleProps)
     return (
       <View style={styles.toolContainer} testID={`${testID}-tool`}>
         {message.tool_calls.map((tc) => (
-          <ToolCallView
-            key={tc.id}
-            toolCall={tc}
-            testID={`${testID}-tool-call-${tc.id}`}
-          />
+          <ToolCallView key={tc.id} toolCall={tc} testID={`${testID}-tool-call-${tc.id}`} />
         ))}
       </View>
     );
@@ -40,18 +36,10 @@ export function ChatBubble({ message, testID = "chat-bubble" }: ChatBubbleProps)
 
   return (
     <View
-      style={[
-        styles.container,
-        isUser ? styles.userContainer : styles.assistantContainer,
-      ]}
+      style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}
       testID={`${testID}-${message.role}`}
     >
-      <View
-        style={[
-          styles.bubble,
-          isUser ? styles.userBubble : styles.assistantBubble,
-        ]}
-      >
+      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
         {!isUser && (
           <Text style={styles.roleLabel}>
             {message.agent_name ?? (message.role === "assistant" ? "Assistant" : message.role)}
@@ -59,10 +47,7 @@ export function ChatBubble({ message, testID = "chat-bubble" }: ChatBubbleProps)
         )}
 
         {message.content && (
-          <Text
-            style={[styles.content, isUser && styles.userContent]}
-            selectable
-          >
+          <Text style={[styles.content, isUser && styles.userContent]} selectable>
             {message.content}
           </Text>
         )}
@@ -70,11 +55,7 @@ export function ChatBubble({ message, testID = "chat-bubble" }: ChatBubbleProps)
         {isAssistant && message.tool_calls && message.tool_calls.length > 0 && (
           <View style={styles.toolCallsContainer}>
             {message.tool_calls.map((tc) => (
-              <ToolCallView
-                key={tc.id}
-                toolCall={tc}
-                testID={`${testID}-tool-call-${tc.id}`}
-              />
+              <ToolCallView key={tc.id} toolCall={tc} testID={`${testID}-tool-call-${tc.id}`} />
             ))}
           </View>
         )}

@@ -42,9 +42,7 @@ export default function RegisterScreen() {
       router.replace("/(tabs)");
     } catch (error: unknown) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Registration failed. Please try again.";
+        error instanceof Error ? error.message : "Registration failed. Please try again.";
       Alert.alert("Registration Failed", message);
     } finally {
       setIsLoading(false);
@@ -59,11 +57,7 @@ export default function RegisterScreen() {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Ionicons
-            name="code-slash-outline"
-            size={56}
-            color={COLORS.primary}
-          />
+          <Ionicons name="code-slash-outline" size={56} color={COLORS.primary} />
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Get started with Loomkin</Text>
         </View>
@@ -141,10 +135,7 @@ export default function RegisterScreen() {
           </View>
 
           <Pressable
-            style={[
-              styles.registerButton,
-              isLoading && styles.registerButtonDisabled,
-            ]}
+            style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
             onPress={handleRegister}
             disabled={isLoading}
             testID="register-submit-button"

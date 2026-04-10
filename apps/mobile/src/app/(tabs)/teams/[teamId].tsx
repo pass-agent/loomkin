@@ -50,12 +50,9 @@ export default function TeamDetailScreen() {
     setSelectedAgent(agent);
   }, []);
 
-  const handleBroadcast = useCallback(
-    (agent: Agent) => {
-      setSelectedAgent(null);
-    },
-    []
-  );
+  const handleBroadcast = useCallback((agent: Agent) => {
+    setSelectedAgent(null);
+  }, []);
 
   const handleSend = useCallback(() => {
     const text = composerText.trim();
@@ -151,22 +148,14 @@ export default function TeamDetailScreen() {
             <Text style={styles.emptyText}>No tasks assigned.</Text>
           ) : (
             team.tasks.map((task) => (
-              <View
-                key={task.id}
-                style={styles.taskCard}
-              >
+              <View key={task.id} style={styles.taskCard}>
                 <View style={styles.taskInfo}>
                   <Text style={styles.taskTitle}>{task.title}</Text>
                   {task.assigned_to && (
-                    <Text style={styles.taskAssigned}>
-                      Assigned to: {task.assigned_to}
-                    </Text>
+                    <Text style={styles.taskAssigned}>Assigned to: {task.assigned_to}</Text>
                   )}
                 </View>
-                <StatusBadge
-                  status={task.status}
-                  testID={`team-task-${task.id}-status-badge`}
-                />
+                <StatusBadge status={task.status} testID={`team-task-${task.id}-status-badge`} />
               </View>
             ))
           )}
@@ -182,9 +171,7 @@ export default function TeamDetailScreen() {
           {selectedAgent && (
             <View style={styles.replyIndicator}>
               <Ionicons name="chatbubble-outline" size={12} color={COLORS.primary} />
-              <Text style={styles.replyText}>
-                Replying to {selectedAgent.name}
-              </Text>
+              <Text style={styles.replyText}>Replying to {selectedAgent.name}</Text>
               <Pressable
                 onPress={() => setSelectedAgent(null)}
                 testID="team-composer-clear-reply-button"
@@ -197,9 +184,7 @@ export default function TeamDetailScreen() {
             <TextInput
               style={styles.composerInput}
               placeholder={
-                selectedAgent
-                  ? `Message ${selectedAgent.name}...`
-                  : "Broadcast to team..."
+                selectedAgent ? `Message ${selectedAgent.name}...` : "Broadcast to team..."
               }
               placeholderTextColor={COLORS.textMuted}
               value={composerText}
@@ -209,10 +194,7 @@ export default function TeamDetailScreen() {
               testID="team-composer-input"
             />
             <Pressable
-              style={[
-                styles.sendButton,
-                !composerText.trim() && styles.sendButtonDisabled,
-              ]}
+              style={[styles.sendButton, !composerText.trim() && styles.sendButtonDisabled]}
               onPress={handleSend}
               disabled={!composerText.trim()}
               testID="team-composer-send-button"

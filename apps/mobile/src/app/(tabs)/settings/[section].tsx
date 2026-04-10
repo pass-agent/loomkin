@@ -20,15 +20,11 @@ export default function SettingSectionScreen() {
   const decodedSection = decodeURIComponent(section ?? "");
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
-  const [pendingChanges, setPendingChanges] = useState<
-    Record<string, unknown>
-  >({});
+  const [pendingChanges, setPendingChanges] = useState<Record<string, unknown>>({});
 
   const sectionSettings = useMemo(() => {
     if (!settings) return [];
-    return settings.filter(
-      (s) => (s.section || "General") === decodedSection
-    );
+    return settings.filter((s) => (s.section || "General") === decodedSection);
   }, [settings, decodedSection]);
 
   const handleSettingChange = (key: string, value: unknown) => {
@@ -43,10 +39,7 @@ export default function SettingSectionScreen() {
       setPendingChanges({});
       Alert.alert("Success", "Settings saved.");
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error?.message ?? "Failed to save settings."
-      );
+      Alert.alert("Error", error?.message ?? "Failed to save settings.");
     }
   };
 
@@ -78,18 +71,14 @@ export default function SettingSectionScreen() {
             {setting.options?.map((option) => (
               <Pressable
                 key={option}
-                style={[
-                  styles.selectOption,
-                  currentValue === option && styles.selectOptionActive,
-                ]}
+                style={[styles.selectOption, currentValue === option && styles.selectOptionActive]}
                 onPress={() => handleSettingChange(setting.key, option)}
                 testID={`settings-${setting.key}-${option}-button`}
               >
                 <Text
                   style={[
                     styles.selectOptionText,
-                    currentValue === option &&
-                      styles.selectOptionTextActive,
+                    currentValue === option && styles.selectOptionTextActive,
                   ]}
                 >
                   {option}
@@ -107,14 +96,9 @@ export default function SettingSectionScreen() {
             style={styles.settingInput}
             value={String(currentValue ?? "")}
             onChangeText={(val) =>
-              handleSettingChange(
-                setting.key,
-                setting.type === "number" ? Number(val) : val
-              )
+              handleSettingChange(setting.key, setting.type === "number" ? Number(val) : val)
             }
-            keyboardType={
-              setting.type === "number" ? "numeric" : "default"
-            }
+            keyboardType={setting.type === "number" ? "numeric" : "default"}
             placeholderTextColor={COLORS.textMuted}
             testID={`settings-${setting.key}-input`}
           />
@@ -130,10 +114,7 @@ export default function SettingSectionScreen() {
         }}
       />
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {isLoading ? (
           <LoadingSpinner message="Loading settings..." />
         ) : (
@@ -142,9 +123,7 @@ export default function SettingSectionScreen() {
               <View style={styles.settingInfo}>
                 <Text style={styles.settingLabel}>{setting.label}</Text>
                 {setting.description && (
-                  <Text style={styles.settingDescription}>
-                    {setting.description}
-                  </Text>
+                  <Text style={styles.settingDescription}>{setting.description}</Text>
                 )}
               </View>
               {renderSettingInput(setting)}

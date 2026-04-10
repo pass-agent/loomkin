@@ -2,10 +2,10 @@
   "name": "@loomkin/cli",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "bin": {
     "loomkin": "./dist/index.js"
   },
+  "type": "module",
   "scripts": {
     "dev": "NODE_EXTRA_CA_CERTS=$(localias debug cert) bun --watch src/index.tsx",
     "build": "bun build src/index.tsx --outdir dist --target bun --external react-devtools-core",

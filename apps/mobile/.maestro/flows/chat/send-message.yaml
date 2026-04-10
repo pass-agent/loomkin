@@ -5,7 +5,6 @@ tags:
   - smoke
 
 ---
-
 # Set up an authenticated session with chat open
 - runFlow: ../../utils/setup-session.yaml
 

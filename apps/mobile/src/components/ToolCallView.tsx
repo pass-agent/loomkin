@@ -9,10 +9,7 @@ interface ToolCallViewProps {
   testID?: string;
 }
 
-export function ToolCallView({
-  toolCall,
-  testID = "tool-call-view",
-}: ToolCallViewProps) {
+export function ToolCallView({ toolCall, testID = "tool-call-view" }: ToolCallViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -22,11 +19,7 @@ export function ToolCallView({
         onPress={() => setIsExpanded(!isExpanded)}
         testID={`${testID}-toggle-button`}
       >
-        <Ionicons
-          name="construct-outline"
-          size={14}
-          color={COLORS.primaryLight}
-        />
+        <Ionicons name="construct-outline" size={14} color={COLORS.primaryLight} />
         <Text style={styles.toolName} numberOfLines={1}>
           {toolCall.name}
         </Text>

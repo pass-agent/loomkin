@@ -14,10 +14,7 @@ export function LoadingSpinner({
   fullScreen = false,
 }: LoadingSpinnerProps) {
   return (
-    <View
-      style={[styles.container, fullScreen && styles.fullScreen]}
-      testID="loading-spinner"
-    >
+    <View style={[styles.container, fullScreen && styles.fullScreen]} testID="loading-spinner">
       <ActivityIndicator size={size} color={COLORS.primary} />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>

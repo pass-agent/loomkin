@@ -4,7 +4,6 @@ tags:
   - teams
 
 ---
-
 # Authenticate first
 - runFlow: ../../utils/setup-auth.yaml
 

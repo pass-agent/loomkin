@@ -23,20 +23,13 @@ export function AgentCard({
 }: AgentCardProps) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        pressed && onPress && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.container, pressed && onPress && styles.pressed]}
       onPress={() => onPress?.(agent)}
       disabled={!onPress}
       testID={testID}
     >
       <View style={styles.iconContainer}>
-        <Ionicons
-          name="person-circle-outline"
-          size={40}
-          color={COLORS.primary}
-        />
+        <Ionicons name="person-circle-outline" size={40} color={COLORS.primary} />
       </View>
 
       <View style={styles.info}>
@@ -44,10 +37,7 @@ export function AgentCard({
         <Text style={styles.role}>{agent.role}</Text>
       </View>
 
-      <StatusBadge
-        status={agent.status}
-        testID={`${testID}-status-badge`}
-      />
+      <StatusBadge status={agent.status} testID={`${testID}-status-badge`} />
 
       {(onReply || onBroadcast) && (
         <View style={styles.actions}>
