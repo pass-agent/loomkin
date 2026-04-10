@@ -30,12 +30,15 @@ test.each([
   { input: "/q", expectedName: "exit", expectedArgs: "" },
   { input: "/HELP", expectedName: "help", expectedArgs: "" },
   { input: "  /mode   chat  ", expectedName: "mode", expectedArgs: "chat" },
-])("resolve($input) → command=$expectedName args=$expectedArgs", ({ input, expectedName, expectedArgs }) => {
-  const result = registry.resolve(input);
-  expect(result).not.toBeNull();
-  expect(result!.command.name).toBe(expectedName);
-  expect(result!.args).toBe(expectedArgs);
-});
+])(
+  "resolve($input) → command=$expectedName args=$expectedArgs",
+  ({ input, expectedName, expectedArgs }) => {
+    const result = registry.resolve(input);
+    expect(result).not.toBeNull();
+    expect(result!.command.name).toBe(expectedName);
+    expect(result!.args).toBe(expectedArgs);
+  },
+);
 
 test.each([
   { input: "/nonexistent", label: "unknown command" },

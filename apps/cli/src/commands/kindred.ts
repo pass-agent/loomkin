@@ -27,9 +27,7 @@ register({
           };
 
           if (resp.kindreds.length === 0) {
-            ctx.addSystemMessage(
-              "No kindred bundles found. Create one in the web UI.",
-            );
+            ctx.addSystemMessage("No kindred bundles found. Create one in the web UI.");
             return;
           }
 
@@ -38,18 +36,13 @@ register({
             const marker = isActive ? pc.green("● ") : "  ";
             const name = pc.bold(isActive ? pc.green(k.name) : k.name);
             const version = pc.dim(`v${k.version}`);
-            const status =
-              k.status === "active"
-                ? pc.green(k.status)
-                : pc.dim(k.status);
+            const status = k.status === "active" ? pc.green(k.status) : pc.dim(k.status);
             const count = pc.dim(`${k.item_count} kin`);
 
             return `${marker}${name} ${version} ${status} ${count}`;
           });
 
-          ctx.addSystemMessage(
-            `${pc.bold("Kindred Bundles")}\n${lines.join("\n")}`,
-          );
+          ctx.addSystemMessage(`${pc.bold("Kindred Bundles")}\n${lines.join("\n")}`);
         })
         .receive("error", (raw: Record<string, unknown>) => {
           const resp = raw as { reason: string };

@@ -58,9 +58,7 @@ export function MessageList({
 }: Props) {
   // Filter by agent if specified
   const filtered =
-    agentFilter === undefined
-      ? messages
-      : messages.filter((m) => m.agent_name === agentFilter);
+    agentFilter === undefined ? messages : messages.filter((m) => m.agent_name === agentFilter);
 
   // Show the most recent messages that fit, respecting scroll offset
   const end = scrollOffset > 0 ? -scrollOffset : undefined;
@@ -85,8 +83,7 @@ export function MessageList({
     <Box flexDirection="column" flexGrow={1} overflow="hidden" justifyContent="flex-end">
       {visible.map((msg, i) => {
         const isLast = i === visible.length - 1;
-        const isStreamingMessage =
-          isLast && isStreaming && msg.role === "assistant";
+        const isStreamingMessage = isLast && isStreaming && msg.role === "assistant";
 
         return (
           <Message

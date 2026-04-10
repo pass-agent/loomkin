@@ -36,12 +36,7 @@ vi.mock("../../lib/config.js", () => ({
 }));
 
 import { resolve } from "../registry.js";
-import {
-  getMe,
-  getSession,
-  listModelProviders,
-  listSessions,
-} from "../../lib/api.js";
+import { getMe, getSession, listModelProviders, listSessions } from "../../lib/api.js";
 
 function createMockContext(
   overrides: Partial<{
@@ -70,7 +65,7 @@ function createMockContext(
       clearErrors: vi.fn(),
     },
     sessionStore: {
-      sessionId: "sessionId" in overrides ? overrides.sessionId ?? null : "abc-123-def",
+      sessionId: "sessionId" in overrides ? (overrides.sessionId ?? null) : "abc-123-def",
       messages: [],
       isStreaming: false,
       pendingToolCalls: [],
@@ -81,7 +76,7 @@ function createMockContext(
       addMessage: vi.fn(),
       updateMessage: vi.fn(),
       clearMessages: vi.fn(),
-    sendMessage: vi.fn(),
+      sendMessage: vi.fn(),
       setStreaming: vi.fn(),
       addPendingToolCall: vi.fn(),
       removePendingToolCall: vi.fn(),
@@ -243,9 +238,7 @@ test("shows errors when present", async () => {
   (listSessions as any).mockResolvedValue({ sessions: [] });
 
   const ctx = createMockContext({
-    errors: [
-      { type: "network", message: "Connection timeout", recoverable: true },
-    ],
+    errors: [{ type: "network", message: "Connection timeout", recoverable: true }],
   });
   const result = resolve("/status");
   await result!.command.handler("", ctx);

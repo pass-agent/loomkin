@@ -76,9 +76,7 @@ test.each(["quit", "clear", "scrollUp", "scrollDown", "toggleSplit"])(
 );
 
 test("ctrl+c is mapped to quit in defaultKeymap", () => {
-  expect(
-    defaultKeymap.some((b) => b.action === "quit" && b.key === "c" && b.ctrl),
-  ).toBe(true);
+  expect(defaultKeymap.some((b) => b.action === "quit" && b.key === "c" && b.ctrl)).toBe(true);
 });
 
 // findAction tests
@@ -166,18 +164,12 @@ test.each([
 
 // Vim insert keymap has escape
 test("vim insert keymap has escape to normal", () => {
-  expect(
-    vimInsertKeymap.some(
-      (b) => b.action === "vim:normal" && b.key === "escape",
-    ),
-  ).toBe(true);
+  expect(vimInsertKeymap.some((b) => b.action === "vim:normal" && b.key === "escape")).toBe(true);
 });
 
 // Vim insert keymap has ctrl+[ as escape alternative
 test("vim insert keymap has ctrl+[ as escape", () => {
-  expect(
-    vimInsertKeymap.some(
-      (b) => b.action === "vim:normal" && b.key === "[" && b.ctrl,
-    ),
-  ).toBe(true);
+  expect(vimInsertKeymap.some((b) => b.action === "vim:normal" && b.key === "[" && b.ctrl)).toBe(
+    true,
+  );
 });

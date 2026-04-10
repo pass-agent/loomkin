@@ -24,7 +24,9 @@ function makeTurn(
   };
 }
 
-function pruneCompleted(conversations: Map<string, ConversationInfo>): Map<string, ConversationInfo> {
+function pruneCompleted(
+  conversations: Map<string, ConversationInfo>,
+): Map<string, ConversationInfo> {
   const completed = [...conversations.values()]
     .filter((c) => c.status === "completed" || c.status === "terminated")
     .sort((a, b) => (a.ended_at ?? "").localeCompare(b.ended_at ?? ""));
@@ -61,11 +63,7 @@ export interface ConversationStoreState {
     reaction_type: string;
     brief: string;
   }) => void;
-  addYield: (data: {
-    conversation_id: string;
-    agent_name: string;
-    reason?: string;
-  }) => void;
+  addYield: (data: { conversation_id: string; agent_name: string; reason?: string }) => void;
   advanceRound: (conversation_id: string, round: number) => void;
   setSummarizing: (conversation_id: string) => void;
   endConversation: (data: {
@@ -79,142 +77,138 @@ export interface ConversationStoreState {
   getList: () => ConversationInfo[];
 }
 
-export const conversationStore = createStore<ConversationStoreState>(
-  (set, get) => ({
-    conversations: new Map(),
-    activeConversationId: null,
+export const conversationStore = createStore<ConversationStoreState>((set, get) => ({
+  conversations: new Map(),
+  activeConversationId: null,
 
-    startConversation: (info) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        conversations.set(info.conversation_id, {
-          ...info,
-          current_round: 1,
-          status: "active",
-          turns: [],
-          started_at: new Date().toISOString(),
-        });
-        // Only auto-focus if user hasn't explicitly pinned a conversation
-        const activeConversationId =
-          state.activeConversationId === null
-            ? info.conversation_id
-            : state.activeConversationId;
-        return { conversations, activeConversationId };
-      }),
+  startConversation: (info) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      conversations.set(info.conversation_id, {
+        ...info,
+        current_round: 1,
+        status: "active",
+        turns: [],
+        started_at: new Date().toISOString(),
+      });
+      // Only auto-focus if user hasn't explicitly pinned a conversation
+      const activeConversationId =
+        state.activeConversationId === null ? info.conversation_id : state.activeConversationId;
+      return { conversations, activeConversationId };
+    }),
 
-    addTurn: (turn) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(turn.conversation_id);
-        if (!conv) return state;
-        conversations.set(turn.conversation_id, {
-          ...conv,
-          turns: cappedTurns([...conv.turns, turn]),
-        });
-        return { conversations };
-      }),
+  addTurn: (turn) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(turn.conversation_id);
+      if (!conv) return state;
+      conversations.set(turn.conversation_id, {
+        ...conv,
+        turns: cappedTurns([...conv.turns, turn]),
+      });
+      return { conversations };
+    }),
 
-    addReaction: (data) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(data.conversation_id);
-        if (!conv) return state;
-        const turn = makeTurn(
-          data.conversation_id,
-          data.agent_name,
-          data.brief,
-          conv.current_round,
-          "reaction",
-          { reaction_type: data.reaction_type },
-        );
-        conversations.set(data.conversation_id, {
-          ...conv,
-          turns: cappedTurns([...conv.turns, turn]),
-        });
-        return { conversations };
-      }),
+  addReaction: (data) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(data.conversation_id);
+      if (!conv) return state;
+      const turn = makeTurn(
+        data.conversation_id,
+        data.agent_name,
+        data.brief,
+        conv.current_round,
+        "reaction",
+        { reaction_type: data.reaction_type },
+      );
+      conversations.set(data.conversation_id, {
+        ...conv,
+        turns: cappedTurns([...conv.turns, turn]),
+      });
+      return { conversations };
+    }),
 
-    addYield: (data) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(data.conversation_id);
-        if (!conv) return state;
-        const turn = makeTurn(
-          data.conversation_id,
-          data.agent_name,
-          data.reason ?? "passed",
-          conv.current_round,
-          "yield",
-          { reason: data.reason },
-        );
-        conversations.set(data.conversation_id, {
-          ...conv,
-          turns: cappedTurns([...conv.turns, turn]),
-        });
-        return { conversations };
-      }),
+  addYield: (data) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(data.conversation_id);
+      if (!conv) return state;
+      const turn = makeTurn(
+        data.conversation_id,
+        data.agent_name,
+        data.reason ?? "passed",
+        conv.current_round,
+        "yield",
+        { reason: data.reason },
+      );
+      conversations.set(data.conversation_id, {
+        ...conv,
+        turns: cappedTurns([...conv.turns, turn]),
+      });
+      return { conversations };
+    }),
 
-    advanceRound: (conversation_id, round) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(conversation_id);
-        if (!conv) return state;
-        conversations.set(conversation_id, {
-          ...conv,
-          current_round: round,
-        });
-        return { conversations };
-      }),
+  advanceRound: (conversation_id, round) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(conversation_id);
+      if (!conv) return state;
+      conversations.set(conversation_id, {
+        ...conv,
+        current_round: round,
+      });
+      return { conversations };
+    }),
 
-    setSummarizing: (conversation_id) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(conversation_id);
-        if (!conv) return state;
-        conversations.set(conversation_id, {
-          ...conv,
-          status: "summarizing",
-        });
-        return { conversations };
-      }),
+  setSummarizing: (conversation_id) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(conversation_id);
+      if (!conv) return state;
+      conversations.set(conversation_id, {
+        ...conv,
+        status: "summarizing",
+      });
+      return { conversations };
+    }),
 
-    endConversation: (data) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(data.conversation_id);
-        if (!conv) return state;
-        conversations.set(data.conversation_id, {
-          ...conv,
-          status: "completed",
-          summary: data.summary,
-          ended_at: new Date().toISOString(),
-        });
-        return { conversations: pruneCompleted(conversations) };
-      }),
+  endConversation: (data) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(data.conversation_id);
+      if (!conv) return state;
+      conversations.set(data.conversation_id, {
+        ...conv,
+        status: "completed",
+        summary: data.summary,
+        ended_at: new Date().toISOString(),
+      });
+      return { conversations: pruneCompleted(conversations) };
+    }),
 
-    terminateConversation: (conversation_id, _reason) =>
-      set((state) => {
-        const conversations = new Map(state.conversations);
-        const conv = conversations.get(conversation_id);
-        if (!conv) return state;
-        conversations.set(conversation_id, {
-          ...conv,
-          status: "terminated",
-          ended_at: new Date().toISOString(),
-        });
-        return { conversations: pruneCompleted(conversations) };
-      }),
+  terminateConversation: (conversation_id, _reason) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const conv = conversations.get(conversation_id);
+      if (!conv) return state;
+      conversations.set(conversation_id, {
+        ...conv,
+        status: "terminated",
+        ended_at: new Date().toISOString(),
+      });
+      return { conversations: pruneCompleted(conversations) };
+    }),
 
-    setActiveConversation: (id) => set({ activeConversationId: id }),
+  setActiveConversation: (id) => set({ activeConversationId: id }),
 
-    getActive: () => {
-      const { conversations, activeConversationId } = get();
-      if (!activeConversationId) return null;
-      return conversations.get(activeConversationId) ?? null;
-    },
+  getActive: () => {
+    const { conversations, activeConversationId } = get();
+    if (!activeConversationId) return null;
+    return conversations.get(activeConversationId) ?? null;
+  },
 
-    getList: () => Array.from(get().conversations.values()),
-  }),
-);
+  getList: () => Array.from(get().conversations.values()),
+}));
 
 export const useConversationStore = conversationStore;

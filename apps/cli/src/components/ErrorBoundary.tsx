@@ -32,13 +32,7 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
   });
 
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="red"
-      paddingX={1}
-      paddingY={1}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor="red" paddingX={1} paddingY={1}>
       <Text bold color="red">
         Loomkin encountered an unexpected error
       </Text>
@@ -52,7 +46,8 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
       )}
       <Box marginTop={1}>
         <Text dimColor>
-          Press <Text bold>q</Text> to exit, <Text bold>r</Text> to retry, <Text bold>c</Text> to copy
+          Press <Text bold>q</Text> to exit, <Text bold>r</Text> to retry, <Text bold>c</Text> to
+          copy
         </Text>
       </Box>
     </Box>

@@ -36,7 +36,8 @@ register({
         const id = pc.dim(gate.gate_id.slice(0, 8));
         const roles = gate.roles.map((r) => r.role).join(", ");
         const cost = gate.estimated_cost.toFixed(4);
-        const costColor = gate.estimated_cost >= 1 ? pc.red : gate.estimated_cost >= 0.1 ? pc.yellow : pc.green;
+        const costColor =
+          gate.estimated_cost >= 1 ? pc.red : gate.estimated_cost >= 0.1 ? pc.yellow : pc.green;
         lines.push(
           `  ${id} ${pc.magenta(gate.agent_name)}: spawn ${pc.cyan(roles)} ${costColor(`$${cost}`)} ${pc.dim(`(${remaining}s)`)}`,
         );

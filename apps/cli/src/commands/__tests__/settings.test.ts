@@ -110,8 +110,7 @@ function createMockContext(): CommandContext {
 }
 
 function getMessage(ctx: CommandContext, callIndex = 0): string {
-  return (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock
-    .calls[callIndex][0] as string;
+  return (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock.calls[callIndex][0] as string;
 }
 
 beforeEach(async () => {
@@ -133,14 +132,11 @@ test.each([
     label: "dotted key shows detail",
   },
   { args: "search budget", contains: "budget", label: "search finds matches" },
-])(
-  "/settings $label",
-  async ({ args, contains }) => {
-    const ctx = createMockContext();
-    await resolve("/settings")!.command.handler(args, ctx);
-    expect(getMessage(ctx).toLowerCase()).toContain(contains.toLowerCase());
-  },
-);
+])("/settings $label", async ({ args, contains }) => {
+  const ctx = createMockContext();
+  await resolve("/settings")!.command.handler(args, ctx);
+  expect(getMessage(ctx).toLowerCase()).toContain(contains.toLowerCase());
+});
 
 // -- Tab listing --
 
@@ -193,10 +189,7 @@ test("unknown setting key shows not found", async () => {
 
 test("update setting calls API and confirms", async () => {
   const ctx = createMockContext();
-  await resolve("/settings")!.command.handler(
-    "teams.orchestrator_mode=false",
-    ctx,
-  );
+  await resolve("/settings")!.command.handler("teams.orchestrator_mode=false", ctx);
   expect(updateSettings).toHaveBeenCalledWith({
     "teams.orchestrator_mode": false,
   });
@@ -205,30 +198,21 @@ test("update setting calls API and confirms", async () => {
 
 test("update with invalid value shows error", async () => {
   const ctx = createMockContext();
-  await resolve("/settings")!.command.handler(
-    "teams.max_nesting_depth=notanumber",
-    ctx,
-  );
+  await resolve("/settings")!.command.handler("teams.max_nesting_depth=notanumber", ctx);
   expect(updateSettings).not.toHaveBeenCalled();
   expect(getMessage(ctx)).toContain("Invalid number");
 });
 
 test("update with out-of-range value shows error", async () => {
   const ctx = createMockContext();
-  await resolve("/settings")!.command.handler(
-    "teams.max_nesting_depth=99",
-    ctx,
-  );
+  await resolve("/settings")!.command.handler("teams.max_nesting_depth=99", ctx);
   expect(updateSettings).not.toHaveBeenCalled();
   expect(getMessage(ctx)).toContain("between 1 and 5");
 });
 
 test("update with invalid select option shows error", async () => {
   const ctx = createMockContext();
-  await resolve("/settings")!.command.handler(
-    "teams.consensus.quorum=invalid",
-    ctx,
-  );
+  await resolve("/settings")!.command.handler("teams.consensus.quorum=invalid", ctx);
   expect(updateSettings).not.toHaveBeenCalled();
   expect(getMessage(ctx)).toContain("Invalid option");
 });
@@ -238,10 +222,7 @@ test("update 422 shows validation error", async () => {
     new ApiError(422, JSON.stringify({ errors: { key: "must be positive" } })),
   );
   const ctx = createMockContext();
-  await resolve("/settings")!.command.handler(
-    "teams.orchestrator_mode=true",
-    ctx,
-  );
+  await resolve("/settings")!.command.handler("teams.orchestrator_mode=true", ctx);
   expect(getMessage(ctx)).toContain("must be positive");
 });
 
@@ -285,26 +266,20 @@ test.each([
   { type: "tag_list", raw: "a,b,c", expected: ["a", "b", "c"] },
   { type: "tag_list", raw: " a , b , c ", expected: ["a", "b", "c"] },
   { type: "tag_list", raw: "", expected: [] },
-])(
-  "parseValueForType($type, $raw) → $expected",
-  async ({ type, raw, expected }) => {
-    const { parseValueForType } = await import("../settings.js");
-    const setting = makeSetting({
-      type,
-      options: type === "select" ? ["majority", "unanimous"] : null,
-    });
-    expect(parseValueForType(type, raw, setting)).toEqual(expected);
-  },
-);
+])("parseValueForType($type, $raw) → $expected", async ({ type, raw, expected }) => {
+  const { parseValueForType } = await import("../settings.js");
+  const setting = makeSetting({
+    type,
+    options: type === "select" ? ["majority", "unanimous"] : null,
+  });
+  expect(parseValueForType(type, raw, setting)).toEqual(expected);
+});
 
 test.each([
   { type: "toggle", raw: "maybe", error: "Invalid toggle" },
   { type: "number", raw: "abc", error: "Invalid number" },
-])(
-  "parseValueForType($type, $raw) throws",
-  async ({ type, raw, error }) => {
-    const { parseValueForType } = await import("../settings.js");
-    const setting = makeSetting({ type });
-    expect(() => parseValueForType(type, raw, setting)).toThrow(error);
-  },
-);
+])("parseValueForType($type, $raw) throws", async ({ type, raw, error }) => {
+  const { parseValueForType } = await import("../settings.js");
+  const setting = makeSetting({ type });
+  expect(() => parseValueForType(type, raw, setting)).toThrow(error);
+});

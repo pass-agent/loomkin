@@ -4,10 +4,7 @@ import { useSessionStore } from "../stores/sessionStore.js";
 import { useAgentStore } from "../stores/agentStore.js";
 import { useConversationStore } from "../stores/conversationStore.js";
 import { useChannelStore } from "../stores/channelStore.js";
-import {
-  getAgentCostsForSession,
-  setAgentCostForSession,
-} from "../lib/config.js";
+import { getAgentCostsForSession, setAgentCostForSession } from "../lib/config.js";
 import { usePaneStore } from "../stores/paneStore.js";
 import { runHooks } from "../lib/hooks.js";
 
@@ -77,29 +74,30 @@ export function useAgentChannel() {
 
     // --- Agent events ---
 
-    on<{ agent_name: string; status: string; pause_queued?: boolean }>("agent_status", (payload) => {
-      const clearTransientState = ["idle", "done", "completed", "error"].includes(
-        payload.status,
-      );
+    on<{ agent_name: string; status: string; pause_queued?: boolean }>(
+      "agent_status",
+      (payload) => {
+        const clearTransientState = ["idle", "done", "completed", "error"].includes(payload.status);
 
-      useAgentStore.getState().upsertAgent(payload.agent_name, {
-        status: payload.status,
-        pauseQueued: payload.pause_queued,
-        ...(clearTransientState
-          ? {
-              currentTool: undefined,
-              currentTask: undefined,
-              currentThought: undefined,
-            }
-          : {}),
-      });
-      if (payload.status === "done" || payload.status === "completed") {
-        notify(`✓ ${payload.agent_name} finished`);
-      }
-      if (payload.status === "paused") {
-        notify(`⏸ ${payload.agent_name} paused`);
-      }
-    });
+        useAgentStore.getState().upsertAgent(payload.agent_name, {
+          status: payload.status,
+          pauseQueued: payload.pause_queued,
+          ...(clearTransientState
+            ? {
+                currentTool: undefined,
+                currentTask: undefined,
+                currentThought: undefined,
+              }
+            : {}),
+        });
+        if (payload.status === "done" || payload.status === "completed") {
+          notify(`✓ ${payload.agent_name} finished`);
+        }
+        if (payload.status === "paused") {
+          notify(`⏸ ${payload.agent_name} paused`);
+        }
+      },
+    );
 
     on<{ agent_name: string; new_role: string }>("agent_role_changed", (payload) => {
       useAgentStore.getState().upsertAgent(payload.agent_name, {
@@ -198,7 +196,13 @@ export function useAgentChannel() {
       },
     );
 
-    on<{ agent_name: string; role: string; team_id: string; worktree_path?: string; parent_agent?: string }>("agent_spawned", (payload) => {
+    on<{
+      agent_name: string;
+      role: string;
+      team_id: string;
+      worktree_path?: string;
+      parent_agent?: string;
+    }>("agent_spawned", (payload) => {
       useAgentStore.getState().upsertAgent(payload.agent_name, {
         role: payload.role,
         teamId: payload.team_id,
@@ -229,40 +233,49 @@ export function useAgentChannel() {
       notify(`💬 ${payload.from} → ${payload.to}: ${payload.content}`);
     });
 
-    on<{ conversation_id: string; topic: string; participants: string[]; strategy?: string; team_id: string }>(
-      "conversation_started",
-      (payload) => {
-        useConversationStore.getState().startConversation(payload);
-        // Auto-open split pane to show the conversation feed
-        const pane = usePaneStore.getState();
-        if (!pane.splitMode) {
-          pane.toggleSplitMode();
-        }
-        const who = payload.participants.join(", ");
-        notify(`🗣 Conversation started: ${payload.topic} (${who})`);
-      },
-    );
+    on<{
+      conversation_id: string;
+      topic: string;
+      participants: string[];
+      strategy?: string;
+      team_id: string;
+    }>("conversation_started", (payload) => {
+      useConversationStore.getState().startConversation(payload);
+      // Auto-open split pane to show the conversation feed
+      const pane = usePaneStore.getState();
+      if (!pane.splitMode) {
+        pane.toggleSplitMode();
+      }
+      const who = payload.participants.join(", ");
+      notify(`🗣 Conversation started: ${payload.topic} (${who})`);
+    });
 
-    on<{ conversation_id: string; speaker: string; content: string; round: number; team_id: string }>(
-      "conversation_turn",
-      (payload) => {
-        useConversationStore.getState().addTurn({
-          conversation_id: payload.conversation_id,
-          speaker: payload.speaker,
-          content: payload.content,
-          round: payload.round,
-          type: "speech",
-          timestamp: new Date().toISOString(),
-        });
-      },
-    );
+    on<{
+      conversation_id: string;
+      speaker: string;
+      content: string;
+      round: number;
+      team_id: string;
+    }>("conversation_turn", (payload) => {
+      useConversationStore.getState().addTurn({
+        conversation_id: payload.conversation_id,
+        speaker: payload.speaker,
+        content: payload.content,
+        round: payload.round,
+        type: "speech",
+        timestamp: new Date().toISOString(),
+      });
+    });
 
-    on<{ conversation_id: string; agent_name: string; reaction_type: string; brief: string; team_id: string }>(
-      "conversation_reaction",
-      (payload) => {
-        useConversationStore.getState().addReaction(payload);
-      },
-    );
+    on<{
+      conversation_id: string;
+      agent_name: string;
+      reaction_type: string;
+      brief: string;
+      team_id: string;
+    }>("conversation_reaction", (payload) => {
+      useConversationStore.getState().addReaction(payload);
+    });
 
     on<{ conversation_id: string; agent_name: string; reason?: string; team_id: string }>(
       "conversation_yield",
@@ -290,24 +303,29 @@ export function useAgentChannel() {
       notify(`📝 Conversation summarizing...`);
     });
 
-    on<{ conversation_id?: string; topic: string; outcome: string; summary?: unknown; team_id: string }>(
-      "conversation_ended",
-      (payload) => {
-        if (payload.conversation_id) {
-          useConversationStore.getState().endConversation({
-            conversation_id: payload.conversation_id,
-            outcome: payload.outcome,
-            summary: payload.summary as ConversationInfo["summary"],
-          });
-        }
-        notify(`🗣 Conversation ended: ${payload.topic} → ${payload.outcome ?? "complete"}`);
-      },
-    );
+    on<{
+      conversation_id?: string;
+      topic: string;
+      outcome: string;
+      summary?: unknown;
+      team_id: string;
+    }>("conversation_ended", (payload) => {
+      if (payload.conversation_id) {
+        useConversationStore.getState().endConversation({
+          conversation_id: payload.conversation_id,
+          outcome: payload.outcome,
+          summary: payload.summary as ConversationInfo["summary"],
+        });
+      }
+      notify(`🗣 Conversation ended: ${payload.topic} → ${payload.outcome ?? "complete"}`);
+    });
 
     on<{ conversation_id: string; tokens_used: number; max_tokens: number; team_id: string }>(
       "conversation_budget_warning",
       (payload) => {
-        notify(`⚠ Conversation approaching token limit (${payload.tokens_used}/${payload.max_tokens})`);
+        notify(
+          `⚠ Conversation approaching token limit (${payload.tokens_used}/${payload.max_tokens})`,
+        );
       },
     );
 
@@ -316,7 +334,9 @@ export function useAgentChannel() {
     });
 
     on<{ from: string; vote: string; reason: string }>("vote_response", (payload) => {
-      notify(`🗳 ${payload.from} votes: ${payload.vote}${payload.reason ? ` — ${payload.reason}` : ""}`);
+      notify(
+        `🗳 ${payload.from} votes: ${payload.vote}${payload.reason ? ` — ${payload.reason}` : ""}`,
+      );
     });
 
     on<Record<string, never>>("team_dissolved", () => {
@@ -342,16 +362,19 @@ export function useAgentChannel() {
 
     // --- Approval gate events ---
 
-    on<{ gate_id: string; agent_name: string; question: string; timeout_ms: number; team_id: string }>(
-      "approval_requested",
-      (payload) => {
-        useSessionStore.getState().addPendingApproval({
-          ...payload,
-          received_at: Date.now(),
-        });
-        notify(`🔒 ${payload.agent_name} requests approval: ${payload.question}`);
-      },
-    );
+    on<{
+      gate_id: string;
+      agent_name: string;
+      question: string;
+      timeout_ms: number;
+      team_id: string;
+    }>("approval_requested", (payload) => {
+      useSessionStore.getState().addPendingApproval({
+        ...payload,
+        received_at: Date.now(),
+      });
+      notify(`🔒 ${payload.agent_name} requests approval: ${payload.question}`);
+    });
 
     on<{ gate_id: string; agent_name: string; outcome: string; team_id: string }>(
       "approval_resolved",
@@ -360,21 +383,30 @@ export function useAgentChannel() {
       },
     );
 
-    on<{ gate_id: string; agent_name: string; team_name: string; roles: Array<{ role: string; name?: string }>; estimated_cost: number; purpose: string | null; timeout_ms: number; limit_warning: string | null; team_id: string }>(
-      "spawn_gate_requested",
-      (payload) => {
-        useSessionStore.getState().addPendingSpawnGate({
-          ...payload,
-          received_at: Date.now(),
-        });
-        const roleNames = payload.roles
-          .map((r) => (r.name ? `${r.name} (${r.role})` : r.role))
-          .filter(Boolean)
-          .join(", ");
-        const summary = roleNames || payload.team_name || payload.purpose || "new team";
-        notify(`🔒 ${payload.agent_name} wants to spawn: ${summary} ($${payload.estimated_cost.toFixed(4)})`);
-      },
-    );
+    on<{
+      gate_id: string;
+      agent_name: string;
+      team_name: string;
+      roles: Array<{ role: string; name?: string }>;
+      estimated_cost: number;
+      purpose: string | null;
+      timeout_ms: number;
+      limit_warning: string | null;
+      team_id: string;
+    }>("spawn_gate_requested", (payload) => {
+      useSessionStore.getState().addPendingSpawnGate({
+        ...payload,
+        received_at: Date.now(),
+      });
+      const roleNames = payload.roles
+        .map((r) => (r.name ? `${r.name} (${r.role})` : r.role))
+        .filter(Boolean)
+        .join(", ");
+      const summary = roleNames || payload.team_name || payload.purpose || "new team";
+      notify(
+        `🔒 ${payload.agent_name} wants to spawn: ${summary} ($${payload.estimated_cost.toFixed(4)})`,
+      );
+    });
 
     on<{ gate_id: string; agent_name: string; outcome: string; team_id: string }>(
       "spawn_gate_resolved",

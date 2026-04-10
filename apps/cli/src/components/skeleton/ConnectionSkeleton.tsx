@@ -23,12 +23,16 @@ export function ConnectionSkeleton({ width }: Props) {
       justifyContent="flex-end"
     >
       <Box flexDirection="column" marginBottom={1}>
-        <Text dimColor bold>assistant</Text>
+        <Text dimColor bold>
+          assistant
+        </Text>
         <SkeletonText lines={3} maxWidth={contentWidth} mode="sweep" />
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>
-        <Text dimColor bold>assistant</Text>
+        <Text dimColor bold>
+          assistant
+        </Text>
         <SkeletonText lines={2} maxWidth={contentWidth} mode="sweep" />
       </Box>
     </Box>

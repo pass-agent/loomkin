@@ -33,9 +33,7 @@ export function SplitPaneLayout({
   // Show conversation feed in right pane when a conversation is active
   const showConversation = activeConversation !== null;
 
-  const rightTitle = showConversation
-    ? `Conversation`
-    : selectedAgent ?? "No agent";
+  const rightTitle = showConversation ? `Conversation` : (selectedAgent ?? "No agent");
   const paneWidth = Math.max(20, Math.floor(termWidth / 2) - 4);
 
   return (

@@ -26,40 +26,29 @@ function formatValue(setting: Setting): string {
   return isDefault ? str + unit : pc.yellow(str) + unit;
 }
 
-function parseValueForType(
-  type: string,
-  raw: string,
-  setting: Setting,
-): unknown {
+function parseValueForType(type: string, raw: string, setting: Setting): unknown {
   switch (type) {
     case "toggle": {
       const lower = raw.toLowerCase();
       if (["true", "1", "on", "yes"].includes(lower)) return true;
       if (["false", "0", "off", "no"].includes(lower)) return false;
-      throw new Error(
-        `Invalid toggle value "${raw}". Use true/false, on/off, 1/0.`,
-      );
+      throw new Error(`Invalid toggle value "${raw}". Use true/false, on/off, 1/0.`);
     }
     case "number":
     case "duration":
     case "currency": {
       const num = Number(raw);
-      if (Number.isNaN(num))
-        throw new Error(`Invalid number "${raw}".`);
+      if (Number.isNaN(num)) throw new Error(`Invalid number "${raw}".`);
       if (setting.range) {
         if (num < setting.range.min || num > setting.range.max) {
-          throw new Error(
-            `Value must be between ${setting.range.min} and ${setting.range.max}.`,
-          );
+          throw new Error(`Value must be between ${setting.range.min} and ${setting.range.max}.`);
         }
       }
       return num;
     }
     case "select": {
       if (setting.options && !setting.options.includes(raw)) {
-        throw new Error(
-          `Invalid option "${raw}". Choose from: ${setting.options.join(", ")}`,
-        );
+        throw new Error(`Invalid option "${raw}". Choose from: ${setting.options.join(", ")}`);
       }
       return raw;
     }
@@ -87,20 +76,12 @@ function showTabs(settings: Setting[], ctx: CommandContext): void {
   ctx.addSystemMessage(lines.join("\n"));
 }
 
-function showTab(
-  settings: Setting[],
-  tabName: string,
-  ctx: CommandContext,
-): void {
-  const tab = settings.filter(
-    (s) => s.tab.toLowerCase() === tabName.toLowerCase(),
-  );
+function showTab(settings: Setting[], tabName: string, ctx: CommandContext): void {
+  const tab = settings.filter((s) => s.tab.toLowerCase() === tabName.toLowerCase());
 
   if (tab.length === 0) {
     const available = [...new Set(settings.map((s) => s.tab))].join(", ");
-    ctx.addSystemMessage(
-      `Unknown tab "${tabName}". Available: ${available}`,
-    );
+    ctx.addSystemMessage(`Unknown tab "${tabName}". Available: ${available}`);
     return;
   }
 
@@ -116,9 +97,7 @@ function showTab(
     lines.push(`  ${pc.bold(pc.underline(section))}`);
     for (const s of items) {
       const key = s.key.split(".").pop() ?? s.key;
-      lines.push(
-        `    ${typeBadge(s.type)} ${pc.cyan(key)}: ${formatValue(s)}`,
-      );
+      lines.push(`    ${typeBadge(s.type)} ${pc.cyan(key)}: ${formatValue(s)}`);
     }
     lines.push("");
   }
@@ -126,19 +105,11 @@ function showTab(
   ctx.addSystemMessage(lines.join("\n"));
 }
 
-function showDetail(
-  settings: Setting[],
-  key: string,
-  ctx: CommandContext,
-): void {
-  const setting = settings.find(
-    (s) => s.key === key || s.key.endsWith(`.${key}`),
-  );
+function showDetail(settings: Setting[], key: string, ctx: CommandContext): void {
+  const setting = settings.find((s) => s.key === key || s.key.endsWith(`.${key}`));
 
   if (!setting) {
-    ctx.addSystemMessage(
-      `Setting "${key}" not found. Try ${pc.cyan("/settings search")} <query>`,
-    );
+    ctx.addSystemMessage(`Setting "${key}" not found. Try ${pc.cyan("/settings search")} <query>`);
     return;
   }
 
@@ -158,19 +129,13 @@ function showDetail(
     );
   }
   if (setting.options) {
-    lines.push(
-      `  ${pc.dim("Options:")} ${setting.options.join(", ")}`,
-    );
+    lines.push(`  ${pc.dim("Options:")} ${setting.options.join(", ")}`);
   }
 
   ctx.addSystemMessage(lines.join("\n"));
 }
 
-function searchSettings(
-  settings: Setting[],
-  query: string,
-  ctx: CommandContext,
-): void {
+function searchSettings(settings: Setting[], query: string, ctx: CommandContext): void {
   const q = query.toLowerCase();
   const matches = settings.filter(
     (s) =>
@@ -188,9 +153,7 @@ function searchSettings(
   const shown = matches.slice(0, limit);
   const lines = [pc.bold(`Settings matching "${query}"`), ""];
   for (const s of shown) {
-    lines.push(
-      `  ${pc.dim(s.tab + " >")} ${pc.cyan(s.key)}: ${formatValue(s)}`,
-    );
+    lines.push(`  ${pc.dim(s.tab + " >")} ${pc.cyan(s.key)}: ${formatValue(s)}`);
   }
   if (matches.length > limit) {
     lines.push(pc.dim(`  ... and ${matches.length - limit} more`));
@@ -238,9 +201,7 @@ register({
       const key = trimmed.slice(0, eqIndex).trim();
       const rawValue = trimmed.slice(eqIndex + 1).trim();
 
-      const setting = settings.find(
-        (s) => s.key === key || s.key.endsWith(`.${key}`),
-      );
+      const setting = settings.find((s) => s.key === key || s.key.endsWith(`.${key}`));
       if (!setting) {
         ctx.addSystemMessage(`Setting "${key}" not found.`);
         return;
@@ -250,9 +211,7 @@ register({
       try {
         parsed = parseValueForType(setting.type, rawValue, setting);
       } catch (err) {
-        ctx.addSystemMessage(
-          pc.red(err instanceof Error ? err.message : String(err)),
-        );
+        ctx.addSystemMessage(pc.red(err instanceof Error ? err.message : String(err)));
         return;
       }
 
@@ -267,9 +226,7 @@ register({
             const body = JSON.parse(err.body) as {
               errors?: Record<string, string>;
             };
-            const messages = body.errors
-              ? Object.values(body.errors).join("; ")
-              : err.body;
+            const messages = body.errors ? Object.values(body.errors).join("; ") : err.body;
             ctx.addSystemMessage(pc.red(`Validation error: ${messages}`));
           } catch {
             ctx.addSystemMessage(pc.red(`Validation error: ${err.body}`));

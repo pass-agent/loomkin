@@ -69,10 +69,7 @@ test("loadMessages replaces all messages and resets scroll", () => {
   sessionStore.getState().addMessage(makeMessage({ content: "old" }));
   sessionStore.getState().setScrollOffset(5);
 
-  const newMessages = [
-    makeMessage({ content: "new-1" }),
-    makeMessage({ content: "new-2" }),
-  ];
+  const newMessages = [makeMessage({ content: "new-1" }), makeMessage({ content: "new-2" })];
   sessionStore.getState().loadMessages(newMessages);
 
   expect(sessionStore.getState().messages).toHaveLength(2);
@@ -96,13 +93,10 @@ test("clearMessages empties messages and resets scroll", () => {
   expect(sessionStore.getState().scrollOffset).toBe(0);
 });
 
-test.each([true, false])(
-  "setStreaming(%s) updates streaming state",
-  (streaming) => {
-    sessionStore.getState().setStreaming(streaming);
-    expect(sessionStore.getState().isStreaming).toBe(streaming);
-  },
-);
+test.each([true, false])("setStreaming(%s) updates streaming state", (streaming) => {
+  sessionStore.getState().setStreaming(streaming);
+  expect(sessionStore.getState().isStreaming).toBe(streaming);
+});
 
 test("startStreamingMessage creates a placeholder assistant message", () => {
   sessionStore.getState().startStreamingMessage("stream-1");

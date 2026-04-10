@@ -72,9 +72,7 @@ export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   });
 }
 
-export async function pollDeviceToken(
-  deviceCode: string,
-): Promise<DeviceTokenResponse> {
+export async function pollDeviceToken(deviceCode: string): Promise<DeviceTokenResponse> {
   return cloudRequest<DeviceTokenResponse>("/api/v1/device/token", {
     method: "POST",
     body: JSON.stringify({
@@ -120,10 +118,7 @@ export async function pollDeviceTokenSafe(
   if (parsed?.error === "slow_down") return "slow_down";
 
   // Terminal errors
-  throw new CloudApiError(
-    response.status,
-    parsed?.error_description ?? parsed?.error ?? body,
-  );
+  throw new CloudApiError(response.status, parsed?.error_description ?? parsed?.error ?? body);
 }
 
 // --- Vault endpoints (authenticated) ---

@@ -16,9 +16,7 @@ import type { Session } from "../lib/types.js";
 function formatSessionLine(session: Session, isCurrent: boolean): string {
   const marker = isCurrent ? pc.green("▸ ") : "  ";
   const id = pc.dim(session.id.slice(0, 8));
-  const title = session.title
-    ? pc.bold(session.title)
-    : pc.dim("(untitled)");
+  const title = session.title ? pc.bold(session.title) : pc.dim("(untitled)");
   const model = pc.cyan(session.model);
   const date = new Date(session.updated_at).toLocaleDateString("en-US", {
     month: "short",
@@ -26,8 +24,7 @@ function formatSessionLine(session: Session, isCurrent: boolean): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const status =
-    session.status === "archived" ? pc.yellow(" [archived]") : "";
+  const status = session.status === "archived" ? pc.yellow(" [archived]") : "";
 
   return `${marker}${id}  ${title}  ${model}  ${pc.dim(date)}${status}`;
 }
@@ -109,14 +106,10 @@ async function handleList(ctx: CommandContext) {
     }
 
     const currentId = ctx.sessionStore.sessionId;
-    const lines = sessions.map((s) =>
-      formatSessionLine(s, s.id === currentId),
-    );
+    const lines = sessions.map((s) => formatSessionLine(s, s.id === currentId));
 
     const header = pc.bold("Recent sessions");
-    const hint = pc.dim(
-      "  /session <id> to switch  /session info <id>  /session search <query>",
-    );
+    const hint = pc.dim("  /session <id> to switch  /session info <id>  /session search <query>");
 
     ctx.addSystemMessage(`${header}\n${lines.join("\n")}\n${hint}`);
   } catch (error) {
@@ -136,9 +129,7 @@ async function handleNew(ctx: CommandContext) {
     ctx.sessionStore.clearPendingQuestions();
     ctx.sessionStore.setSessionId(session.id);
     setLastSessionId(session.id);
-    ctx.addSystemMessage(
-      `New session ${pc.bold(session.id.slice(0, 8))} created.`,
-    );
+    ctx.addSystemMessage(`New session ${pc.bold(session.id.slice(0, 8))} created.`);
   } catch (error) {
     const msg = extractErrorMessage(error);
     ctx.addSystemMessage(pc.red(`Failed to create session: ${msg}`));
@@ -167,9 +158,7 @@ async function handleArchive(ctx: CommandContext, id?: string) {
       ctx.sessionStore.clearPendingQuestions();
       ctx.sessionStore.setSessionId(session.id);
       setLastSessionId(session.id);
-      ctx.addSystemMessage(
-        `New session ${pc.bold(session.id.slice(0, 8))} created.`,
-      );
+      ctx.addSystemMessage(`New session ${pc.bold(session.id.slice(0, 8))} created.`);
     }
   } catch (error) {
     const msg = extractErrorMessage(error);
@@ -193,9 +182,7 @@ async function handleInfo(ctx: CommandContext, id?: string) {
     } catch {
       // Try matching short ID from list
       const { sessions } = await listSessions();
-      const match = sessions.find(
-        (s) => s.id.startsWith(targetId),
-      );
+      const match = sessions.find((s) => s.id.startsWith(targetId));
       if (!match) {
         ctx.addSystemMessage(pc.red(`Session ${targetId} not found.`));
         return;
@@ -291,9 +278,7 @@ async function handleSearch(ctx: CommandContext, query: string) {
     }
 
     const currentId = ctx.sessionStore.sessionId;
-    const lines = matches.map((s) =>
-      formatSessionLine(s, s.id === currentId),
-    );
+    const lines = matches.map((s) => formatSessionLine(s, s.id === currentId));
 
     ctx.addSystemMessage(
       `${pc.bold(`Search: "${query}" (${matches.length} results)`)}\n${lines.join("\n")}`,
@@ -306,9 +291,7 @@ async function handleSearch(ctx: CommandContext, query: string) {
 
 async function handleSwitch(ctx: CommandContext, requested: string) {
   try {
-    ctx.addSystemMessage(
-      pc.dim(`Loading session ${requested.slice(0, 8)}…`),
-    );
+    ctx.addSystemMessage(pc.dim(`Loading session ${requested.slice(0, 8)}…`));
 
     const { messages } = await getSessionMessages(requested);
 
@@ -325,8 +308,6 @@ async function handleSwitch(ctx: CommandContext, requested: string) {
     );
   } catch (error) {
     const msg = extractErrorMessage(error);
-    ctx.addSystemMessage(
-      pc.red(`Failed to switch session: ${msg}`),
-    );
+    ctx.addSystemMessage(pc.red(`Failed to switch session: ${msg}`));
   }
 }

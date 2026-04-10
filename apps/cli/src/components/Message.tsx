@@ -35,8 +35,7 @@ function ThinkingBlock({ content, isActive = false }: { content: string; isActiv
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Text dimColor>
-        {expanded ? "▼" : "▶"}{" "}
-        <Text italic>Thinking ({tokenCount} tokens)</Text>
+        {expanded ? "▼" : "▶"} <Text italic>Thinking ({tokenCount} tokens)</Text>
       </Text>
       {expanded && (
         <Box marginLeft={2} flexDirection="column">
@@ -51,11 +50,7 @@ function ThinkingBlock({ content, isActive = false }: { content: string; isActiv
   );
 }
 
-export function Message({
-  message,
-  pendingToolCalls = [],
-  isStreaming = false,
-}: Props) {
+export function Message({ message, pendingToolCalls = [], isStreaming = false }: Props) {
   const { role, content, tool_calls, agent_name } = message;
 
   // Handle thinking role (server sends thinking content as a special message)
@@ -88,16 +83,15 @@ export function Message({
             {roleLabel}
           </Text>
           {content ? (
-            <MarkdownText
-              content={isStreaming ? `${content}\u2588` : content}
-            />
+            <MarkdownText content={isStreaming ? `${content}\u2588` : content} />
           ) : (
             isStreaming && <MessageSkeleton maxWidth={60} />
           )}
           {(() => {
             if (!tool_calls || tool_calls.length === 0) return null;
             const pendingSet = new Set(pendingToolCalls.map((p) => p.id));
-            const allInProgress = tool_calls.length >= 2 && tool_calls.every((tc) => pendingSet.has(tc.id));
+            const allInProgress =
+              tool_calls.length >= 2 && tool_calls.every((tc) => pendingSet.has(tc.id));
             if (allInProgress) {
               const grouped: GroupedToolUse[] = tool_calls.map((tc) => ({
                 toolUseId: tc.id,
@@ -110,11 +104,7 @@ export function Message({
               return <GroupedToolDisplay toolUses={grouped} />;
             }
             return tool_calls.map((tc) => (
-              <ToolCallDisplay
-                key={tc.id}
-                toolCall={tc}
-                isPending={pendingSet.has(tc.id)}
-              />
+              <ToolCallDisplay key={tc.id} toolCall={tc} isPending={pendingSet.has(tc.id)} />
             ));
           })()}
         </Box>

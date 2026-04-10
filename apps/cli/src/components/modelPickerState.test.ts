@@ -12,9 +12,7 @@ const providers: ModelProvider[] = [
     id: "anthropic",
     name: "Anthropic",
     status: { type: "oauth", status: "connected" },
-    models: [
-      { id: "anthropic:claude-sonnet", label: "Claude Sonnet", context: "200K ctx" },
-    ],
+    models: [{ id: "anthropic:claude-sonnet", label: "Claude Sonnet", context: "200K ctx" }],
   },
   {
     id: "openai",

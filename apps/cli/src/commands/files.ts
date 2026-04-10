@@ -1,19 +1,11 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
-import {
-  listFiles,
-  readFile,
-  searchFiles,
-  grepFiles,
-  ApiError,
-} from "../lib/api.js";
+import { listFiles, readFile, searchFiles, grepFiles, ApiError } from "../lib/api.js";
 import type { FileEntry, GrepMatch } from "../lib/types.js";
 
 function formatEntry(entry: FileEntry): string {
   const icon = entry.is_dir ? pc.blue("📁") : "  ";
-  const name = entry.is_dir
-    ? pc.bold(pc.blue(entry.name + "/"))
-    : pc.cyan(entry.name);
+  const name = entry.is_dir ? pc.bold(pc.blue(entry.name + "/")) : pc.cyan(entry.name);
   const size = pc.dim(entry.size.padStart(8));
   const modified = pc.dim(entry.modified);
   return `${icon} ${name}  ${size}  ${modified}`;
@@ -55,11 +47,7 @@ async function showFileContent(
   ctx.addSystemMessage(content);
 }
 
-async function showSearchResults(
-  pattern: string,
-  path: string | undefined,
-  ctx: CommandContext,
-) {
+async function showSearchResults(pattern: string, path: string | undefined, ctx: CommandContext) {
   const { files } = await searchFiles(pattern, path);
 
   if (files.length === 0) {
@@ -92,11 +80,7 @@ async function showGrepResults(
     return;
   }
 
-  const lines = [
-    pc.bold(`${matches.length} match(es)`),
-    "",
-    ...matches.map(formatGrepMatch),
-  ];
+  const lines = [pc.bold(`${matches.length} match(es)`), "", ...matches.map(formatGrepMatch)];
 
   ctx.addSystemMessage(lines.join("\n"));
 }
@@ -135,9 +119,7 @@ register({
         case "cat": {
           const filePath = parts[1];
           if (!filePath) {
-            ctx.addSystemMessage(
-              `Usage: ${pc.cyan("/files read <path>")} [offset] [limit]`,
-            );
+            ctx.addSystemMessage(`Usage: ${pc.cyan("/files read <path>")} [offset] [limit]`);
             return;
           }
           const offset = parts[2] ? parseInt(parts[2], 10) : undefined;
@@ -149,9 +131,7 @@ register({
         case "grep": {
           const pattern = parts[1];
           if (!pattern) {
-            ctx.addSystemMessage(
-              `Usage: ${pc.cyan("/files grep <regex>")} [glob]`,
-            );
+            ctx.addSystemMessage(`Usage: ${pc.cyan("/files grep <regex>")} [glob]`);
             return;
           }
           const glob = parts[2];

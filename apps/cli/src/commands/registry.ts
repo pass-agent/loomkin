@@ -73,9 +73,7 @@ export function markCurrentAsBuiltins(): void {
   }
 }
 
-export function resolve(
-  input: string,
-): { command: SlashCommand; args: string } | null {
+export function resolve(input: string): { command: SlashCommand; args: string } | null {
   const trimmed = input.trim();
   if (!trimmed.startsWith("/")) return null;
 
@@ -111,18 +109,12 @@ export function getCompletions(partial: string): SlashCommand[] {
  * @param commandName - the resolved command name (e.g. "delegate")
  * @param partialArg - text after the command and space (e.g. "cod" when user typed "/delegate cod")
  */
-export function getArgCompletions(
-  commandName: string,
-  partialArg: string,
-): string[] {
-  const cmd =
-    commands.get(commandName) ?? commands.get(aliasMap.get(commandName) ?? "");
+export function getArgCompletions(commandName: string, partialArg: string): string[] {
+  const cmd = commands.get(commandName) ?? commands.get(aliasMap.get(commandName) ?? "");
   if (!cmd?.getArgCompletions) return [];
   return cmd.getArgCompletions(partialArg);
 }
 
 export function getAllCommands(): SlashCommand[] {
-  return Array.from(commands.values()).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  return Array.from(commands.values()).sort((a, b) => a.name.localeCompare(b.name));
 }

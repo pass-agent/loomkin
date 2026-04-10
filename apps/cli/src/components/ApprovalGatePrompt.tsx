@@ -8,7 +8,12 @@ type Props =
       type: "approval";
       gate: ApprovalRequest;
       queueCount?: number;
-      onRespond: (gateId: string, outcome: "approved" | "denied", context?: string, reason?: string) => void;
+      onRespond: (
+        gateId: string,
+        outcome: "approved" | "denied",
+        context?: string,
+        reason?: string,
+      ) => void;
     }
   | {
       type: "spawn_gate";
@@ -73,12 +78,7 @@ export function ApprovalGatePrompt(props: Props) {
   const timeColor = remaining <= 10 ? "red" : remaining <= 30 ? "yellow" : "gray";
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor="magenta"
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="round" borderColor="magenta" paddingX={1} flexDirection="column">
       {props.type === "approval" ? (
         <>
           <Text bold color="magenta">
@@ -91,9 +91,7 @@ export function ApprovalGatePrompt(props: Props) {
           <Text bold color="magenta">
             {props.gate.agent_name} wants to spawn agents
           </Text>
-          {props.gate.purpose && (
-            <Text dimColor>Purpose: {props.gate.purpose}</Text>
-          )}
+          {props.gate.purpose && <Text dimColor>Purpose: {props.gate.purpose}</Text>}
           <Box marginTop={1} flexDirection="column">
             {props.gate.roles.map((r, i) => (
               <Text key={`role-${i}`}>
@@ -115,9 +113,7 @@ export function ApprovalGatePrompt(props: Props) {
               ${props.gate.estimated_cost.toFixed(4)}
             </Text>
           </Text>
-          {props.gate.limit_warning && (
-            <Text color="yellow">⚠ {props.gate.limit_warning}</Text>
-          )}
+          {props.gate.limit_warning && <Text color="yellow">⚠ {props.gate.limit_warning}</Text>}
         </>
       )}
 
@@ -129,12 +125,21 @@ export function ApprovalGatePrompt(props: Props) {
       {mode === "choose" && (
         <Box marginTop={1}>
           <Text>
-            <Text bold color="green">[y]</Text> approve{"  "}
-            <Text bold color="red">[n]</Text> deny
+            <Text bold color="green">
+              [y]
+            </Text>{" "}
+            approve{"  "}
+            <Text bold color="red">
+              [n]
+            </Text>{" "}
+            deny
             {props.type === "approval" && (
               <>
                 {"  "}
-                <Text bold color="cyan">[c]</Text> approve with context
+                <Text bold color="cyan">
+                  [c]
+                </Text>{" "}
+                approve with context
               </>
             )}
           </Text>
@@ -143,9 +148,7 @@ export function ApprovalGatePrompt(props: Props) {
 
       {(mode === "context" || mode === "reason") && (
         <Box marginTop={1} flexDirection="column">
-          <Text dimColor>
-            {mode === "context" ? "Add context:" : "Reason for denial:"}
-          </Text>
+          <Text dimColor>{mode === "context" ? "Add context:" : "Reason for denial:"}</Text>
           <Box>
             <Text dimColor>{"› "}</Text>
             <TextInput

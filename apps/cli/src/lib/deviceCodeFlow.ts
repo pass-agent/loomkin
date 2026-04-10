@@ -7,9 +7,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function runDeviceCodeFlow(
-  addMessage: (msg: string) => void,
-): Promise<boolean> {
+export async function runDeviceCodeFlow(addMessage: (msg: string) => void): Promise<boolean> {
   addMessage("Starting loomkin.dev authentication...");
 
   let codeResponse;
@@ -82,9 +80,7 @@ export async function runDeviceCodeFlow(
       });
 
       addMessage(
-        pc.green("Authenticated with loomkin.dev") +
-          "\n" +
-          pc.dim(`Token expires: ${expiresAt}`),
+        pc.green("Authenticated with loomkin.dev") + "\n" + pc.dim(`Token expires: ${expiresAt}`),
       );
       return true;
     } catch (err) {

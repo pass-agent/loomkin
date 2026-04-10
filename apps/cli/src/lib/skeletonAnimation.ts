@@ -81,7 +81,7 @@ function noise(width: number, elapsedMs: number): SkeletonChar[] {
   // Not cryptographic — just visually varied.
   const tick = Math.floor(elapsedMs / 150);
   return Array.from({ length: width }, (_, i) => {
-    const idx = (tick * 7 + i * 13 + (i * i * 3)) % BRAILLE_CHARS.length;
+    const idx = (tick * 7 + i * 13 + i * i * 3) % BRAILLE_CHARS.length;
     return { char: BRAILLE_CHARS[idx]!, dim: false, bold: false };
   });
 }

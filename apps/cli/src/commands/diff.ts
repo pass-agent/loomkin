@@ -47,11 +47,7 @@ function parseDiffStats(raw: string): {
   return { files, additions, deletions };
 }
 
-function formatStats(stats: {
-  files: number;
-  additions: number;
-  deletions: number;
-}): string {
+function formatStats(stats: { files: number; additions: number; deletions: number }): string {
   const parts = [
     `${stats.files} file(s)`,
     pc.green(`+${stats.additions}`),
@@ -96,10 +92,7 @@ register({
 
       ctx.addSystemMessage(`${header}\n\n${colored}`);
     } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? `Diff failed: ${err.body}`
-          : "Diff failed.";
+      const msg = err instanceof ApiError ? `Diff failed: ${err.body}` : "Diff failed.";
       ctx.addSystemMessage(pc.red(msg));
     }
   },

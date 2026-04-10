@@ -11,7 +11,8 @@ register({
       return;
     }
 
-    channel.push("compact_history", {})
+    channel
+      .push("compact_history", {})
       .receive("ok", () => {
         ctx.addSystemMessage("Compaction requested. Waiting for server...");
       })

@@ -65,11 +65,12 @@ test.each([
       content: "result",
       tool_calls: null,
     },
-    expected: JSON.stringify(
-      { id: "msg3", role: "assistant", content: "result", tool_calls: null },
-      null,
-      2,
-    ) + "\n",
+    expected:
+      JSON.stringify(
+        { id: "msg3", role: "assistant", content: "result", tool_calls: null },
+        null,
+        2,
+      ) + "\n",
   },
 ])("$name", async ({ format, response, expected }) => {
   mockSendMessageRest.mockResolvedValue({ message: response });

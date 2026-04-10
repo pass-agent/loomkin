@@ -1,19 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, Text, useInput, useBoxMetrics, type DOMElement } from "ink";
 import TextInput from "ink-text-input";
 import { useStore } from "zustand";
 import { CommandPalette } from "./CommandPalette.js";
 import { ModelPicker } from "./ModelPicker.js";
 import { ListPicker } from "./ListPicker.js";
-import {
-  resolve,
-  getCompletions,
-  getArgCompletions,
-} from "../commands/registry.js";
-import type {
-  CommandContext,
-  ListPickerOptions,
-} from "../commands/registry.js";
+import { resolve, getCompletions, getArgCompletions } from "../commands/registry.js";
+import type { CommandContext, ListPickerOptions } from "../commands/registry.js";
 import { useAppStore } from "../stores/appStore.js";
 import { usePaneStore } from "../stores/paneStore.js";
 import { listModelProviders } from "../lib/api.js";
@@ -35,11 +28,8 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [argPaletteIndex, setArgPaletteIndex] = useState(0);
   const [cursor, setCursor] = useState(0);
-  const [modelPickerProviders, setModelPickerProviders] = useState<
-    ModelProvider[] | null
-  >(null);
-  const [listPickerOptions, setListPickerOptions] =
-    useState<ListPickerOptions | null>(null);
+  const [modelPickerProviders, setModelPickerProviders] = useState<ModelProvider[] | null>(null);
+  const [listPickerOptions, setListPickerOptions] = useState<ListPickerOptions | null>(null);
   const [awaitingCapture, setAwaitingCapture] = useState(false);
   // Ctrl+R reverse-search state
   const [searchMode, setSearchMode] = useState(false);
@@ -50,6 +40,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   const undoStack = useRef<string[]>([]);
   const skipSubmitRef = useRef(false);
   const pendingInputCaptureRef = useRef<((input: string) => void) | null>(null);
+  const inputBorderBoxRef = useRef<DOMElement>(null);
 
   const hasError = useStore(useAppStore, (s) => s.errors.length > 0);
   const keybindMode = useStore(useAppStore, (s) => s.keybindMode);
@@ -57,10 +48,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   const setVimMode = useStore(useAppStore, (s) => s.setVimMode);
   const focusedTarget = useStore(usePaneStore, (s) => s.focusedTarget);
   const connectionState = useStore(useAppStore, (s) => s.connectionState);
-  const showModelPickerOnConnect = useStore(
-    useAppStore,
-    (s) => s.showModelPickerOnConnect,
-  );
+  const showModelPickerOnConnect = useStore(useAppStore, (s) => s.showModelPickerOnConnect);
   const autoShownRef = useRef(false);
 
   // Replay early input buffered before Ink mounted
@@ -74,11 +62,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
 
   // Auto-show model picker once after first connect
   useEffect(() => {
-    if (
-      !showModelPickerOnConnect ||
-      connectionState !== "connected" ||
-      autoShownRef.current
-    )
+    if (!showModelPickerOnConnect || connectionState !== "connected" || autoShownRef.current)
       return;
     autoShownRef.current = true;
     useAppStore.getState().setShowModelPickerOnConnect(false);
@@ -98,8 +82,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   const hasArgs = value.includes(" ");
   const showPalette =
     value.startsWith("/") &&
-    (!hasArgs ||
-      getCompletions(commandWord).some((c) => `/${c.name}` === commandWord));
+    (!hasArgs || getCompletions(commandWord).some((c) => `/${c.name}` === commandWord));
   const completions = showPalette
     ? hasArgs
       ? getCompletions(commandWord).filter((c) => `/${c.name}` === commandWord)
@@ -215,10 +198,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
         case "vim:searchHistory":
           // Navigate backwards through history
           if (history.length > 0) {
-            const idx =
-              historyIndex === -1
-                ? history.length - 1
-                : Math.max(0, historyIndex - 1);
+            const idx = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
             setHistoryIndex(idx);
             setValue(history[idx]);
             setCursor(0);
@@ -230,9 +210,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   );
 
   // Search mode: compute filtered results reactively
-  const searchResults = searchMode
-    ? history.filter((h) => h.includes(searchQuery)).reverse()
-    : [];
+  const searchResults = searchMode ? history.filter((h) => h.includes(searchQuery)).reverse() : [];
   const selectedResult = searchResults[searchResultIndex] ?? null;
 
   useInput((input, key) => {
@@ -308,8 +286,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
       if (key.return) {
         if (!hasArgs) {
           const selected = completions[paletteIndex];
-          const isExactMatch =
-            selected && value.toLowerCase() === `/${selected.name}`;
+          const isExactMatch = selected && value.toLowerCase() === `/${selected.name}`;
           if (selected && !isExactMatch) {
             // Partial match — dispatch immediately, block TextInput's duplicate onSubmit
             handleSubmit(`/${selected.name}`);
@@ -385,10 +362,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
       }
 
       // Global ctrl bindings
-      const globalAction = findAction(
-        { key: input, ctrl: key.ctrl },
-        defaultKeymap,
-      );
+      const globalAction = findAction({ key: input, ctrl: key.ctrl }, defaultKeymap);
       if (globalAction) return; // Let parent handle global bindings
 
       return; // Block all other input in normal mode
@@ -411,10 +385,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
 
     // Default mode: history navigation (only when not in palette)
     if (!showPalette && key.upArrow && history.length > 0) {
-      const newIdx =
-        historyIndex === -1
-          ? history.length - 1
-          : Math.max(0, historyIndex - 1);
+      const newIdx = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
       setHistoryIndex(newIdx);
       setValue(history[newIdx]);
       return;
@@ -499,11 +470,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
       // Parse @mention prefix: "@agent-name rest of message"
       const mentionMatch = trimmed.match(/^@(\S+)\s+([\s\S]+)$/);
       if (mentionMatch) {
-        const [, mentionTarget, rest] = mentionMatch as [
-          string,
-          string,
-          string,
-        ];
+        const [, mentionTarget, rest] = mentionMatch as [string, string, string];
         onSubmit(rest, mentionTarget);
         setValue("");
         // history already added above; no duplicate needed
@@ -518,21 +485,9 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
   // Prompt indicator
   const promptChar = isVim ? (isNormal ? ":" : isInsert ? ">" : "/") : ">";
 
-  const promptColor = isVim
-    ? isNormal
-      ? "yellow"
-      : isInsert
-        ? "green"
-        : "cyan"
-    : "blue";
+  const promptColor = isVim ? (isNormal ? "yellow" : isInsert ? "green" : "cyan") : "blue";
 
-  const modeHint = isVim
-    ? isNormal
-      ? " NORMAL"
-      : isInsert
-        ? " INSERT"
-        : " COMMAND"
-    : "";
+  const modeHint = isVim ? (isNormal ? " NORMAL" : isInsert ? " INSERT" : " COMMAND") : "";
 
   const placeholder = awaitingCapture
     ? "Paste the OAuth code (code#state)..."
@@ -540,9 +495,16 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
       ? "Press i to type, : for commands, Enter to send..."
       : "Send a message, @agent to target, or / for commands...";
 
+  // Cast: Ink's type expects RefObject<DOMElement> but React 19 useRef always includes null
+  const { width: borderBoxWidth, hasMeasured: boxMeasured } = useBoxMetrics(
+    inputBorderBoxRef as React.RefObject<DOMElement>,
+  );
   // border (2) + paddingX={1} (2) + prompt char + space (2) = 6 fixed overhead
   const targetOverhead = focusedTarget && !isNormal ? focusedTarget.length + 2 : 0;
-  const availableWidth = Math.max(0, termWidth - 6 - targetOverhead - modeHint.length);
+  const availableWidth = Math.max(
+    0,
+    (boxMeasured ? borderBoxWidth : termWidth) - 6 - targetOverhead - modeHint.length,
+  );
   const truncatedPlaceholder =
     placeholder.length > availableWidth
       ? placeholder.slice(0, Math.max(0, availableWidth - 1)) + "…"
@@ -604,9 +566,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
               enrichedContext.captureNextInput,
             );
             if (ok) {
-              commandContext.addSystemMessage(
-                `${name} connected. Refreshing model list...`,
-              );
+              commandContext.addSystemMessage(`${name} connected. Refreshing model list...`);
               try {
                 const { providers } = await listModelProviders();
                 setModelPickerProviders(providers);
@@ -619,7 +579,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
           <Box paddingX={1}>
             <Text dimColor>{"─".repeat(dividerWidth)}</Text>
           </Box>
-          <Box borderStyle="single" borderColor={promptColor} paddingX={1}>
+          <Box ref={inputBorderBoxRef} borderStyle="single" borderColor={promptColor} paddingX={1}>
             <Text color={promptColor} bold>
               {promptChar}{" "}
             </Text>
@@ -665,12 +625,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
             )}
           </Box>
           {searchMode && (
-            <Box
-              flexDirection="column"
-              borderStyle="single"
-              borderColor="cyan"
-              paddingX={1}
-            >
+            <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1}>
               <Text color="cyan" bold>
                 reverse-i-search: <Text color="white">{searchQuery}</Text>
                 <Text color="cyan" inverse>
@@ -693,12 +648,7 @@ export function InputArea({ onSubmit, commandContext, termWidth = 80 }: Props) {
             <CommandPalette input={value} selectedIndex={paletteIndex} />
           )}
           {!searchMode && showArgPalette && (
-            <Box
-              flexDirection="column"
-              borderStyle="single"
-              borderColor="gray"
-              paddingX={1}
-            >
+            <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
               {argCompletions.map((name, i) => (
                 <Text
                   key={name}

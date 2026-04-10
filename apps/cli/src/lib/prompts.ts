@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  readdirSync,
+} from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -31,10 +38,7 @@ function extractVariables(content: string): string[] {
 }
 
 /** Replace {{variable}} placeholders with provided values */
-export function renderTemplate(
-  content: string,
-  vars: Record<string, string>,
-): string {
+export function renderTemplate(content: string, vars: Record<string, string>): string {
   return content.replace(/\{\{(\w+)\}\}/g, (match, key) => {
     return vars[key] ?? match;
   });
@@ -69,11 +73,7 @@ export function getTemplate(name: string): PromptTemplate | null {
   }
 }
 
-export function saveTemplate(
-  name: string,
-  content: string,
-  description = "",
-): PromptTemplate {
+export function saveTemplate(name: string, content: string, description = ""): PromptTemplate {
   ensureDir();
   const existing = getTemplate(name);
   const now = new Date().toISOString();

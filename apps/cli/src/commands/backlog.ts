@@ -1,11 +1,7 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { extractErrorMessage } from "../lib/errors.js";
-import {
-  listBacklogItems,
-  createBacklogItem,
-  updateBacklogItem,
-} from "../lib/api.js";
+import { listBacklogItems, createBacklogItem, updateBacklogItem } from "../lib/api.js";
 import type { BacklogItem } from "../lib/types.js";
 
 const STATUS_ICONS: Record<string, string> = {
@@ -145,26 +141,17 @@ async function handleList(ctx: CommandContext, status?: string) {
 async function handleCreate(ctx: CommandContext, title: string) {
   try {
     const { item } = await createBacklogItem({ title });
-    ctx.addSystemMessage(
-      `${pc.green("✔")} Created: ${pc.dim(item.id.slice(0, 8))} ${item.title}`,
-    );
+    ctx.addSystemMessage(`${pc.green("✔")} Created: ${pc.dim(item.id.slice(0, 8))} ${item.title}`);
   } catch (error) {
     const msg = extractErrorMessage(error);
     ctx.addSystemMessage(pc.red(`Failed to create item: ${msg}`));
   }
 }
 
-async function handleTransition(
-  ctx: CommandContext,
-  id: string,
-  status: string,
-  label: string,
-) {
+async function handleTransition(ctx: CommandContext, id: string, status: string, label: string) {
   try {
     const { item } = await updateBacklogItem(id, { status } as Partial<BacklogItem>);
-    ctx.addSystemMessage(
-      `${pc.green("✔")} ${label}: ${pc.dim(item.id.slice(0, 8))} ${item.title}`,
-    );
+    ctx.addSystemMessage(`${pc.green("✔")} ${label}: ${pc.dim(item.id.slice(0, 8))} ${item.title}`);
   } catch (error) {
     const msg = extractErrorMessage(error);
     ctx.addSystemMessage(pc.red(`Failed to update item: ${msg}`));
@@ -174,9 +161,7 @@ async function handleTransition(
 async function handleShow(ctx: CommandContext, id: string) {
   try {
     const { items } = await listBacklogItems({ limit: 50 });
-    const item = items.find(
-      (i) => i.id === id || i.id.startsWith(id),
-    );
+    const item = items.find((i) => i.id === id || i.id.startsWith(id));
 
     if (!item) {
       ctx.addSystemMessage(pc.red(`Item ${id} not found.`));

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Box, useApp, useInput, useStdout } from "ink";
+import React, { useCallback, useMemo } from "react";
+import { Box, useApp, useInput, useWindowSize } from "ink";
 import { useStore } from "zustand";
 import { StatusBar } from "./components/StatusBar.js";
 import { MessageList } from "./components/MessageList.js";
@@ -72,30 +72,11 @@ import "./commands/vault.js";
 
 let messageCounter = 0;
 
-function useTerminalSize() {
-  const { stdout } = useStdout();
-  const [size, setSize] = useState({
-    cols: stdout?.columns ?? 80,
-    rows: stdout?.rows ?? 24,
-  });
-
-  useEffect(() => {
-    if (!stdout) return;
-    const onResize = () => {
-      setSize({ cols: stdout.columns ?? 80, rows: stdout.rows ?? 24 });
-    };
-    stdout.on("resize", onResize);
-    return () => {
-      stdout.off("resize", onResize);
-    };
-  }, [stdout]);
-
-  return size;
-}
-
 export function App() {
   const { exit } = useApp();
-  const { cols: termWidth, rows: termHeight } = useTerminalSize();
+  const { columns, rows } = useWindowSize();
+  const termWidth = columns ?? 80;
+  const termHeight = rows ?? 24;
   const { isConnected } = useConnection();
 
   // Single channel lifecycle owner — must be before useSessionChannel/useAgentChannel
@@ -240,7 +221,16 @@ export function App() {
       setSessionModel: setModel,
       setSessionFastModel: setFastModel,
     }),
-    [appState, sessionState, addSystemMessage, sendMessage, clearMessages, exit, setModel, setFastModel],
+    [
+      appState,
+      sessionState,
+      addSystemMessage,
+      sendMessage,
+      clearMessages,
+      exit,
+      setModel,
+      setFastModel,
+    ],
   );
 
   const handleSubmit = useCallback(
@@ -282,28 +272,20 @@ export function App() {
       )}
       {latestError && <ErrorBanner error={latestError} />}
       {pendingPermissions.length > 0 && (
-        <PermissionPrompt
-          request={pendingPermissions[0]}
-          onRespond={respondPermission}
-        />
+        <PermissionPrompt request={pendingPermissions[0]} onRespond={respondPermission} />
       )}
       {pendingQuestions.length > 0 && !pendingPermissions.length && (
-        <AskUserPrompt
-          question={pendingQuestions[0]}
-          onAnswer={answerQuestion}
+        <AskUserPrompt question={pendingQuestions[0]} onAnswer={answerQuestion} />
+      )}
+      {pendingApprovals.length > 0 && !pendingPermissions.length && !pendingQuestions.length && (
+        <ApprovalGatePrompt
+          key={pendingApprovals[0].gate_id}
+          type="approval"
+          gate={pendingApprovals[0]}
+          queueCount={pendingApprovals.length}
+          onRespond={respondApproval}
         />
       )}
-      {pendingApprovals.length > 0 &&
-        !pendingPermissions.length &&
-        !pendingQuestions.length && (
-          <ApprovalGatePrompt
-            key={pendingApprovals[0].gate_id}
-            type="approval"
-            gate={pendingApprovals[0]}
-            queueCount={pendingApprovals.length}
-            onRespond={respondApproval}
-          />
-        )}
       {pendingSpawnGates.length > 0 &&
         !pendingPermissions.length &&
         !pendingQuestions.length &&

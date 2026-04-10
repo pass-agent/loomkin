@@ -6,12 +6,7 @@ import pc from "picocolors";
 import { appendFileSync, openSync, readFileSync } from "fs";
 import { App } from "./app.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
-import {
-  isAuthenticated,
-  setConfig,
-  getLastSessionId,
-  setLastSessionId,
-} from "./lib/config.js";
+import { isAuthenticated, setConfig, getLastSessionId, setLastSessionId } from "./lib/config.js";
 import { runSetupWizard } from "./components/Welcome.js";
 import { useAppStore } from "./stores/appStore.js";
 import { useSessionStore } from "./stores/sessionStore.js";
@@ -233,7 +228,9 @@ async function resumeSession(sessionId: string): Promise<boolean> {
       });
     }
     setLastSessionId(sessionId);
-    console.error(pc.green(`Resumed session ${sessionId.slice(0, 8)} (${messages.length} messages)`));
+    console.error(
+      pc.green(`Resumed session ${sessionId.slice(0, 8)} (${messages.length} messages)`),
+    );
     return true;
   } catch {
     console.error(pc.yellow(`Could not resume session ${sessionId.slice(0, 8)}, creating new…`));
@@ -408,7 +405,9 @@ async function main() {
       try {
         prompt = readFileSync(cli.flags.promptFile, "utf-8").trim();
       } catch (err) {
-        console.error(`Error: could not read --prompt-file "${cli.flags.promptFile}": ${err instanceof Error ? err.message : String(err)}`);
+        console.error(
+          `Error: could not read --prompt-file "${cli.flags.promptFile}": ${err instanceof Error ? err.message : String(err)}`,
+        );
         process.exit(1);
       }
     } else if (prompt === "-") {
@@ -465,9 +464,7 @@ async function main() {
       if (useAppStore.getState().debug && err instanceof Error) {
         console.error(err.stack);
       } else {
-        console.error(
-          `Error: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
       }
       process.exit(1);
     } finally {

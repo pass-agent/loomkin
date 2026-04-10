@@ -24,7 +24,9 @@ export function SessionLoadingSkeleton({ width, messageCount = 4 }: Props) {
           const lines = role === "user" ? 1 : 2 + (i % 2);
           return (
             <Box key={i} flexDirection="column" marginBottom={1}>
-              <Text dimColor bold>{role}</Text>
+              <Text dimColor bold>
+                {role}
+              </Text>
               <SkeletonText
                 lines={lines}
                 maxWidth={role === "user" ? Math.floor(contentWidth * 0.5) : contentWidth}

@@ -120,17 +120,14 @@ test("passes file and staged together", async () => {
   expect(getDiff).toHaveBeenCalledWith({ file: "src/app.ts", staged: true });
 });
 
-test.each(["staged", "-s", "--staged"])(
-  "recognizes '%s' as staged flag",
-  async (flag) => {
-    (getDiff as any).mockResolvedValue({ diff: sampleDiff });
+test.each(["staged", "-s", "--staged"])("recognizes '%s' as staged flag", async (flag) => {
+  (getDiff as any).mockResolvedValue({ diff: sampleDiff });
 
-    const ctx = createMockContext();
-    await resolve("/diff")!.command.handler(flag, ctx);
+  const ctx = createMockContext();
+  await resolve("/diff")!.command.handler(flag, ctx);
 
-    expect(getDiff).toHaveBeenCalledWith({ file: undefined, staged: true });
-  },
-);
+  expect(getDiff).toHaveBeenCalledWith({ file: undefined, staged: true });
+});
 
 test("shows no changes message", async () => {
   (getDiff as any).mockResolvedValue({

@@ -24,9 +24,7 @@ register({
         .receive("ok", (raw: Record<string, unknown>) => {
           const resp = raw as { kin: KinAgent[] };
           if (resp.kin.length === 0) {
-            ctx.addSystemMessage(
-              "No kin configured. Create kin in the web UI or database.",
-            );
+            ctx.addSystemMessage("No kin configured. Create kin in the web UI or database.");
             return;
           }
 
@@ -35,14 +33,9 @@ register({
             const role = pc.dim(`(${k.role})`);
             const potency = pc.yellow(`P${k.potency}`);
             const auto = k.auto_spawn ? pc.green(" auto") : "";
-            const model = k.model_override
-              ? pc.dim(` model:${k.model_override}`)
-              : "";
-            const display = k.display_name
-              ? ` ${pc.dim(k.display_name)}`
-              : "";
-            const tags =
-              k.tags.length > 0 ? pc.dim(` [${k.tags.join(", ")}]`) : "";
+            const model = k.model_override ? pc.dim(` model:${k.model_override}`) : "";
+            const display = k.display_name ? ` ${pc.dim(k.display_name)}` : "";
+            const tags = k.tags.length > 0 ? pc.dim(` [${k.tags.join(", ")}]`) : "";
 
             return `  ${potency} ${name} ${role}${display}${auto}${model}${tags}`;
           });
@@ -105,9 +98,7 @@ register({
         .push("list_kin", {})
         .receive("ok", (raw: Record<string, unknown>) => {
           const resp = raw as { kin: KinAgent[] };
-          const kin = resp.kin.find(
-            (k) => k.name.toLowerCase() === kinName.toLowerCase(),
-          );
+          const kin = resp.kin.find((k) => k.name.toLowerCase() === kinName.toLowerCase());
           if (!kin) {
             ctx.addSystemMessage(pc.red(`Kin "${kinName}" not found.`));
             return;
@@ -120,14 +111,10 @@ register({
             `  Auto-spawn: ${kin.auto_spawn ? pc.green("yes") : "no"}`,
           ];
 
-          if (kin.model_override)
-            lines.push(`  Model: ${kin.model_override}`);
-          if (kin.budget_limit)
-            lines.push(`  Budget: $${kin.budget_limit}`);
-          if (kin.spawn_context)
-            lines.push(`  Spawn context: ${kin.spawn_context}`);
-          if (kin.tags.length > 0)
-            lines.push(`  Tags: ${kin.tags.join(", ")}`);
+          if (kin.model_override) lines.push(`  Model: ${kin.model_override}`);
+          if (kin.budget_limit) lines.push(`  Budget: $${kin.budget_limit}`);
+          if (kin.spawn_context) lines.push(`  Spawn context: ${kin.spawn_context}`);
+          if (kin.tags.length > 0) lines.push(`  Tags: ${kin.tags.join(", ")}`);
           if (kin.system_prompt_extra)
             lines.push(
               `  Extra prompt: ${pc.dim(kin.system_prompt_extra.slice(0, 120))}${kin.system_prompt_extra.length > 120 ? "..." : ""}`,
@@ -142,8 +129,6 @@ register({
       return;
     }
 
-    ctx.addSystemMessage(
-      `Usage: /kin [list | spawn <name> | info <name>]`,
-    );
+    ctx.addSystemMessage(`Usage: /kin [list | spawn <name> | info <name>]`);
   },
 });

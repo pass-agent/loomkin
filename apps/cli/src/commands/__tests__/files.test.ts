@@ -218,22 +218,19 @@ test("handles API errors gracefully", async () => {
   expect(getMessage(ctx)).toContain("File operation failed");
 });
 
-test.each(["find", "cat"])(
-  "alias '%s' works for subcommands",
-  async (alias) => {
-    if (alias === "find") {
-      (searchFiles as any).mockResolvedValue({
-        pattern: "*.ts",
-        files: ["a.ts"],
-      });
-    } else {
-      (readFile as any).mockResolvedValue({ content: "test" });
-    }
+test.each(["find", "cat"])("alias '%s' works for subcommands", async (alias) => {
+  if (alias === "find") {
+    (searchFiles as any).mockResolvedValue({
+      pattern: "*.ts",
+      files: ["a.ts"],
+    });
+  } else {
+    (readFile as any).mockResolvedValue({ content: "test" });
+  }
 
-    const ctx = createMockContext();
-    const args = alias === "find" ? "find *.ts" : "cat test.ts";
-    await resolve("/files")!.command.handler(args, ctx);
+  const ctx = createMockContext();
+  const args = alias === "find" ? "find *.ts" : "cat test.ts";
+  await resolve("/files")!.command.handler(args, ctx);
 
-    expect(ctx.addSystemMessage).toHaveBeenCalled();
-  },
-);
+  expect(ctx.addSystemMessage).toHaveBeenCalled();
+});

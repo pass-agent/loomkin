@@ -5,7 +5,10 @@ import type { ListPickerOptions } from "../commands/registry.js";
 const VISIBLE_COUNT = 8;
 
 export function ListPicker({ title, items, currentValue, onSelect, onCancel }: ListPickerOptions) {
-  const initialIndex = Math.max(0, items.findIndex((i) => i.value === currentValue));
+  const initialIndex = Math.max(
+    0,
+    items.findIndex((i) => i.value === currentValue),
+  );
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const [windowStart, setWindowStart] = useState(() =>
     Math.max(0, initialIndex - Math.floor(VISIBLE_COUNT / 2)),
@@ -42,10 +45,9 @@ export function ListPicker({ title, items, currentValue, onSelect, onCancel }: L
   return (
     <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1}>
       <Text bold color="cyan">
-        {title}{" "}
-        <Text dimColor>(↑↓ · Enter · Esc cancel)</Text>
+        {title} <Text dimColor>(↑↓ · Enter · Esc cancel)</Text>
       </Text>
-      {windowStart > 0 && <Text dimColor>  ▲ {windowStart} more above</Text>}
+      {windowStart > 0 && <Text dimColor> ▲ {windowStart} more above</Text>}
       {items.slice(windowStart, windowStart + VISIBLE_COUNT).map((item, offset) => {
         const i = windowStart + offset;
         const isSelected = i === selectedIndex;
@@ -61,7 +63,7 @@ export function ListPicker({ title, items, currentValue, onSelect, onCancel }: L
         );
       })}
       {windowStart + VISIBLE_COUNT < items.length && (
-        <Text dimColor>  ▼ {items.length - windowStart - VISIBLE_COUNT} more below</Text>
+        <Text dimColor> ▼ {items.length - windowStart - VISIBLE_COUNT} more below</Text>
       )}
     </Box>
   );

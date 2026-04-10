@@ -67,9 +67,7 @@ export function loadKeybindings(): KeybindingOverride {
       }
       // Refuse to rebind protected actions
       if (PROTECTED_ACTIONS.has(action.toLowerCase())) {
-        logger.debug(
-          `[keybindings] cannot rebind protected action "${action}" — skipped`,
-        );
+        logger.debug(`[keybindings] cannot rebind protected action "${action}" — skipped`);
         continue;
       }
 

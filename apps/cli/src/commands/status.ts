@@ -1,13 +1,7 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { formatTokens, formatCost } from "../lib/format.js";
-import {
-  getMe,
-  getSession,
-  listModelProviders,
-  listSessions,
-  ApiError,
-} from "../lib/api.js";
+import { getMe, getSession, listModelProviders, listSessions, ApiError } from "../lib/api.js";
 import { getApiBaseUrl } from "../lib/urls.js";
 import type { ModelProvider, Session } from "../lib/types.js";
 
@@ -34,7 +28,6 @@ function providerStatus(provider: ModelProvider): string {
   return pc.yellow("?");
 }
 
-
 function formatSession(session: Session): string {
   const title = session.title ?? pc.dim("(untitled)");
   const tokens = formatTokens(session.prompt_tokens + session.completion_tokens);
@@ -46,12 +39,9 @@ async function fetchStatus(ctx: CommandContext) {
   const lines: string[] = [pc.bold("Loomkin Status"), ""];
 
   // Connection
-  const { connectionState, serverUrl, mode, model, reconnectAttempts } =
-    ctx.appStore;
+  const { connectionState, serverUrl, mode, model, reconnectAttempts } = ctx.appStore;
   lines.push(pc.bold(pc.underline("Connection")));
-  lines.push(
-    `  ${connectionDot(connectionState)} ${connectionState} → ${pc.dim(serverUrl)}`,
-  );
+  lines.push(`  ${connectionDot(connectionState)} ${connectionState} → ${pc.dim(serverUrl)}`);
   if (connectionState === "reconnecting") {
     lines.push(`  ${pc.dim(`Attempt ${reconnectAttempts}`)}`);
   }
@@ -122,9 +112,7 @@ async function fetchStatus(ctx: CommandContext) {
   if (errors.length > 0) {
     lines.push(pc.bold(pc.underline("Errors")));
     for (const err of errors) {
-      lines.push(
-        `  ${pc.red("●")} ${pc.dim(`[${err.type}]`)} ${err.message}`,
-      );
+      lines.push(`  ${pc.red("●")} ${pc.dim(`[${err.type}]`)} ${err.message}`);
     }
     lines.push("");
   }
@@ -143,9 +131,7 @@ register({
       await fetchStatus(ctx);
     } catch (err) {
       const msg =
-        err instanceof ApiError
-          ? `Status check failed: ${err.body}`
-          : "Status check failed.";
+        err instanceof ApiError ? `Status check failed: ${err.body}` : "Status check failed.";
       ctx.addSystemMessage(pc.red(msg));
     }
   },

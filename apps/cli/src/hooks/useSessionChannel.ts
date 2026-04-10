@@ -7,7 +7,13 @@ import { isMcpTool, truncateMcpOutput } from "../lib/mcpTruncation.js";
 import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.js";
 import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
 import { runHooks } from "../lib/hooks.js";
-import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
+import type {
+  Message,
+  ToolCall,
+  PermissionRequest,
+  AskUserQuestion,
+  PlanMessage,
+} from "../lib/types.js";
 
 /**
  * Subscribes to session-level events on the shared Phoenix channel.
@@ -114,32 +120,37 @@ export function useSessionChannel() {
       void runHooks("PreToolUse", {
         tool: payload.tool_call.name,
         input: payload.tool_call.arguments,
-      }).then((hookOutputs) => {
-        useSessionStore.getState().hookCompleted(toolUseId);
-        const denied = hookOutputs.find((o) => o.decision === "deny");
-        if (denied) {
-          useChannelStore.getState().getChannel()?.push("tool_denied", {
-            call_id: payload.tool_call.id,
-            reason: denied.reason ?? "Denied by hook",
-          });
-          useSessionStore.getState().removePendingToolCall(payload.tool_call.id);
-        }
-        const sysMsg = hookOutputs.find((o) => o.systemMessage);
-        if (sysMsg?.systemMessage) {
-          useSessionStore.getState().addMessage({
-            id: `hook-msg-${Date.now()}`,
-            role: "system",
-            content: sysMsg.systemMessage,
-            tool_calls: null,
-            tool_call_id: null,
-            token_count: null,
-            agent_name: null,
-            inserted_at: new Date().toISOString(),
-          });
-        }
-      }).catch(() => {
-        useSessionStore.getState().hookCompleted(toolUseId);
-      });
+      })
+        .then((hookOutputs) => {
+          useSessionStore.getState().hookCompleted(toolUseId);
+          const denied = hookOutputs.find((o) => o.decision === "deny");
+          if (denied) {
+            useChannelStore
+              .getState()
+              .getChannel()
+              ?.push("tool_denied", {
+                call_id: payload.tool_call.id,
+                reason: denied.reason ?? "Denied by hook",
+              });
+            useSessionStore.getState().removePendingToolCall(payload.tool_call.id);
+          }
+          const sysMsg = hookOutputs.find((o) => o.systemMessage);
+          if (sysMsg?.systemMessage) {
+            useSessionStore.getState().addMessage({
+              id: `hook-msg-${Date.now()}`,
+              role: "system",
+              content: sysMsg.systemMessage,
+              tool_calls: null,
+              tool_call_id: null,
+              token_count: null,
+              agent_name: null,
+              inserted_at: new Date().toISOString(),
+            });
+          }
+        })
+        .catch(() => {
+          useSessionStore.getState().hookCompleted(toolUseId);
+        });
     });
 
     on("tool_call_completed", (raw) => {
@@ -188,11 +199,13 @@ export function useSessionChannel() {
       runHooks("PostToolUse", {
         tool: payload.tool_call.name,
         output: payload.tool_call.output,
-      }).then(() => {
-        useSessionStore.getState().hookCompleted(postToolUseId);
-      }).catch(() => {
-        useSessionStore.getState().hookCompleted(postToolUseId);
-      });
+      })
+        .then(() => {
+          useSessionStore.getState().hookCompleted(postToolUseId);
+        })
+        .catch(() => {
+          useSessionStore.getState().hookCompleted(postToolUseId);
+        });
     });
 
     on("permission_request", (raw) => {
@@ -269,7 +282,9 @@ export function useSessionChannel() {
       if (typeof percent === "number") {
         store.setContextBudgetPercent(percent);
       }
-      const msg = payload.message ?? `Context window is getting full${typeof percent === "number" ? ` (${percent}% remaining)` : ""}. Consider using /compact.`;
+      const msg =
+        payload.message ??
+        `Context window is getting full${typeof percent === "number" ? ` (${percent}% remaining)` : ""}. Consider using /compact.`;
       store.addMessage({
         id: `ctx-warning-${Date.now()}`,
         role: "system",
@@ -287,12 +302,7 @@ export function useSessionChannel() {
       const cooldownPassed =
         !appState.lastAutoCompactAt || now - appState.lastAutoCompactAt > 60_000;
 
-      if (
-        appState.autoCompact &&
-        typeof percent === "number" &&
-        percent >= 85 &&
-        cooldownPassed
-      ) {
+      if (appState.autoCompact && typeof percent === "number" && percent >= 85 && cooldownPassed) {
         const liveChannel = useChannelStore.getState().getChannel();
         if (liveChannel) {
           liveChannel.push("compact_history", {});
@@ -388,31 +398,28 @@ export function useSessionChannel() {
     [],
   );
 
-  const answerQuestion = useCallback(
-    (questionId: string, answer: string) => {
-      const ch = useChannelStore.getState().getChannel();
-      if (!ch) return;
+  const answerQuestion = useCallback((questionId: string, answer: string) => {
+    const ch = useChannelStore.getState().getChannel();
+    if (!ch) return;
 
-      ch.push("ask_user_answer", { question_id: questionId, answer })
-        .receive("ok", () => {
-          useSessionStore.getState().removePendingQuestion(questionId);
-        })
-        .receive("error", () => {
-          useSessionStore.getState().removePendingQuestion(questionId);
-          useSessionStore.getState().addMessage({
-            id: `error-answer-${Date.now()}`,
-            role: "system",
-            content: "Answer failed to send. The agent may time out.",
-            tool_calls: null,
-            tool_call_id: null,
-            token_count: null,
-            agent_name: null,
-            inserted_at: new Date().toISOString(),
-          });
+    ch.push("ask_user_answer", { question_id: questionId, answer })
+      .receive("ok", () => {
+        useSessionStore.getState().removePendingQuestion(questionId);
+      })
+      .receive("error", () => {
+        useSessionStore.getState().removePendingQuestion(questionId);
+        useSessionStore.getState().addMessage({
+          id: `error-answer-${Date.now()}`,
+          role: "system",
+          content: "Answer failed to send. The agent may time out.",
+          tool_calls: null,
+          tool_call_id: null,
+          token_count: null,
+          agent_name: null,
+          inserted_at: new Date().toISOString(),
         });
-    },
-    [],
-  );
+      });
+  }, []);
 
   const respondApproval = useCallback(
     (gateId: string, outcome: "approved" | "denied", context?: string, reason?: string) => {

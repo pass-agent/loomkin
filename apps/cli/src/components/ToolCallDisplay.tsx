@@ -20,29 +20,29 @@ function ToolResultOutput({ output, isError }: { output: string; isError?: boole
   const state = getToolResultState({ isError, content: output });
 
   switch (state) {
-    case 'canceled':
+    case "canceled":
       return (
         <Box marginLeft={2}>
           <Text dimColor>○ Canceled</Text>
         </Box>
       );
-    case 'interrupted':
+    case "interrupted":
       return (
         <Box marginLeft={2}>
           <Text dimColor>⚡ Interrupted</Text>
         </Box>
       );
-    case 'rejected': {
+    case "rejected": {
       const reason = output.startsWith(TOOL_REJECT_WITH_REASON_PREFIX)
         ? output.slice(TOOL_REJECT_WITH_REASON_PREFIX.length)
-        : '';
+        : "";
       return (
         <Box marginLeft={2}>
-          <Text color="yellow">⊘ Rejected{reason ? ': ' + reason : ''}</Text>
+          <Text color="yellow">⊘ Rejected{reason ? ": " + reason : ""}</Text>
         </Box>
       );
     }
-    case 'error':
+    case "error":
       return (
         <Box marginLeft={2}>
           <Text color="red">✗ Error: {output}</Text>
@@ -65,14 +65,16 @@ export function ToolCallDisplay({ toolCall, isPending, isError }: Props) {
   const facingName = toolCall.renderer?.userFacingName(toolCall.arguments);
   const displayName = facingName ? facingName : toolCall.name;
 
-  const renderedResult = toolCall.output && toolCall.renderer?.renderToolResultMessage
-    ? toolCall.renderer.renderToolResultMessage(toolCall.output, { verbose })
-    : null;
+  const renderedResult =
+    toolCall.output && toolCall.renderer?.renderToolResultMessage
+      ? toolCall.renderer.renderToolResultMessage(toolCall.output, { verbose })
+      : null;
 
   if (!verbose) {
     // Condensed mode: show tool name + 1-line summary of output
     const outputSummary = toolCall.output
-      ? toolCall.output.split("\n")[0].slice(0, 80) + (toolCall.output.split("\n")[0].length > 80 || toolCall.output.includes("\n") ? "…" : "")
+      ? toolCall.output.split("\n")[0].slice(0, 80) +
+        (toolCall.output.split("\n")[0].length > 80 || toolCall.output.includes("\n") ? "…" : "")
       : null;
     return (
       <Box flexDirection="row" marginLeft={2} gap={1}>
@@ -81,7 +83,9 @@ export function ToolCallDisplay({ toolCall, isPending, isError }: Props) {
             <Spinner type="dots" />
           </Text>
         )}
-        <Text color="cyan" bold>{displayName}</Text>
+        <Text color="cyan" bold>
+          {displayName}
+        </Text>
         {outputSummary && <Text dimColor>{outputSummary}</Text>}
       </Box>
     );
@@ -107,11 +111,12 @@ export function ToolCallDisplay({ toolCall, isPending, isError }: Props) {
         />
       )}
       {isPending && <ToolCallSkeleton width={30} />}
-      {toolCall.output && (
-        renderedResult != null
-          ? <Box marginLeft={2}>{renderedResult}</Box>
-          : <ToolResultOutput output={toolCall.output} isError={isError} />
-      )}
+      {toolCall.output &&
+        (renderedResult != null ? (
+          <Box marginLeft={2}>{renderedResult}</Box>
+        ) : (
+          <ToolResultOutput output={toolCall.output} isError={isError} />
+        ))}
     </Box>
   );
 }

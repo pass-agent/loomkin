@@ -51,12 +51,7 @@ export function PlanApprovalPrompt({ plan, onRespond }: Props) {
   const timeColor = remaining <= 10 ? "red" : remaining <= 30 ? "yellow" : "gray";
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="round" borderColor="cyan" paddingX={1} flexDirection="column">
       <Text bold color="cyan">
         {plan.agent_name} proposes a plan
       </Text>

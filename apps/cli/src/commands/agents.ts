@@ -33,9 +33,7 @@ function formatAgent(agent: AgentInfo, indent = ""): string {
     detail = pc.dim(` — thinking: ${preview}`);
   } else if (agent.currentTask) {
     const taskPreview =
-      agent.currentTask.length > 50
-        ? agent.currentTask.slice(0, 50) + "…"
-        : agent.currentTask;
+      agent.currentTask.length > 50 ? agent.currentTask.slice(0, 50) + "…" : agent.currentTask;
     detail = pc.dim(` — ${taskPreview}`);
   } else if (agent.lastError && agent.status === "error") {
     detail = pc.red(` — ${agent.lastError.slice(0, 60)}`);

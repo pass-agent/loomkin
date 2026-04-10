@@ -38,7 +38,9 @@ function toMarkdown(session: Session, messages: Message[]): string {
       for (const tc of msg.tool_calls) {
         lines.push(`> **Tool call:** \`${tc.name}\``);
         if (tc.output) {
-          lines.push(`> **Result:** ${tc.output.slice(0, 200)}${tc.output.length > 200 ? "..." : ""}`);
+          lines.push(
+            `> **Result:** ${tc.output.slice(0, 200)}${tc.output.length > 200 ? "..." : ""}`,
+          );
         }
         lines.push("");
       }
@@ -120,10 +122,7 @@ register({
         return;
       }
 
-      const content =
-        format === "json"
-          ? toJson(session, messages)
-          : toMarkdown(session, messages);
+      const content = format === "json" ? toJson(session, messages) : toMarkdown(session, messages);
 
       const defaultName = `loomkin-${sessionId.slice(0, 8)}.${format === "json" ? "json" : "md"}`;
       const outPath = resolve(filePath || defaultName);

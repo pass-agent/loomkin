@@ -79,8 +79,7 @@ test.each([
   const ctx = createMockContext();
   const result = resolve(`/keybinds ${args}`.trim());
   result!.command.handler(result!.args, ctx);
-  const msg = (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock
-    .calls[0][0] as string;
+  const msg = (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
   expect(msg).toContain(expectContains);
 });
 
@@ -104,8 +103,7 @@ test("show in vim mode displays vim-specific bindings", () => {
   const ctx = createMockContext();
   const result = resolve("/keybinds show");
   result!.command.handler(result!.args, ctx);
-  const msg = (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock
-    .calls[0][0] as string;
+  const msg = (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
   expect(msg).toContain("Normal mode");
   expect(msg).toContain("Insert mode");
   expect(msg).toContain("Escape");

@@ -3,11 +3,7 @@ import type { Mode } from "../lib/constants.js";
 import { getConfig } from "../lib/config.js";
 import type { KeybindMode, VimMode } from "../lib/keymap.js";
 
-export type ConnectionState =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "reconnecting";
+export type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
 
 export interface AppError {
   type: "network" | "auth" | "session" | "api";
@@ -226,8 +222,7 @@ export const appStore = createStore<AppState>((set, get) => ({
   setFastModel: (fastModel) => set({ fastModel }),
   setToken: (token) => set({ token }),
 
-  addError: (error) =>
-    set((state) => ({ errors: [...state.errors, error] })),
+  addError: (error) => set((state) => ({ errors: [...state.errors, error] })),
 
   dismissError: (index) =>
     set((state) => ({

@@ -15,9 +15,7 @@ type OAuthProviderId = (typeof OAUTH_PROVIDERS)[number]["id"];
 
 function resolveProvider(input: string): { id: OAuthProviderId; name: string } | null {
   const lower = input.toLowerCase();
-  return OAUTH_PROVIDERS.find(
-    (p) => p.id === lower || p.name.toLowerCase() === lower,
-  ) ?? null;
+  return OAUTH_PROVIDERS.find((p) => p.id === lower || p.name.toLowerCase() === lower) ?? null;
 }
 
 register({
@@ -119,15 +117,12 @@ async function showAllStatuses(ctx: CommandContext): Promise<void> {
   for (const r of results) {
     const dot = r.connected ? pc.green("✔") : pc.dim("○");
     const status = r.connected ? pc.green("connected") : pc.dim("not connected");
-    const pending =
-      r.flow_active && !r.connected ? pc.yellow(" (flow active...)") : "";
+    const pending = r.flow_active && !r.connected ? pc.yellow(" (flow active...)") : "";
     lines.push(`  ${dot} ${r.name.padEnd(12)} ${status}${pending}`);
   }
   lines.push("");
   lines.push(
-    pc.dim(
-      "Use /provider connect <name> to connect, /provider disconnect <name> to revoke.",
-    ),
+    pc.dim("Use /provider connect <name> to connect, /provider disconnect <name> to revoke."),
   );
   ctx.addSystemMessage(lines.join("\n"));
 }

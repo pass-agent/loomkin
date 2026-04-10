@@ -61,9 +61,7 @@ async function runCloudAuthFlow(): Promise<boolean> {
     return true;
   } catch (err) {
     spinner.stop("Local setup failed.");
-    p.log.error(
-      err instanceof Error ? err.message : "Failed to bootstrap local account",
-    );
+    p.log.error(err instanceof Error ? err.message : "Failed to bootstrap local account");
     return false;
   }
 }
@@ -125,7 +123,11 @@ async function selectModel(): Promise<void> {
       options,
     });
 
-    if (p.isCancel(selected) || selected === "__skip" || (selected as string).startsWith("__sep_")) {
+    if (
+      p.isCancel(selected) ||
+      selected === "__skip" ||
+      (selected as string).startsWith("__sep_")
+    ) {
       p.log.info(pc.dim("You can configure a model anytime with /model"));
       return;
     }
@@ -183,7 +185,11 @@ export async function runSetupWizard(): Promise<boolean> {
   const choice = await p.select({
     message: "How would you like to get started?",
     options: [
-      { value: "cloud", label: "Connect your Loomkin account", hint: "opens browser for sign-in at loomkin.dev" },
+      {
+        value: "cloud",
+        label: "Connect your Loomkin account",
+        hint: "opens browser for sign-in at loomkin.dev",
+      },
       { value: "guest", label: "Continue as guest", hint: "no account needed, limited features" },
     ],
   });

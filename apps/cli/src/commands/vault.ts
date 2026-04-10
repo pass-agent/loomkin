@@ -120,8 +120,7 @@ async function vaultList(ctx: CommandContext) {
     }
   } catch (err) {
     lines.push(
-      pc.red("  Failed to fetch vaults: ") +
-        (err instanceof Error ? err.message : "Unknown error"),
+      pc.red("  Failed to fetch vaults: ") + (err instanceof Error ? err.message : "Unknown error"),
     );
   }
 
@@ -141,9 +140,7 @@ async function vaultAttach(vaultId: string, ctx: CommandContext) {
 
   if (!isCloudAuthenticated()) {
     ctx.addSystemMessage(
-      pc.yellow("Not authenticated with loomkin.dev.") +
-        "\n" +
-        pc.dim("Run /vault auth first."),
+      pc.yellow("Not authenticated with loomkin.dev.") + "\n" + pc.dim("Run /vault auth first."),
     );
     return;
   }
@@ -155,8 +152,7 @@ async function vaultAttach(vaultId: string, ctx: CommandContext) {
     vault = result.vault;
   } catch (err) {
     ctx.addSystemMessage(
-      pc.red("Could not access vault: ") +
-        (err instanceof Error ? err.message : "Unknown error"),
+      pc.red("Could not access vault: ") + (err instanceof Error ? err.message : "Unknown error"),
     );
     return;
   }
@@ -212,10 +208,7 @@ async function vaultSearch(query: string, ctx: CommandContext) {
     try {
       const { results } = await searchVault(vaultConfig.vault_id, query);
       if (results.length > 0) {
-        const lines = [
-          pc.bold(`Vault search: "${query}"`),
-          "",
-        ];
+        const lines = [pc.bold(`Vault search: "${query}"`), ""];
         for (const r of results) {
           const tags = r.tags.length > 0 ? pc.dim(` [${r.tags.join(", ")}]`) : "";
           lines.push(`  ${pc.cyan(r.title)} ${pc.dim(`(${r.entry_type})`)}${tags}`);

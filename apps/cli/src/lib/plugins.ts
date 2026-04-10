@@ -59,7 +59,7 @@ export async function loadPlugins(): Promise<void> {
     files = files.slice(0, MAX_PLUGIN_FILES);
   }
 
-  const resolvedDir = await Bun.file(dir).exists() ? (await Bun.resolve(".", dir)) : dir;
+  const resolvedDir = (await Bun.file(dir).exists()) ? await Bun.resolve(".", dir) : dir;
 
   for (const file of files) {
     const filePath = join(dir, file);

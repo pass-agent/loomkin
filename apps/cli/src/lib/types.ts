@@ -374,32 +374,32 @@ export interface VaultSearchResult {
 // ── Hook Progress ─────────────────────────────────────────────────────────
 
 export interface HookProgressEvent {
-  toolUseId: string
-  hookEvent: 'pre_tool_use' | 'post_tool_use'
-  status: 'running' | 'complete' | 'error'
-  message?: string
+  toolUseId: string;
+  hookEvent: "pre_tool_use" | "post_tool_use";
+  status: "running" | "complete" | "error";
+  message?: string;
 }
 
 // ── Tool Result States ────────────────────────────────────────────────────
 
-export const TOOL_CANCEL_MESSAGE = '__cancel__'
-export const TOOL_REJECT_MESSAGE = '__reject__'
-export const TOOL_INTERRUPT_MESSAGE = '__interrupt__'
-export const TOOL_REJECT_WITH_REASON_PREFIX = '__reject_reason__:'
+export const TOOL_CANCEL_MESSAGE = "__cancel__";
+export const TOOL_REJECT_MESSAGE = "__reject__";
+export const TOOL_INTERRUPT_MESSAGE = "__interrupt__";
+export const TOOL_REJECT_WITH_REASON_PREFIX = "__reject_reason__:";
 
-export type ToolResultState = 'success' | 'error' | 'rejected' | 'canceled' | 'interrupted'
+export type ToolResultState = "success" | "error" | "rejected" | "canceled" | "interrupted";
 
 export function getToolResultState(result: {
-  isError?: boolean
-  content?: string
+  isError?: boolean;
+  content?: string;
 }): ToolResultState {
-  const c = result.content ?? ''
-  if (c === TOOL_CANCEL_MESSAGE) return 'canceled'
-  if (c === TOOL_INTERRUPT_MESSAGE) return 'interrupted'
-  if (c === TOOL_REJECT_MESSAGE) return 'rejected'
-  if (c.startsWith(TOOL_REJECT_WITH_REASON_PREFIX)) return 'rejected'
-  if (result.isError) return 'error'
-  return 'success'
+  const c = result.content ?? "";
+  if (c === TOOL_CANCEL_MESSAGE) return "canceled";
+  if (c === TOOL_INTERRUPT_MESSAGE) return "interrupted";
+  if (c === TOOL_REJECT_MESSAGE) return "rejected";
+  if (c.startsWith(TOOL_REJECT_WITH_REASON_PREFIX)) return "rejected";
+  if (result.isError) return "error";
+  return "success";
 }
 
 // ── Tool Self-Rendering Protocol ──────────────────────────────────────────
@@ -427,11 +427,11 @@ export function buildToolRenderer(def: ToolRenderer): ToolRenderer {
 // ── Grouped Tool Display ──────────────────────────────────────────────────
 
 export interface GroupedToolUse {
-  toolUseId: string
-  toolName: string
-  input: unknown
-  isResolved: boolean
-  isError: boolean
-  isInProgress: boolean
-  output?: unknown
+  toolUseId: string;
+  toolName: string;
+  input: unknown;
+  isResolved: boolean;
+  isError: boolean;
+  isInProgress: boolean;
+  output?: unknown;
 }

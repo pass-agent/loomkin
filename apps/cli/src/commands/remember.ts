@@ -40,9 +40,7 @@ register({
 
     const text = textParts.join(" ").trim();
     if (!text) {
-      ctx.addSystemMessage(
-        pc.red("Usage: /remember [--scope global|project|agent:<name>] <text>"),
-      );
+      ctx.addSystemMessage(pc.red("Usage: /remember [--scope global|project|agent:<name>] <text>"));
       return;
     }
 
@@ -55,13 +53,8 @@ register({
     const name = autoName || `memory-${Date.now()}`;
 
     saveMemory(name, "general", text, scope, agentName);
-    const scopeLabel =
-      scope === "agent" && agentName
-        ? `agent:${agentName}`
-        : scope;
-    ctx.addSystemMessage(
-      pc.green("Memory saved: ") + pc.bold(name) + pc.dim(` [${scopeLabel}]`),
-    );
+    const scopeLabel = scope === "agent" && agentName ? `agent:${agentName}` : scope;
+    ctx.addSystemMessage(pc.green("Memory saved: ") + pc.bold(name) + pc.dim(` [${scopeLabel}]`));
   },
 });
 
@@ -93,9 +86,7 @@ register({
 
     const totalCount = allEntries.length;
     if (totalCount === 0) {
-      ctx.addSystemMessage(
-        pc.dim("No memories saved. Use /remember <text> to save one."),
-      );
+      ctx.addSystemMessage(pc.dim("No memories saved. Use /remember <text> to save one."));
       return;
     }
 

@@ -39,7 +39,8 @@ test("ApiError extracts message from JSON body", () => {
 });
 
 test("ApiError extracts title from HTML error page", () => {
-  const html = '<!DOCTYPE html><html><head><title>Ecto.Query.CastError at GET /api/v1/sessions/bad-id</title></head><body>...</body></html>';
+  const html =
+    "<!DOCTYPE html><html><head><title>Ecto.Query.CastError at GET /api/v1/sessions/bad-id</title></head><body>...</body></html>";
   const error = new ApiError(400, html);
   expect(error.message).toBe("400 Ecto.Query.CastError at GET /api/v1/sessions/bad-id");
 });

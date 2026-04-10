@@ -113,8 +113,7 @@ function handleList(ctx: CommandContext) {
 
   if (templates.length === 0) {
     ctx.addSystemMessage(
-      pc.dim("No prompt templates saved yet.\n") +
-        pc.dim("Save one with: /prompt save <name>"),
+      pc.dim("No prompt templates saved yet.\n") + pc.dim("Save one with: /prompt save <name>"),
     );
     return;
   }
@@ -136,9 +135,7 @@ function handleSave(ctx: CommandContext, name: string, description: string) {
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
 
   if (!lastUserMsg?.content) {
-    ctx.addSystemMessage(
-      pc.red("No user message found to save as template."),
-    );
+    ctx.addSystemMessage(pc.red("No user message found to save as template."));
     return;
   }
 
@@ -156,7 +153,9 @@ function handleSave(ctx: CommandContext, name: string, description: string) {
 function handleLoad(ctx: CommandContext, name: string, varArgs: string[]) {
   const template = getTemplate(name);
   if (!template) {
-    ctx.addSystemMessage(pc.red(`Template "${name}" not found. Use /prompt list to see available templates.`));
+    ctx.addSystemMessage(
+      pc.red(`Template "${name}" not found. Use /prompt list to see available templates.`),
+    );
     return;
   }
 
@@ -243,7 +242,5 @@ function handleEdit(ctx: CommandContext, name: string, content: string) {
     ? pc.dim(` with variables: ${template.variables.map((v) => `{{${v}}}`).join(", ")}`)
     : "";
 
-  ctx.addSystemMessage(
-    `${pc.green("✔")} Updated template ${pc.bold(name)}${vars}`,
-  );
+  ctx.addSystemMessage(`${pc.green("✔")} Updated template ${pc.bold(name)}${vars}`);
 }

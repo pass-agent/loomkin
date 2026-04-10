@@ -1,6 +1,10 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { computeSkeletonChars, textLineWidths, type AnimationMode } from "../../lib/skeletonAnimation.js";
+import {
+  computeSkeletonChars,
+  textLineWidths,
+  type AnimationMode,
+} from "../../lib/skeletonAnimation.js";
 import { useSharedSkeletonTimer } from "../../hooks/useSkeletonAnimation.js";
 
 interface Props {

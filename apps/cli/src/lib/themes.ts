@@ -212,28 +212,28 @@ export const loomkinTheme: Theme = {
   colorblind: false,
 
   // Catppuccin-inspired semantic colors
-  success: pc.green,           // emerald #a6e3a1
-  error: pc.red,               // rose #f38ba8
-  warning: pc.yellow,          // amber #f9e2af
-  info: pc.cyan,               // cyan #89dceb
+  success: pc.green, // emerald #a6e3a1
+  error: pc.red, // rose #f38ba8
+  warning: pc.yellow, // amber #f9e2af
+  info: pc.cyan, // cyan #89dceb
 
   // Brand purple as accent
-  accent: pc.magenta,          // mauve #cba6f7 / brand #b4a0e8
+  accent: pc.magenta, // mauve #cba6f7 / brand #b4a0e8
   dim: pc.dim,
   bold: pc.bold,
   muted: pc.gray,
 
   // Agent status — catppuccin pairs
-  agentWorking: pc.green,      // emerald
+  agentWorking: pc.green, // emerald
   agentIdle: pc.dim,
-  agentBlocked: pc.yellow,     // amber
-  agentError: pc.red,          // rose
+  agentBlocked: pc.yellow, // amber
+  agentError: pc.red, // rose
 
   // Roles — purple/cyan from the brand palette
-  roleName: pc.cyan,           // cyan #89dceb
-  userName: pc.magenta,        // mauve #cba6f7
-  assistantName: pc.magenta,   // brand purple
-  toolName: pc.yellow,         // peach #fab387
+  roleName: pc.cyan, // cyan #89dceb
+  userName: pc.magenta, // mauve #cba6f7
+  assistantName: pc.magenta, // brand purple
+  toolName: pc.yellow, // peach #fab387
 
   borderColor: "magenta",
   activeBorderColor: "cyan",

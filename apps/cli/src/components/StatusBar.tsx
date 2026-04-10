@@ -62,8 +62,7 @@ export function StatusBar() {
   const extractionInProgress = useStore(useSessionStore, (s) => s.extractionInProgress);
 
   const isConnected = connectionState === "connected";
-  const isReconnecting =
-    connectionState === "reconnecting" || connectionState === "connecting";
+  const isReconnecting = connectionState === "reconnecting" || connectionState === "connecting";
 
   const dotColor = isConnected ? "green" : isReconnecting ? "yellow" : "red";
   const dotChar = isConnected ? "●" : isReconnecting ? "◐" : "○";
@@ -74,18 +73,12 @@ export function StatusBar() {
   // Determine if model provider is actually configured
   const modelProviderPart = model?.split(":")[0] ?? "";
   const isModelConfigured =
-    !model ||
-    modelProviderStatus !== "loaded" ||
-    configuredProviderIds.has(modelProviderPart);
+    !model || modelProviderStatus !== "loaded" || configuredProviderIds.has(modelProviderPart);
 
   const hasActivityGroup = agentCount > 0 || keybindMode === "vim" || splitMode || !!focusedTarget;
 
   return (
-    <Box
-      paddingX={1}
-      justifyContent="space-between"
-      flexShrink={0}
-    >
+    <Box paddingX={1} justifyContent="space-between" flexShrink={0}>
       <Box gap={2}>
         <Text color={dotColor}>{dotChar}</Text>
         {isReconnecting && (
@@ -100,7 +93,9 @@ export function StatusBar() {
           mode:<Text bold>{mode}</Text>
         </Text>
         {!model ? (
-          <Text color="yellow">model:<Text bold>none</Text></Text>
+          <Text color="yellow">
+            model:<Text bold>none</Text>
+          </Text>
         ) : isModelConfigured ? (
           <Text dimColor>
             model:<Text bold>{displayModel}</Text>
@@ -125,7 +120,7 @@ export function StatusBar() {
             <Text bold>{formatCost(estimatedCostUsd)}</Text>
           </Text>
         )}
-        {(totalInputTokens + totalOutputTokens) > 0 && (
+        {totalInputTokens + totalOutputTokens > 0 && (
           <Text dimColor>
             <Text bold>{formatTokens(totalInputTokens + totalOutputTokens)}</Text>
             {" tok"}
@@ -142,28 +137,32 @@ export function StatusBar() {
         {hasActivityGroup && <Text dimColor>│</Text>}
         {agentCount > 0 && (
           <Text dimColor>
-            agents:<Text bold color={workingCount > 0 ? "green" : undefined}>
+            agents:
+            <Text bold color={workingCount > 0 ? "green" : undefined}>
               {workingCount}/{agentCount}
             </Text>
           </Text>
         )}
         {agentCount > 0 && agentsWithPublishedFindingsCount > 0 && (
           <Text dimColor>
-            pub:<Text bold color="cyan">
+            pub:
+            <Text bold color="cyan">
               {agentsWithPublishedFindingsCount}/{agentCount}
             </Text>
           </Text>
         )}
         {agentCount >= 2 && agentsWithCostCount >= 2 && (
           <Text dimColor>
-            team:<Text bold>
+            team:
+            <Text bold>
               {agentCount} | {formatCost(teamTotalCost)}
             </Text>
           </Text>
         )}
         {activeConversation && (
           <Text dimColor>
-            conv:<Text bold color="magenta">
+            conv:
+            <Text bold color="magenta">
               {activeConversation.participants.length}
             </Text>
           </Text>
@@ -174,19 +173,26 @@ export function StatusBar() {
           </Text>
         ) : agentCount > 0 ? (
           <Text dimColor>
-            to:<Text bold color="green">broadcast</Text>
+            to:
+            <Text bold color="green">
+              broadcast
+            </Text>
           </Text>
         ) : null}
         {keybindMode === "vim" && (
           <Text dimColor>
-            vim:<Text bold color={vimMode === "normal" ? "yellow" : "green"}>
+            vim:
+            <Text bold color={vimMode === "normal" ? "yellow" : "green"}>
               {vimMode.toUpperCase()}
             </Text>
           </Text>
         )}
         {splitMode && selectedAgent && (
           <Text dimColor>
-            split:<Text bold color="cyan">{selectedAgent}</Text>
+            split:
+            <Text bold color="cyan">
+              {selectedAgent}
+            </Text>
           </Text>
         )}
       </Box>

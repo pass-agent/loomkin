@@ -29,9 +29,7 @@ register({
     }
 
     if (!MODES.includes(requested as Mode)) {
-      ctx.addSystemMessage(
-        `Unknown mode "${requested}". Available: ${MODES.join(", ")}`,
-      );
+      ctx.addSystemMessage(`Unknown mode "${requested}". Available: ${MODES.join(", ")}`);
       return;
     }
 

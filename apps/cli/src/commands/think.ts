@@ -16,11 +16,9 @@ register({
       useAppStore.getState().setThinkingBudget(null);
       const channel = getSessionChannel();
       if (channel) {
-        channel
-          .push("set_thinking_budget", { budget: null })
-          .receive("error", () => {
-            ctx.addSystemMessage("Failed to update thinking budget on server.");
-          });
+        channel.push("set_thinking_budget", { budget: null }).receive("error", () => {
+          ctx.addSystemMessage("Failed to update thinking budget on server.");
+        });
       }
       ctx.addSystemMessage(pc.dim("Extended thinking disabled"));
       return;
@@ -37,16 +35,13 @@ register({
     useAppStore.getState().setThinkingBudget(budget);
     const channel = getSessionChannel();
     if (channel) {
-      channel
-        .push("set_thinking_budget", { budget })
-        .receive("error", () => {
-          ctx.addSystemMessage("Failed to update thinking budget on server.");
-        });
+      channel.push("set_thinking_budget", { budget }).receive("error", () => {
+        ctx.addSystemMessage("Failed to update thinking budget on server.");
+      });
     }
 
     ctx.addSystemMessage(
-      pc.cyan("Extended thinking enabled") +
-        pc.dim(` — budget: ${budget.toLocaleString()} tokens`),
+      pc.cyan("Extended thinking enabled") + pc.dim(` — budget: ${budget.toLocaleString()} tokens`),
     );
   },
 });

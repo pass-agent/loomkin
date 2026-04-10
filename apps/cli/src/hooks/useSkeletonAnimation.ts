@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext } from "react";
+import { useAnimation } from "ink";
 
 const DEFAULT_INTERVAL_MS = 150;
 
@@ -8,17 +9,8 @@ const DEFAULT_INTERVAL_MS = 150;
  * from this single number — no per-component timers needed.
  */
 export function useSkeletonAnimation(intervalMs = DEFAULT_INTERVAL_MS): number {
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    const start = Date.now();
-    const id = setInterval(() => {
-      setElapsed(Date.now() - start);
-    }, intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-
-  return elapsed;
+  const { time } = useAnimation({ interval: intervalMs });
+  return time;
 }
 
 // ── Shared timer context ─────────────────────────────────────────────
@@ -32,7 +24,10 @@ interface ProviderProps {
   children: React.ReactNode;
 }
 
-export function SkeletonTimerProvider({ intervalMs = DEFAULT_INTERVAL_MS, children }: ProviderProps) {
+export function SkeletonTimerProvider({
+  intervalMs = DEFAULT_INTERVAL_MS,
+  children,
+}: ProviderProps) {
   const elapsed = useSkeletonAnimation(intervalMs);
   return React.createElement(SkeletonTimerContext.Provider, { value: elapsed }, children);
 }
@@ -43,6 +38,6 @@ export function SkeletonTimerProvider({ intervalMs = DEFAULT_INTERVAL_MS, childr
  */
 export function useSharedSkeletonTimer(intervalMs = DEFAULT_INTERVAL_MS): number {
   const shared = useContext(SkeletonTimerContext);
-  const local = useSkeletonAnimation(shared !== null ? 999999 : intervalMs);
-  return shared ?? local;
+  const { time } = useAnimation({ interval: intervalMs, isActive: shared === null });
+  return shared ?? time;
 }

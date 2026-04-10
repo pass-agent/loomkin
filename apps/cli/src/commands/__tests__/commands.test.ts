@@ -5,7 +5,22 @@ import type { SessionState } from "../../stores/sessionStore.js";
 
 vi.mock("../../lib/api.js", () => ({
   listSessions: vi.fn().mockResolvedValue({ sessions: [] }),
-  getSession: vi.fn().mockResolvedValue({ session: { id: "abc-123", title: "Test", model: "anthropic:claude-opus-4", prompt_tokens: 0, completion_tokens: 0, status: "active", fast_model: null, project_path: "/tmp", cost_usd: null, team_id: null, inserted_at: "", updated_at: "" } }),
+  getSession: vi.fn().mockResolvedValue({
+    session: {
+      id: "abc-123",
+      title: "Test",
+      model: "anthropic:claude-opus-4",
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      status: "active",
+      fast_model: null,
+      project_path: "/tmp",
+      cost_usd: null,
+      team_id: null,
+      inserted_at: "",
+      updated_at: "",
+    },
+  }),
   getSessionMessages: vi.fn().mockResolvedValue({ messages: [] }),
   createSession: vi.fn().mockResolvedValue({ session: { id: "new-session" } }),
   updateSession: vi.fn().mockResolvedValue({ session: {} }),
@@ -26,7 +41,10 @@ vi.mock("../../lib/api.js", () => ({
   getMcpStatus: vi.fn().mockResolvedValue({ servers: [] }),
   refreshMcp: vi.fn().mockResolvedValue({ servers: [] }),
   ApiError: class ApiError extends Error {
-    constructor(public status: number, public body: string) {
+    constructor(
+      public status: number,
+      public body: string,
+    ) {
       super(`API ${status}: ${body}`);
     }
   },
@@ -69,7 +87,7 @@ function getMessage(ctx: CommandContext, callIndex = 0): string {
   return (ctx.addSystemMessage as ReturnType<typeof vi.fn>).mock.calls[callIndex][0] as string;
 }
 
-let resolve: typeof import("../registry.js")["resolve"];
+let resolve: (typeof import("../registry.js"))["resolve"];
 
 beforeEach(async () => {
   ({ resolve } = await import("../registry.js"));
@@ -162,7 +180,12 @@ test("/model switches to requested model", async () => {
 
 test.each([
   { sessionId: "abc-123", args: "", expected: "abc-123", label: "shows current session" },
-  { sessionId: null as string | null, args: "", expected: "No active session", label: "shows no session when null" },
+  {
+    sessionId: null as string | null,
+    args: "",
+    expected: "No active session",
+    label: "shows no session when null",
+  },
 ])("/session $label", async ({ sessionId, args, expected }) => {
   const ctx = createMockContext({ sessionId });
   if (sessionId === null) {

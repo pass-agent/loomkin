@@ -91,8 +91,6 @@ register({
       return;
     }
 
-    ctx.addSystemMessage(
-      `Unknown keybinding mode: "${arg}". Available: ${VALID_MODES.join(", ")}`,
-    );
+    ctx.addSystemMessage(`Unknown keybinding mode: "${arg}". Available: ${VALID_MODES.join(", ")}`);
   },
 });

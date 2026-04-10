@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Box, Text } from "ink";
+import React, { useEffect, useMemo } from "react";
+import { Box, Text, useAnimation } from "ink";
 import { useStore } from "zustand";
 import { useSessionStore } from "../stores/sessionStore.js";
 import { useAgentStore } from "../stores/agentStore.js";
@@ -69,42 +69,36 @@ export function ProcessingStatus() {
 
   const lastMessage = messages[messages.length - 1];
   const hasStreamingContent =
-    isStreaming &&
-    lastMessage?.role === "assistant" &&
-    (lastMessage.content?.length ?? 0) > 0;
+    isStreaming && lastMessage?.role === "assistant" && (lastMessage.content?.length ?? 0) > 0;
 
   const hasAgentActivity = activeAgents.length > 0;
-  const stateKey =
-    hasStreamingContent ? "streaming"
-    : isStreaming ? "looming"
-    : isPendingResponse ? "waiting"
-    : hasAgentActivity ? "agents"
-    : null;
+  const stateKey = hasStreamingContent
+    ? "streaming"
+    : isStreaming
+      ? "looming"
+      : isPendingResponse
+        ? "waiting"
+        : hasAgentActivity
+          ? "agents"
+          : null;
   const frames =
-    stateKey === "streaming" ? STREAM_FRAMES
-    : stateKey === "looming" || stateKey === "agents" ? LOOM_FRAMES
-    : WAIT_FRAMES;
+    stateKey === "streaming"
+      ? STREAM_FRAMES
+      : stateKey === "looming" || stateKey === "agents"
+        ? LOOM_FRAMES
+        : WAIT_FRAMES;
 
-  const [frame, setFrame] = useState(0);
+  const isActive = Boolean(isPendingResponse || isStreaming || hasAgentActivity);
+  const { frame, reset } = useAnimation({ interval: INTERVAL_MS, isActive });
 
   // Reset to frame 0 on state transition for clean animation handoff
   useEffect(() => {
-    setFrame(0);
-  }, [stateKey]);
+    if (isActive) reset();
+  }, [stateKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Advance spinner while active
-  useEffect(() => {
-    if (!isPendingResponse && !isStreaming && !hasAgentActivity) return;
-    const id = setInterval(
-      () => setFrame((f) => (f + 1) % frames.length),
-      INTERVAL_MS,
-    );
-    return () => clearInterval(id);
-  }, [isPendingResponse, isStreaming, hasAgentActivity, frames.length]);
+  if (!isActive) return null;
 
-  if (!isPendingResponse && !isStreaming && !hasAgentActivity) return null;
-
-  const spinner = frames[frame] ?? frames[0];
+  const spinner = frames[frame % frames.length];
   const agentSummary = activeAgents.map(summarizeAgent).join("  ·  ");
 
   return (

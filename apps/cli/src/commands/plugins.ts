@@ -10,9 +10,7 @@ register({
 
     if (plugins.length === 0) {
       ctx.addSystemMessage(
-        pc.dim(
-          "No plugins loaded. Add .js files to ~/.loomkin/plugins/ to install plugins.",
-        ),
+        pc.dim("No plugins loaded. Add .js files to ~/.loomkin/plugins/ to install plugins."),
       );
       return;
     }
@@ -29,9 +27,7 @@ register({
             : pc.dim("(no commands registered)");
         lines.push(`  ${statusIcon} ${pc.bold(filename)} — ${cmdList}`);
       } else {
-        lines.push(
-          `  ${statusIcon} ${pc.bold(filename)} — ${pc.red(plugin.error ?? "error")}`,
-        );
+        lines.push(`  ${statusIcon} ${pc.bold(filename)} — ${pc.red(plugin.error ?? "error")}`);
       }
       lines.push(pc.dim(`    ${plugin.filePath}`));
     }

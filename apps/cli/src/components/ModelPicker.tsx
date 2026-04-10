@@ -103,8 +103,7 @@ export function ModelPicker({ providers, currentModel, onSelect, onCancel, onOAu
     return (
       <Box flexDirection="column" borderStyle="single" borderColor="magenta" paddingX={1}>
         <Text bold color="magenta">
-          Connect an OAuth provider{" "}
-          <Text dimColor>(↑↓ navigate · Enter connect · Esc back)</Text>
+          Connect an OAuth provider <Text dimColor>(↑↓ navigate · Enter connect · Esc back)</Text>
         </Text>
         {OAUTH_PROVIDERS.map((prov, i) => (
           <Box key={prov.id} gap={1}>
@@ -129,12 +128,9 @@ export function ModelPicker({ providers, currentModel, onSelect, onCancel, onOAu
   return (
     <Box flexDirection="column" borderStyle="single" borderColor="blue" paddingX={1}>
       <Text bold color="blue">
-        Select a model{" "}
-        <Text dimColor>(↑↓ · Enter · Esc cancel · ctrl+o oauth)</Text>
+        Select a model <Text dimColor>(↑↓ · Enter · Esc cancel · ctrl+o oauth)</Text>
       </Text>
-      {windowStart > 0 && (
-        <Text dimColor>  ▲ {windowStart} more above</Text>
-      )}
+      {windowStart > 0 && <Text dimColor> ▲ {windowStart} more above</Text>}
       {modelOptions.slice(windowStart, windowStart + VISIBLE_COUNT).map((item, offset) => {
         const i = windowStart + offset;
         const isSelected = i === selectedIndex;
@@ -144,9 +140,7 @@ export function ModelPicker({ providers, currentModel, onSelect, onCancel, onOAu
 
         return (
           <React.Fragment key={`${item.providerId}:${item.id}`}>
-            {showProviderHeader && (
-              <Text dimColor>── {item.providerName} ──</Text>
-            )}
+            {showProviderHeader && <Text dimColor>── {item.providerName} ──</Text>}
             <Box gap={1}>
               <Text color={isSelected ? "blue" : undefined} bold={isSelected}>
                 {isSelected ? "▸" : " "}
@@ -159,7 +153,7 @@ export function ModelPicker({ providers, currentModel, onSelect, onCancel, onOAu
         );
       })}
       {windowStart + VISIBLE_COUNT < modelOptions.length && (
-        <Text dimColor>  ▼ {modelOptions.length - windowStart - VISIBLE_COUNT} more below</Text>
+        <Text dimColor> ▼ {modelOptions.length - windowStart - VISIBLE_COUNT} more below</Text>
       )}
     </Box>
   );

@@ -31,8 +31,7 @@ export function getSocket(): Socket {
 
   socket = new Socket(getWsUrl(), {
     params: { token: token ?? "" },
-    reconnectAfterMs: (tries: number) =>
-      [1000, 2000, 5000, 10000][Math.min(tries - 1, 3)],
+    reconnectAfterMs: (tries: number) => [1000, 2000, 5000, 10000][Math.min(tries - 1, 3)],
   });
 
   socket.onOpen(() => {
@@ -107,10 +106,7 @@ export function joinChannel(
     })
     .receive("error", (resp: Record<string, unknown>) => {
       activeChannels.delete(topic);
-      const reason =
-        typeof resp?.reason === "string"
-          ? resp.reason
-          : "connection refused";
+      const reason = typeof resp?.reason === "string" ? resp.reason : "connection refused";
       useAppStore.getState().addError({
         type: "session",
         message: `Could not join ${topic} — ${reason}`,

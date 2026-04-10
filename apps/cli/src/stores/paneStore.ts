@@ -47,19 +47,15 @@ export const paneStore = createStore<PaneState>((set) => ({
     set((state) => {
       const agents = agentStore.getState().getAgentList();
       if (agents.length === 0) return state;
-      const currentIndex = agents.findIndex(
-        (a) => a.name === state.selectedAgent,
-      );
-      const nextIndex =
-        (currentIndex + direction + agents.length) % agents.length;
+      const currentIndex = agents.findIndex((a) => a.name === state.selectedAgent);
+      const nextIndex = (currentIndex + direction + agents.length) % agents.length;
       return {
         selectedAgent: agents[nextIndex].name,
         rightScrollOffset: 0,
       };
     }),
 
-  setRightScrollOffset: (offset) =>
-    set({ rightScrollOffset: Math.max(0, offset) }),
+  setRightScrollOffset: (offset) => set({ rightScrollOffset: Math.max(0, offset) }),
 
   setFocusedTarget: (focusedTarget) => set({ focusedTarget }),
 }));

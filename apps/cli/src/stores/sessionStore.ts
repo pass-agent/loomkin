@@ -127,14 +127,11 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
 
   setSessionId: (sessionId) => set({ sessionId }),
 
-  addMessage: (message) =>
-    set((state) => ({ messages: [...state.messages, message] })),
+  addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
 
   updateMessage: (id, partial) =>
     set((state) => ({
-      messages: state.messages.map((m) =>
-        m.id === id ? { ...m, ...partial } : m,
-      ),
+      messages: state.messages.map((m) => (m.id === id ? { ...m, ...partial } : m)),
     })),
 
   loadMessages: (messages) => set({ messages, scrollOffset: 0 }),
@@ -160,9 +157,7 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
     if (!hasMessage || state.currentStreamingMessageId !== streamId) {
       set({
         currentStreamingMessageId: streamId,
-        messages: hasMessage
-          ? state.messages
-          : [...state.messages, makeStreamingMessage(streamId)],
+        messages: hasMessage ? state.messages : [...state.messages, makeStreamingMessage(streamId)],
       });
     }
 
@@ -205,9 +200,7 @@ export const sessionStore = createStore<SessionState>((set, _get) => ({
 
   removePendingQuestion: (questionId) =>
     set((state) => ({
-      pendingQuestions: state.pendingQuestions.filter(
-        (q) => q.question_id !== questionId,
-      ),
+      pendingQuestions: state.pendingQuestions.filter((q) => q.question_id !== questionId),
     })),
 
   clearPendingPermissions: () => set({ pendingPermissions: [] }),

@@ -1,6 +1,13 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
-import { getMcpStatus, refreshMcp, addMcpServer, removeMcpServer, restartMcpServer, ApiError } from "../lib/api.js";
+import {
+  getMcpStatus,
+  refreshMcp,
+  addMcpServer,
+  removeMcpServer,
+  restartMcpServer,
+  ApiError,
+} from "../lib/api.js";
 import type { McpClientInfo, McpServerInfo } from "../lib/types.js";
 
 function statusDot(status: string): string {
@@ -11,23 +18,16 @@ function statusDot(status: string): string {
 
 function transportLabel(transport: McpClientInfo["transport"]): string {
   if (transport.type === "http") return pc.dim(`http → ${transport.url}`);
-  if (transport.type === "stdio")
-    return pc.dim(`stdio → ${transport.command}`);
+  if (transport.type === "stdio") return pc.dim(`stdio → ${transport.command}`);
   return pc.dim(transport.type);
 }
 
-function showOverview(
-  server: McpServerInfo,
-  clients: McpClientInfo[],
-  ctx: CommandContext,
-): void {
+function showOverview(server: McpServerInfo, clients: McpClientInfo[], ctx: CommandContext): void {
   const lines: string[] = [pc.bold("MCP"), ""];
 
   lines.push(pc.bold(pc.underline("Server")));
   if (server.enabled) {
-    lines.push(
-      `  ${pc.green("●")} enabled ${pc.dim(`(${server.tools.length} tools exposed)`)}`,
-    );
+    lines.push(`  ${pc.green("●")} enabled ${pc.dim(`(${server.tools.length} tools exposed)`)}`);
   } else {
     lines.push(`  ${pc.dim("○")} disabled`);
   }
@@ -39,11 +39,7 @@ function showOverview(
     lines.push(pc.dim("  Configure in .loomkin.toml:"));
     lines.push(pc.dim("    [mcp]"));
     lines.push(pc.dim("    servers = ["));
-    lines.push(
-      pc.dim(
-        '      { name = "example", url = "http://localhost:3001/sse" }',
-      ),
-    );
+    lines.push(pc.dim('      { name = "example", url = "http://localhost:3001/sse" }'));
     lines.push(pc.dim("    ]"));
   } else {
     for (const client of clients) {
@@ -65,11 +61,7 @@ function showOverview(
   ctx.addSystemMessage(lines.join("\n"));
 }
 
-function showTools(
-  server: McpServerInfo,
-  clients: McpClientInfo[],
-  ctx: CommandContext,
-): void {
+function showTools(server: McpServerInfo, clients: McpClientInfo[], ctx: CommandContext): void {
   const lines: string[] = [pc.bold("MCP Tools"), ""];
 
   if (server.enabled && server.tools.length > 0) {
@@ -84,13 +76,9 @@ function showTools(
     lines.push(pc.bold(pc.underline("External Server Tools")));
     for (const client of clients) {
       if (client.tool_count > 0) {
-        lines.push(
-          `  ${pc.cyan(client.name)}: ${client.tool_count} tools available`,
-        );
+        lines.push(`  ${pc.cyan(client.name)}: ${client.tool_count} tools available`);
       } else {
-        lines.push(
-          `  ${pc.cyan(client.name)}: ${pc.dim("no tools discovered")}`,
-        );
+        lines.push(`  ${pc.cyan(client.name)}: ${pc.dim("no tools discovered")}`);
       }
     }
     lines.push("");
@@ -140,10 +128,7 @@ register({
         const result = await refreshMcp(name);
         ctx.addSystemMessage(pc.green(result.message));
       } catch (err) {
-        const msg =
-          err instanceof ApiError
-            ? `Refresh failed: ${err.body}`
-            : "Refresh failed.";
+        const msg = err instanceof ApiError ? `Refresh failed: ${err.body}` : "Refresh failed.";
         ctx.addSystemMessage(pc.red(msg));
       }
       return;

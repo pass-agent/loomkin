@@ -13,9 +13,22 @@ type NdjsonEvent =
   | { type: "session_start"; session_id: string; timestamp: string }
   | { type: "stream_token"; delta: string; timestamp: string }
   | { type: "tool_call"; name: string; input: unknown; call_id: string; timestamp: string }
-  | { type: "tool_result"; name: string; output: unknown; call_id: string; is_error?: boolean; timestamp: string }
+  | {
+      type: "tool_result";
+      name: string;
+      output: unknown;
+      call_id: string;
+      is_error?: boolean;
+      timestamp: string;
+    }
   | { type: "message_end"; content: string; stop_reason?: string; timestamp: string }
-  | { type: "cost"; input_tokens: number; output_tokens: number; cost_usd: number; timestamp: string }
+  | {
+      type: "cost";
+      input_tokens: number;
+      output_tokens: number;
+      cost_usd: number;
+      timestamp: string;
+    }
   | { type: "error"; message: string; code?: string; timestamp: string };
 
 function emitNdjson(event: NdjsonEvent): void {

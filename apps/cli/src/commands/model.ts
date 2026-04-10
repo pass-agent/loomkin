@@ -5,12 +5,9 @@ import { extractErrorMessage } from "../lib/errors.js";
 import { isProviderConfigured } from "../lib/modelUtils.js";
 import type { ModelProvider } from "../lib/types.js";
 
-
 function formatProviderStatus(providers: ModelProvider[]): string {
   const configured = providers.filter(isProviderConfigured);
-  const unconfigured = providers.filter(
-    (p) => !isProviderConfigured(p) && p.status.env_var,
-  );
+  const unconfigured = providers.filter((p) => !isProviderConfigured(p) && p.status.env_var);
 
   const lines: string[] = [];
 

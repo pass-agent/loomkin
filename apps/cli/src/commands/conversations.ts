@@ -30,8 +30,7 @@ register({
                 ? pc.cyan
                 : pc.red;
 
-        const active =
-          c.conversation_id === store.activeConversationId ? pc.bold("* ") : "  ";
+        const active = c.conversation_id === store.activeConversationId ? pc.bold("* ") : "  ";
         const id = pc.dim(c.conversation_id.slice(0, 8));
         const topic = pc.bold(c.topic);
         const status = statusColor(`[${c.status}]`);
@@ -52,9 +51,7 @@ register({
         return;
       }
 
-      const conv = conversations.find((c) =>
-        c.conversation_id.startsWith(targetId),
-      );
+      const conv = conversations.find((c) => c.conversation_id.startsWith(targetId));
       if (!conv) {
         ctx.addSystemMessage(pc.red(`No conversation matching "${targetId}"`));
         return;
@@ -67,9 +64,7 @@ register({
           return pc.dim(`  [${t.reaction_type}] ${t.speaker}: ${t.content}`);
         }
         if (t.type === "yield") {
-          return pc.dim(
-            `  ${t.speaker} yields${t.reason ? `: ${t.reason}` : ""}`,
-          );
+          return pc.dim(`  ${t.speaker} yields${t.reason ? `: ${t.reason}` : ""}`);
         }
         return `${pc.bold(pc.magenta(t.speaker))}: ${t.content}`;
       });
@@ -88,9 +83,7 @@ register({
         }
       }
 
-      ctx.addSystemMessage(
-        [header, "", ...turnLines, ...summaryLines].join("\n"),
-      );
+      ctx.addSystemMessage([header, "", ...turnLines, ...summaryLines].join("\n"));
       return;
     }
 
@@ -103,9 +96,7 @@ register({
         return;
       }
 
-      const conv = conversations.find((c) =>
-        c.conversation_id.startsWith(targetId),
-      );
+      const conv = conversations.find((c) => c.conversation_id.startsWith(targetId));
       if (!conv) {
         ctx.addSystemMessage(pc.red(`No conversation matching "${targetId}"`));
         return;
@@ -123,8 +114,6 @@ register({
       return;
     }
 
-    ctx.addSystemMessage(
-      `Usage: /conversations [list | view <id> | focus <id|off>]`,
-    );
+    ctx.addSystemMessage(`Usage: /conversations [list | view <id> | focus <id|off>]`);
   },
 });

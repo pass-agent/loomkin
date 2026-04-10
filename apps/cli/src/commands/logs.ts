@@ -58,9 +58,7 @@ function formatNode(node: DecisionNode): string {
 
   if (node.description) {
     const desc =
-      node.description.length > 100
-        ? node.description.slice(0, 100) + "…"
-        : node.description;
+      node.description.length > 100 ? node.description.slice(0, 100) + "…" : node.description;
     return `${line1}\n    ${pc.dim(desc)}\n${line2}`;
   }
 
@@ -85,11 +83,7 @@ register({
             ctx.addSystemMessage(pc.dim("No active goals."));
             return;
           }
-          const lines = [
-            pc.bold("Active Goals"),
-            "",
-            ...nodes.map(formatNode),
-          ];
+          const lines = [pc.bold("Active Goals"), "", ...nodes.map(formatNode)];
           ctx.addSystemMessage(lines.join("\n"));
           break;
         }
@@ -98,8 +92,7 @@ register({
         case "health": {
           const result = await getDecisions({ type: "pulse" });
           const score = result.health_score ?? 0;
-          const color =
-            score >= 70 ? pc.green : score >= 40 ? pc.yellow : pc.red;
+          const color = score >= 70 ? pc.green : score >= 40 ? pc.yellow : pc.red;
           ctx.addSystemMessage(
             `${pc.bold("Pulse")} ${color(`${score}/100`)}\n${result.summary ?? "No summary available."}`,
           );
@@ -110,9 +103,7 @@ register({
         case "find": {
           const query = parts.slice(1).join(" ");
           if (!query) {
-            ctx.addSystemMessage(
-              `Usage: ${pc.cyan("/logs search <query>")}`,
-            );
+            ctx.addSystemMessage(`Usage: ${pc.cyan("/logs search <query>")}`);
             return;
           }
           const { nodes } = await getDecisions({
@@ -123,11 +114,7 @@ register({
             ctx.addSystemMessage(pc.dim(`No decisions matching "${query}".`));
             return;
           }
-          const lines = [
-            pc.bold(`Decisions matching "${query}"`),
-            "",
-            ...nodes.map(formatNode),
-          ];
+          const lines = [pc.bold(`Decisions matching "${query}"`), "", ...nodes.map(formatNode)];
           ctx.addSystemMessage(lines.join("\n"));
           break;
         }
@@ -148,9 +135,7 @@ register({
             "",
             ...nodes.map(formatNode),
             "",
-            pc.dim(
-              "/logs goals, /logs pulse, /logs search <query>",
-            ),
+            pc.dim("/logs goals, /logs pulse, /logs search <query>"),
           ];
           ctx.addSystemMessage(lines.join("\n"));
           break;

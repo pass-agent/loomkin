@@ -50,12 +50,7 @@ export function PermissionPrompt({ request, onRespond }: Props) {
   const color = CATEGORY_COLORS[request.category] || "yellow";
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor={color}
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="round" borderColor={color} paddingX={1} flexDirection="column">
       <Text bold color={color}>
         Permission required
       </Text>
@@ -67,9 +62,7 @@ export function PermissionPrompt({ request, onRespond }: Props) {
         )}
         <Text bold>{request.tool_name}</Text>
       </Text>
-      {request.tool_path && (
-        <Text dimColor>  {request.tool_path}</Text>
-      )}
+      {request.tool_path && <Text dimColor> {request.tool_path}</Text>}
       <Box gap={2} marginTop={1}>
         {labels.map((label, i) => (
           <Text
@@ -80,7 +73,7 @@ export function PermissionPrompt({ request, onRespond }: Props) {
             {` ${label} `}
           </Text>
         ))}
-        <Text dimColor>[y] once  [A] always  [n] deny</Text>
+        <Text dimColor>[y] once [A] always [n] deny</Text>
       </Box>
     </Box>
   );

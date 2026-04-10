@@ -48,13 +48,10 @@ test("toggleSplitMode off resets focusedPane to left", () => {
   expect(state.focusedPane).toBe("left");
 });
 
-test.each<"left" | "right">(["left", "right"])(
-  "setFocusedPane(%s) updates focusedPane",
-  (pane) => {
-    paneStore.getState().setFocusedPane(pane);
-    expect(paneStore.getState().focusedPane).toBe(pane);
-  },
-);
+test.each<"left" | "right">(["left", "right"])("setFocusedPane(%s) updates focusedPane", (pane) => {
+  paneStore.getState().setFocusedPane(pane);
+  expect(paneStore.getState().focusedPane).toBe(pane);
+});
 
 test("selectAgent sets agent and resets scroll offset", () => {
   paneStore.setState({ rightScrollOffset: 10 });

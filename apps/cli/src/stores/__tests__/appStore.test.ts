@@ -38,13 +38,10 @@ test("initial state loads from config", () => {
   expect(state.model).toBe("anthropic:claude-opus-4");
 });
 
-test.each(["code", "plan", "chat"] as const)(
-  "setMode(%s) updates mode",
-  (mode) => {
-    appStore.getState().setMode(mode);
-    expect(appStore.getState().mode).toBe(mode);
-  },
-);
+test.each(["code", "plan", "chat"] as const)("setMode(%s) updates mode", (mode) => {
+  appStore.getState().setMode(mode);
+  expect(appStore.getState().mode).toBe(mode);
+});
 
 test("setModel updates model", () => {
   appStore.getState().setModel("claude-sonnet-4");

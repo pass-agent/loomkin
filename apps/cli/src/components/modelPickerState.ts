@@ -20,18 +20,12 @@ export function buildModelOptions(providers: ModelProvider[]): ModelPickerOption
   );
 }
 
-export function getInitialModelIndex(
-  options: ModelPickerOption[],
-  currentModel: string,
-): number {
+export function getInitialModelIndex(options: ModelPickerOption[], currentModel: string): number {
   const currentIndex = options.findIndex((item) => item.id === currentModel);
   return currentIndex >= 0 ? currentIndex : 0;
 }
 
-export function getCenteredWindowStart(
-  selectedIndex: number,
-  visibleCount: number,
-): number {
+export function getCenteredWindowStart(selectedIndex: number, visibleCount: number): number {
   return Math.max(0, selectedIndex - Math.floor(visibleCount / 2));
 }
 

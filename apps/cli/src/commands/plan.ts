@@ -24,11 +24,9 @@ register({
 
     const channel = getSessionChannel();
     if (channel) {
-      channel
-        .push("set_plan_mode", { enabled: enable })
-        .receive("error", () => {
-          ctx.addSystemMessage("Failed to set plan mode on server — local state updated only.");
-        });
+      channel.push("set_plan_mode", { enabled: enable }).receive("error", () => {
+        ctx.addSystemMessage("Failed to set plan mode on server — local state updated only.");
+      });
     }
 
     useAppStore.getState().setPlanMode(enable);
@@ -47,8 +45,7 @@ register({
       );
     } else {
       ctx.addSystemMessage(
-        pc.dim("Plan mode disabled") +
-          ` — ${modelLabel} will execute without a planning step`,
+        pc.dim("Plan mode disabled") + ` — ${modelLabel} will execute without a planning step`,
       );
     }
   },

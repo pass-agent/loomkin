@@ -13,7 +13,9 @@ export function loadHistory(): string[] {
     const content = readFileSync(getHistoryPath(), "utf-8");
     const parsed = JSON.parse(content);
     if (Array.isArray(parsed)) {
-      return (parsed as unknown[]).filter((e): e is string => typeof e === "string").slice(-MAX_HISTORY);
+      return (parsed as unknown[])
+        .filter((e): e is string => typeof e === "string")
+        .slice(-MAX_HISTORY);
     }
     return [];
   } catch {

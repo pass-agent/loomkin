@@ -135,7 +135,9 @@ async function runRedirectOAuthFlow(
   writeText(authorizeUrl).catch(() => {});
   p.log.step(`Browser opened for ${displayName} authorization.`);
   p.log.info(
-    pc.dim(`If the browser did not open, visit:\n  ${pc.cyan(authorizeUrl)}\n  (URL copied to clipboard)`),
+    pc.dim(
+      `If the browser did not open, visit:\n  ${pc.cyan(authorizeUrl)}\n  (URL copied to clipboard)`,
+    ),
   );
 
   const spinner = p.spinner();
@@ -233,10 +235,7 @@ async function runPasteBackOAuthFlow(
   }
 }
 
-export async function runOAuthFlow(
-  provider: string,
-  displayName: string,
-): Promise<boolean> {
+export async function runOAuthFlow(provider: string, displayName: string): Promise<boolean> {
   const spinner = p.spinner();
   spinner.start(`Starting ${displayName} OAuth flow...`);
 

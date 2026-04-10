@@ -12,17 +12,10 @@ export function ErrorBanner({ error }: Props) {
   const retryState = useStore(useAppStore, (s) => s.retryState);
 
   const displayMessage =
-    error.message.length > 200
-      ? error.message.slice(0, 200) + "…"
-      : error.message;
+    error.message.length > 200 ? error.message.slice(0, 200) + "…" : error.message;
 
   return (
-    <Box
-      borderStyle="single"
-      borderColor="red"
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="single" borderColor="red" paddingX={1} flexDirection="column">
       <Text color="red" bold>
         {error.type}: {displayMessage}
       </Text>
@@ -39,9 +32,7 @@ export function ErrorBanner({ error }: Props) {
           {!error.action && "[d] dismiss  [c] copy"}
         </Text>
       )}
-      {!error.recoverable && (
-        <Text dimColor>[c] copy</Text>
-      )}
+      {!error.recoverable && <Text dimColor>[c] copy</Text>}
     </Box>
   );
 }

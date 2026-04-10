@@ -31,7 +31,8 @@ function TurnRow({ turn }: { turn: ConversationTurn }) {
     return (
       <Box>
         <Text dimColor italic>
-          {"  "}{turn.speaker} yields{turn.reason ? `: ${turn.reason}` : ""}
+          {"  "}
+          {turn.speaker} yields{turn.reason ? `: ${turn.reason}` : ""}
         </Text>
       </Box>
     );
@@ -74,7 +75,9 @@ export function ConversationFeed({ conversation, maxLines = 100 }: Props) {
       elements.push(
         <Box key={`round-${currentRound}`} marginTop={currentRound > 1 ? 1 : 0}>
           <Text dimColor>
-            {"── Round "}{currentRound}{" ──"}
+            {"── Round "}
+            {currentRound}
+            {" ──"}
           </Text>
         </Box>,
       );
@@ -91,29 +94,35 @@ export function ConversationFeed({ conversation, maxLines = 100 }: Props) {
           Summary
         </Text>
         {s.key_points?.map((p, i) => (
-          <Text key={`kp-${i}`}>  - {p}</Text>
+          <Text key={`kp-${i}`}> - {p}</Text>
         ))}
         {s.consensus && s.consensus.length > 0 && (
           <>
-            <Text bold color="green">Consensus</Text>
+            <Text bold color="green">
+              Consensus
+            </Text>
             {s.consensus.map((c, i) => (
-              <Text key={`c-${i}`}>  - {c}</Text>
+              <Text key={`c-${i}`}> - {c}</Text>
             ))}
           </>
         )}
         {s.disagreements && s.disagreements.length > 0 && (
           <>
-            <Text bold color="red">Disagreements</Text>
+            <Text bold color="red">
+              Disagreements
+            </Text>
             {s.disagreements.map((d, i) => (
-              <Text key={`d-${i}`}>  - {d}</Text>
+              <Text key={`d-${i}`}> - {d}</Text>
             ))}
           </>
         )}
         {s.recommended_actions && s.recommended_actions.length > 0 && (
           <>
-            <Text bold color="yellow">Actions</Text>
+            <Text bold color="yellow">
+              Actions
+            </Text>
             {s.recommended_actions.map((a, i) => (
-              <Text key={`a-${i}`}>  - {a}</Text>
+              <Text key={`a-${i}`}> - {a}</Text>
             ))}
           </>
         )}
@@ -132,9 +141,7 @@ export function ConversationFeed({ conversation, maxLines = 100 }: Props) {
         <Text dimColor> R{conversation.current_round}</Text>
       </Box>
       <Box marginBottom={1}>
-        <Text dimColor>
-          {conversation.participants.join(", ")}
-        </Text>
+        <Text dimColor>{conversation.participants.join(", ")}</Text>
       </Box>
       <Box flexDirection="column" flexGrow={1}>
         {elements}

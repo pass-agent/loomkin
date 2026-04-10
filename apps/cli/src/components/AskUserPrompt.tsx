@@ -23,9 +23,7 @@ export function AskUserPrompt({ question, onAnswer }: Props) {
   }, [question.question_id]);
 
   // Append the collective option to the agent-provided choices
-  const allOptions = hasOptions
-    ? [...question.options, COLLECTIVE_OPTION]
-    : [];
+  const allOptions = hasOptions ? [...question.options, COLLECTIVE_OPTION] : [];
 
   useInput(
     (input, key) => {
@@ -37,8 +35,7 @@ export function AskUserPrompt({ question, onAnswer }: Props) {
         setSelected((s) => Math.min(allOptions.length - 1, s + 1));
       } else if (key.return) {
         const chosen = allOptions[selected];
-        const answer =
-          chosen === COLLECTIVE_OPTION ? COLLECTIVE_ANSWER : chosen;
+        const answer = chosen === COLLECTIVE_OPTION ? COLLECTIVE_ANSWER : chosen;
         onAnswer(question.question_id, answer);
       }
     },
@@ -46,12 +43,7 @@ export function AskUserPrompt({ question, onAnswer }: Props) {
   );
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-      flexDirection="column"
-    >
+    <Box borderStyle="round" borderColor="cyan" paddingX={1} flexDirection="column">
       <Text bold color="cyan">
         {question.agent_name} asks:
       </Text>
@@ -62,11 +54,7 @@ export function AskUserPrompt({ question, onAnswer }: Props) {
           {allOptions.map((opt, i) => {
             const isCollective = opt === COLLECTIVE_OPTION;
             const isSelected = i === selected;
-            const color = isCollective
-              ? "yellow"
-              : isSelected
-                ? "cyan"
-                : undefined;
+            const color = isCollective ? "yellow" : isSelected ? "cyan" : undefined;
 
             return (
               <Text key={opt}>

@@ -75,10 +75,7 @@ export class ApiError extends Error {
   }
 }
 
-async function requestOnce<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function requestOnce<T>(path: string, options: RequestInit = {}): Promise<T> {
   const { token } = getConfig();
   const url = `${getApiUrl()}${path}`;
 
@@ -108,10 +105,7 @@ async function requestOnce<T>(
   return response.json() as Promise<T>;
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return withRetry(() => requestOnce<T>(path, options), {
     maxAttempts: 3,
     baseDelayMs: 500,
@@ -167,9 +161,7 @@ export async function listSessions(): Promise<{ sessions: Session[] }> {
   return request<{ sessions: Session[] }>("/sessions");
 }
 
-export async function getSession(
-  sessionId: string,
-): Promise<{ session: Session }> {
+export async function getSession(sessionId: string): Promise<{ session: Session }> {
   return request<{ session: Session }>(`/sessions/${sessionId}`);
 }
 
@@ -192,20 +184,14 @@ export async function updateSession(
   });
 }
 
-export async function archiveSession(
-  sessionId: string,
-): Promise<{ session: Session }> {
+export async function archiveSession(sessionId: string): Promise<{ session: Session }> {
   return request<{ session: Session }>(`/sessions/${sessionId}/archive`, {
     method: "PATCH",
   });
 }
 
-export async function getSessionMessages(
-  sessionId: string,
-): Promise<{ messages: Message[] }> {
-  return request<{ messages: Message[] }>(
-    `/sessions/${sessionId}/messages`,
-  );
+export async function getSessionMessages(sessionId: string): Promise<{ messages: Message[] }> {
+  return request<{ messages: Message[] }>(`/sessions/${sessionId}/messages`);
 }
 
 export async function sendMessageRest(
@@ -239,12 +225,8 @@ export async function listModelProviders(): Promise<{
 
 // --- Files ---
 
-export async function listFiles(
-  path = ".",
-): Promise<{ path: string; entries: FileEntry[] }> {
-  return request<{ path: string; entries: FileEntry[] }>(
-    `/files?path=${encodeURIComponent(path)}`,
-  );
+export async function listFiles(path = "."): Promise<{ path: string; entries: FileEntry[] }> {
+  return request<{ path: string; entries: FileEntry[] }>(`/files?path=${encodeURIComponent(path)}`);
 }
 
 export async function readFile(
@@ -280,9 +262,7 @@ export async function getMcpStatus(): Promise<McpStatus> {
   return request<McpStatus>("/mcp");
 }
 
-export async function refreshMcp(
-  name?: string,
-): Promise<{ message: string }> {
+export async function refreshMcp(name?: string): Promise<{ message: string }> {
   return request<{ message: string }>("/mcp/refresh", {
     method: "POST",
     body: name ? JSON.stringify({ name }) : JSON.stringify({}),
@@ -317,7 +297,13 @@ export async function restartMcpServer(name: string): Promise<{ message: string 
 
 export async function getDecisions(
   opts: { type?: string; q?: string; limit?: number } = {},
-): Promise<{ type: string; nodes?: DecisionNode[]; query?: string; summary?: string; health_score?: number }> {
+): Promise<{
+  type: string;
+  nodes?: DecisionNode[];
+  query?: string;
+  summary?: string;
+  health_score?: number;
+}> {
   const params = new URLSearchParams();
   if (opts.type) params.set("type", opts.type);
   if (opts.q) params.set("q", opts.q);
@@ -338,9 +324,7 @@ export async function listBacklogItems(
   return request<{ items: BacklogItem[] }>(`/backlog${qs ? `?${qs}` : ""}`);
 }
 
-export async function getBacklogItem(
-  id: string,
-): Promise<{ item: BacklogItem }> {
+export async function getBacklogItem(id: string): Promise<{ item: BacklogItem }> {
   return request<{ item: BacklogItem }>(`/backlog/${id}`);
 }
 
@@ -363,9 +347,7 @@ export async function updateBacklogItem(
   });
 }
 
-export async function deleteBacklogItem(
-  id: string,
-): Promise<void> {
+export async function deleteBacklogItem(id: string): Promise<void> {
   await request<void>(`/backlog/${id}`, { method: "DELETE" });
 }
 
@@ -400,9 +382,7 @@ export async function createShare(
   });
 }
 
-export async function listShares(
-  sessionId: string,
-): Promise<{ shares: SessionShare[] }> {
+export async function listShares(sessionId: string): Promise<{ shares: SessionShare[] }> {
   return request<{ shares: SessionShare[] }>(`/sessions/${sessionId}/shares`);
 }
 
@@ -421,36 +401,26 @@ export async function getSettings(): Promise<{ settings: Setting[] }> {
 export async function updateSettings(
   values: Record<string, unknown>,
 ): Promise<{ message: string; values: Record<string, unknown> }> {
-  return request<{ message: string; values: Record<string, unknown> }>(
-    "/settings",
-    {
-      method: "PUT",
-      body: JSON.stringify({ settings: values }),
-    },
-  );
+  return request<{ message: string; values: Record<string, unknown> }>("/settings", {
+    method: "PUT",
+    body: JSON.stringify({ settings: values }),
+  });
 }
 
 // --- OAuth Providers ---
 
-export async function startOAuthFlow(
-  provider: string,
-): Promise<OAuthStartResponse> {
+export async function startOAuthFlow(provider: string): Promise<OAuthStartResponse> {
   return request<OAuthStartResponse>(`/providers/oauth/${provider}/start`, {
     method: "POST",
     body: JSON.stringify({}),
   });
 }
 
-export async function getOAuthStatus(
-  provider: string,
-): Promise<OAuthStatusResponse> {
+export async function getOAuthStatus(provider: string): Promise<OAuthStatusResponse> {
   return request<OAuthStatusResponse>(`/providers/oauth/${provider}/status`);
 }
 
-export async function submitOAuthPaste(
-  provider: string,
-  codeState: string,
-): Promise<void> {
+export async function submitOAuthPaste(provider: string, codeState: string): Promise<void> {
   await request(`/providers/oauth/${provider}/paste`, {
     method: "POST",
     body: JSON.stringify({ code_state: codeState }),

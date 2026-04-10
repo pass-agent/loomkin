@@ -40,9 +40,7 @@ register({
     channel
       .push("inject_guidance", { agent_name: agentName, text })
       .receive("ok", () => {
-        ctx.addSystemMessage(
-          `${pc.cyan("💉")} Guidance injected for ${pc.bold(agentName)}`,
-        );
+        ctx.addSystemMessage(`${pc.cyan("💉")} Guidance injected for ${pc.bold(agentName)}`);
       })
       .receive("error", (raw: Record<string, unknown>) => {
         const reason = typeof raw?.reason === "string" ? raw.reason : "unknown error";

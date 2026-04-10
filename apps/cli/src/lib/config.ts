@@ -65,9 +65,7 @@ export function getHistoryPath(): string {
 
 const MAX_COST_SESSIONS = 10;
 
-export function getAgentCostsForSession(
-  sessionId: string,
-): Record<string, AgentCostEntry> {
+export function getAgentCostsForSession(sessionId: string): Record<string, AgentCostEntry> {
   const allCosts = config.get("agentCosts") ?? {};
   return allCosts[sessionId] ?? {};
 }
@@ -78,8 +76,7 @@ export function setAgentCostForSession(
   costUsd: number,
   tokensUsed: number,
 ): void {
-  const allCosts: Record<string, Record<string, AgentCostEntry>> =
-    config.get("agentCosts") ?? {};
+  const allCosts: Record<string, Record<string, AgentCostEntry>> = config.get("agentCosts") ?? {};
 
   if (!allCosts[sessionId]) {
     allCosts[sessionId] = {};

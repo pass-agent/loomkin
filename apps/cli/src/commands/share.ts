@@ -1,12 +1,7 @@
 import pc from "picocolors";
 import { register, type CommandContext } from "./registry.js";
 import { extractErrorMessage } from "../lib/errors.js";
-import {
-  createShare,
-  listShares,
-  revokeShare,
-  type SessionShare,
-} from "../lib/api.js";
+import { createShare, listShares, revokeShare, type SessionShare } from "../lib/api.js";
 
 function formatShare(share: SessionShare): string {
   const id = pc.dim(share.id.slice(0, 8));
@@ -47,14 +42,14 @@ register({
           });
 
           const permLabel =
-            share.permission === "collaborate"
-              ? pc.yellow("collaborate")
-              : pc.green("view-only");
+            share.permission === "collaborate" ? pc.yellow("collaborate") : pc.green("view-only");
 
           ctx.addSystemMessage(
             `${pc.green("✔")} Share link created (${permLabel})\n` +
               `  ${pc.bold(url)}\n` +
-              pc.dim(`  Expires: ${share.expires_at ? new Date(share.expires_at).toLocaleString() : "never"}`),
+              pc.dim(
+                `  Expires: ${share.expires_at ? new Date(share.expires_at).toLocaleString() : "never"}`,
+              ),
           );
         } catch (error) {
           const msg = extractErrorMessage(error);
@@ -92,9 +87,7 @@ register({
         try {
           // Support short IDs by matching against the list
           const { shares } = await listShares(sessionId);
-          const match = shares.find(
-            (s) => s.id === rest || s.id.startsWith(rest),
-          );
+          const match = shares.find((s) => s.id === rest || s.id.startsWith(rest));
 
           if (!match) {
             ctx.addSystemMessage(pc.red(`Share ${rest} not found.`));
@@ -102,9 +95,7 @@ register({
           }
 
           await revokeShare(match.id);
-          ctx.addSystemMessage(
-            `${pc.green("✔")} Revoked share ${pc.dim(match.id.slice(0, 8))}`,
-          );
+          ctx.addSystemMessage(`${pc.green("✔")} Revoked share ${pc.dim(match.id.slice(0, 8))}`);
         } catch (error) {
           const msg = extractErrorMessage(error);
           ctx.addSystemMessage(pc.red(`Failed to revoke share: ${msg}`));
