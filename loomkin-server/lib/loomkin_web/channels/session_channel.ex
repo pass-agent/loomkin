@@ -430,6 +430,23 @@ defmodule LoomkinWeb.SessionChannel do
     {:noreply, socket}
   end
 
+  # Inline diff preview events. Emitted by SignalBridge after a successful
+  # work-unit commit so the CLI / mobile clients can surface a +N −M
+  # summary (and optionally an expandable patch excerpt) inline.
+  def handle_info(%Jido.Signal{type: "session.orchestration.diff"} = sig, socket) do
+    if sig.data[:session_id] in [nil, socket.assigns.session_id] do
+      push(socket, "orchestration_diff", %{
+        work_unit_id: sig.data[:work_unit_id],
+        sha: sig.data[:sha],
+        stats: sig.data[:stats],
+        files: sig.data[:files],
+        patch_excerpt: sig.data[:patch_excerpt]
+      })
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info(%Jido.Signal{type: "session.status.changed"} = sig, socket) do
     if sig.data[:session_id] == socket.assigns.session_id do
       case sig.data[:raw_event] do

@@ -34,6 +34,7 @@ defmodule Loomkin.Orchestration.WorkUnitPipeline do
   """
   @behaviour :gen_statem
 
+  alias Loomkin.Orchestration.Diff
   alias Loomkin.Orchestration.RetryLadder
   alias Loomkin.Orchestration.Schema.ReviewVerdict
 
@@ -215,6 +216,7 @@ defmodule Loomkin.Orchestration.WorkUnitPipeline do
       {:ok, sha} ->
         data = %{data | commit_sha: sha}
         broadcast(data, {:commit_done, sha})
+        maybe_broadcast_diff(data, sha)
         {:next_state, :done, data}
 
       {:error, reason} ->
@@ -393,6 +395,60 @@ defmodule Loomkin.Orchestration.WorkUnitPipeline do
   end
 
   defp broadcast(_, _), do: :ok
+
+  # Capture a diff for the just-landed sha and broadcast it on the same
+  # `orchestration.work_unit` topic so SignalBridge can re-publish it as a
+  # `session.orchestration.diff` Jido.Signal.
+  #
+  # We use a flat payload (event tag `:diff`) so the bridge can distinguish
+  # diff events from regular phase events.
+  defp maybe_broadcast_diff(%{artifact: artifact, work_unit: wu, bus_topic: topic} = data, sha)
+       when is_binary(topic) do
+    case worktree_from_artifact(artifact) do
+      nil ->
+        :ok
+
+      worktree when is_binary(worktree) ->
+        case Diff.capture(sha, worktree) do
+          {:ok, capture} ->
+            payload = %{
+              work_unit_id: Map.get(wu, :id) || Map.get(wu, "id"),
+              event: :diff,
+              sha: capture.sha,
+              stats: capture.stats,
+              files: capture.files,
+              patch_excerpt: capture.patch_excerpt,
+              session_id: session_id_from(data)
+            }
+
+            broadcast_raw(topic, payload)
+
+          {:error, _reason} ->
+            :ok
+        end
+    end
+  rescue
+    _ -> :ok
+  end
+
+  defp maybe_broadcast_diff(_, _), do: :ok
+
+  defp worktree_from_artifact(%{worktree_path: path}) when is_binary(path), do: path
+  defp worktree_from_artifact(%{"worktree_path" => path}) when is_binary(path), do: path
+  defp worktree_from_artifact(_), do: nil
+
+  defp session_id_from(%{work_unit: %{session_id: sid}}) when is_binary(sid), do: sid
+  defp session_id_from(%{work_unit: %{"session_id" => sid}}) when is_binary(sid), do: sid
+  defp session_id_from(_), do: nil
+
+  defp broadcast_raw(topic, payload) when is_binary(topic) and is_map(payload) do
+    case Process.whereis(Loomkin.PubSub) do
+      nil -> :ok
+      _pid -> Phoenix.PubSub.broadcast(Loomkin.PubSub, topic, {topic, payload})
+    end
+  rescue
+    _ -> :ok
+  end
 
   defp notify_owner(%{owner: pid}, status) when is_pid(pid) do
     send(pid, {:work_unit_pipeline, self(), status})

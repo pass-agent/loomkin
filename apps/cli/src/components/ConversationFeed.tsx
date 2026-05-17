@@ -1,6 +1,8 @@
 import React from "react";
 import { Box, Text } from "ink";
 import type { ConversationInfo, ConversationTurn } from "../lib/types.js";
+import { OrchestrationEpicCard } from "./OrchestrationEpicCard.js";
+import { useEpicCardStore } from "../stores/epicCardStore.js";
 
 interface Props {
   conversation: ConversationInfo;
@@ -132,6 +134,7 @@ export function ConversationFeed({ conversation, maxLines = 100 }: Props) {
 
   return (
     <Box flexDirection="column" flexGrow={1} paddingX={1}>
+      <EpicCardStack />
       <Box>
         <Text bold color="magenta">
           {conversation.topic}
@@ -146,6 +149,24 @@ export function ConversationFeed({ conversation, maxLines = 100 }: Props) {
       <Box flexDirection="column" flexGrow={1}>
         {elements}
       </Box>
+    </Box>
+  );
+}
+
+/**
+ * Sticky stack of live orchestration epic cards. One card per active
+ * epic, pinned to the top of the feed so the human always has the
+ * current pipeline state in view.
+ */
+function EpicCardStack() {
+  const cards = useEpicCardStore((s) => s.cards);
+  const list = Object.values(cards);
+  if (list.length === 0) return null;
+  return (
+    <Box flexDirection="column">
+      {list.map((card) => (
+        <OrchestrationEpicCard key={card.epic_id} card={card} />
+      ))}
     </Box>
   );
 }

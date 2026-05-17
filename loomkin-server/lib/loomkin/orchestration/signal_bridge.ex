@@ -12,6 +12,12 @@ defmodule Loomkin.Orchestration.SignalBridge do
       orchestration.gate       → signal type "session.orchestration.phase" with subtype "gate"
       orchestration.knowledge  → signal type "session.orchestration.phase" with subtype "knowledge"
 
+  In addition to the phase events above, the `orchestration.work_unit` topic
+  also carries diff events emitted by `WorkUnitPipeline` after a successful
+  commit. Those are republished as `"session.orchestration.diff"` signals so
+  the CLI / LiveView can render an inline diff summary alongside the phase
+  feed without changing the existing streaming contract.
+
   Signal payload shape:
 
       %Jido.Signal{
@@ -51,6 +57,12 @@ defmodule Loomkin.Orchestration.SignalBridge do
   end
 
   @impl true
+  def handle_info({topic, %{event: :diff} = payload}, state)
+      when topic == "orchestration.work_unit" do
+    publish_diff(payload)
+    {:noreply, state}
+  end
+
   def handle_info({topic, payload}, state) when topic in @topics do
     publish(topic, payload)
     {:noreply, state}
@@ -62,11 +74,13 @@ defmodule Loomkin.Orchestration.SignalBridge do
 
   defp publish(topic, payload) when is_map(payload) do
     subtype = subtype_from_topic(topic)
+    persona = Loomkin.Orchestration.Personas.for_event(subtype, payload)
 
     data =
       payload
       |> Map.put(:subtype, subtype)
       |> Map.put_new(:session_id, payload[:session_id])
+      |> Map.put(:persona, persona)
 
     signal = %Jido.Signal{
       id: Ecto.UUID.generate(),
@@ -88,6 +102,36 @@ defmodule Loomkin.Orchestration.SignalBridge do
   end
 
   defp publish(_topic, _other), do: :ok
+
+  defp publish_diff(payload) when is_map(payload) do
+    data = %{
+      subtype: :work_unit,
+      work_unit_id: payload[:work_unit_id],
+      sha: payload[:sha],
+      stats: payload[:stats] || %{additions: 0, deletions: 0, files: 0},
+      files: payload[:files] || [],
+      patch_excerpt: payload[:patch_excerpt] || "",
+      session_id: payload[:session_id]
+    }
+
+    signal = %Jido.Signal{
+      id: Ecto.UUID.generate(),
+      source: "loomkin.orchestration",
+      type: "session.orchestration.diff",
+      datacontenttype: "application/json",
+      time: DateTime.utc_now() |> DateTime.to_iso8601(),
+      data: data,
+      specversion: "1.0.2"
+    }
+
+    try do
+      Loomkin.Signals.publish(signal)
+    rescue
+      _ -> :ok
+    catch
+      _, _ -> :ok
+    end
+  end
 
   defp subtype_from_topic("orchestration.epic"), do: :epic
   defp subtype_from_topic("orchestration.work_unit"), do: :work_unit

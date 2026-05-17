@@ -67,4 +67,36 @@ defmodule Loomkin.Orchestration.SignalBridgeTest do
     # SignalBridge still alive
     assert Process.alive?(Process.whereis(SignalBridge))
   end
+
+  test "diff payload on work_unit topic becomes a session.orchestration.diff signal" do
+    wu_id = Ecto.UUID.generate()
+
+    payload = %{
+      work_unit_id: wu_id,
+      event: :diff,
+      sha: "abc1234567890",
+      stats: %{additions: 5, deletions: 2, files: 1},
+      files: [%{path: "lib/x.ex", additions: 5, deletions: 2}],
+      patch_excerpt: "diff --git a/lib/x.ex …",
+      session_id: nil
+    }
+
+    Phoenix.PubSub.broadcast(
+      Loomkin.PubSub,
+      "orchestration.work_unit",
+      {"orchestration.work_unit", payload}
+    )
+
+    assert_receive {:signal,
+                    %Jido.Signal{
+                      type: "session.orchestration.diff",
+                      data: %{
+                        subtype: :work_unit,
+                        work_unit_id: ^wu_id,
+                        sha: "abc1234567890",
+                        stats: %{additions: 5, deletions: 2, files: 1}
+                      }
+                    }},
+                   1_000
+  end
 end

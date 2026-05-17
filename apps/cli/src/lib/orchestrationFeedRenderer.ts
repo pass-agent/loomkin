@@ -12,14 +12,24 @@
  *   ▲ escalated         for human-escalation events
  *   ⇡ knowledge:<n>     for curator extractions
  */
+export interface OrchestrationPersona {
+  name: string;
+  icon: string;
+  role_blurb?: string;
+}
+
 export function formatOrchestrationPhase(payload: {
   subtype?: string;
   event?: unknown;
   epic_id?: string;
   work_unit_id?: string;
+  persona?: OrchestrationPersona;
 }): string | null {
-  const { subtype, event } = payload;
-  const scope = scopeLabel(payload);
+  const { subtype, event, persona } = payload;
+  // When a persona is present we surface a named cast instead of the
+  // anonymous [epic:abc] / [wu:xyz] scope tag — the persona already
+  // identifies who is speaking.
+  const scope = persona ? "" : scopeLabel(payload);
 
   // Tuple events come over the channel as Elixir tuples; Phoenix encodes them
   // as arrays. We accept both arrays and plain string events.
@@ -29,36 +39,39 @@ export function formatOrchestrationPhase(payload: {
     switch (tag) {
       case "phase_entered": {
         const phase = String(rest[0] ?? "");
-        return `${scope}⇢ ${phase}`;
+        return withPersona(persona, `${scope}⇢ ${phase}`);
       }
       case "gate_verdict": {
         const [gate, verdict, count] = rest as [string, string, number];
         const glyph = verdict === "pass" ? "✓" : "✗";
-        return `${scope}${glyph} ${gate} · ${count} reviewer${count === 1 ? "" : "s"}`;
+        return withPersona(
+          persona,
+          `${scope}${glyph} ${gate} · ${count} reviewer${count === 1 ? "" : "s"}`,
+        );
       }
       case "escalated":
-        return `${scope}▲ escalated (3-iteration cap exceeded)`;
+        return withPersona(persona, `${scope}▲ escalated (3-iteration cap exceeded)`);
       case "fail": {
         const [where, reason] = rest as [string, unknown];
-        return `${scope}✗ ${where} failed: ${stringify(reason)}`;
+        return withPersona(persona, `${scope}✗ ${where} failed: ${stringify(reason)}`);
       }
       case "review_pass": {
-        return `${scope}✓ review passed`;
+        return withPersona(persona, `${scope}✓ review passed`);
       }
       case "review_fail": {
-        return `${scope}✗ review failed`;
+        return withPersona(persona, `${scope}✗ review failed`);
       }
       case "retry": {
         const [retryState, _reason] = rest as [string, unknown];
-        return `${scope}↻ retry → ${retryState}`;
+        return withPersona(persona, `${scope}↻ retry → ${retryState}`);
       }
       case "validate_pass":
-        return `${scope}✓ validate`;
+        return withPersona(persona, `${scope}✓ validate`);
       case "validate_fail":
-        return `${scope}✗ validate`;
+        return withPersona(persona, `${scope}✗ validate`);
       case "commit_done": {
         const sha = String(rest[0] ?? "");
-        return `${scope}✓ commit ${sha.slice(0, 12)}`;
+        return withPersona(persona, `${scope}✓ commit ${sha.slice(0, 12)}`);
       }
       default:
         return null;
@@ -68,27 +81,32 @@ export function formatOrchestrationPhase(payload: {
   if (typeof event === "string") {
     switch (event) {
       case "created":
-        return `${scope}⇢ created`;
+        return withPersona(persona, `${scope}⇢ created`);
       case "started":
-        return `${scope}⇢ started`;
+        return withPersona(persona, `${scope}⇢ started`);
       case "implement_complete":
-        return `${scope}✓ implement`;
+        return withPersona(persona, `${scope}✓ implement`);
       case "completed":
-        return `${scope}✓ completed`;
+        return withPersona(persona, `${scope}✓ completed`);
       case "failed":
-        return `${scope}✗ failed`;
+        return withPersona(persona, `${scope}✗ failed`);
       case "closed":
-        return `${scope}✓ closed`;
+        return withPersona(persona, `${scope}✓ closed`);
       default:
-        return `${scope}· ${event}`;
+        return withPersona(persona, `${scope}· ${event}`);
     }
   }
 
   if (subtype === "knowledge") {
-    return `${scope}⇡ knowledge fact added`;
+    return withPersona(persona, `${scope}⇡ knowledge fact added`);
   }
 
   return null;
+}
+
+function withPersona(persona: OrchestrationPersona | undefined, line: string): string {
+  if (!persona) return line;
+  return `${persona.icon} ${persona.name}: ${line}`;
 }
 
 function scopeLabel(payload: {

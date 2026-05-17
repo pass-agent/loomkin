@@ -120,4 +120,61 @@ defmodule Loomkin.Orchestration.WorkUnitPipelineTest do
     assert state == :done
     assert_receive {:work_unit_pipeline, ^pid, :completed}, 1_000
   end
+
+  test "successful commit broadcasts a :diff event on orchestration.work_unit" do
+    path =
+      Path.join(System.tmp_dir!(), "wu-pipeline-diff-#{System.unique_integer([:positive])}")
+
+    File.mkdir_p!(path)
+    {_, 0} = System.cmd("git", ["init", "-q", "-b", "main"], cd: path)
+    {_, 0} = System.cmd("git", ["config", "user.email", "test@example.com"], cd: path)
+    {_, 0} = System.cmd("git", ["config", "user.name", "Pipeline Diff Test"], cd: path)
+    File.write!(Path.join(path, "README.md"), "initial\n")
+    {_, 0} = System.cmd("git", ["add", "."], cd: path)
+    {_, 0} = System.cmd("git", ["commit", "-q", "-m", "initial"], cd: path)
+
+    File.write!(Path.join(path, "x.txt"), "x\n")
+    {_, 0} = System.cmd("git", ["add", "."], cd: path)
+    {_, 0} = System.cmd("git", ["commit", "-q", "-m", "x"], cd: path)
+    {sha, 0} = System.cmd("git", ["rev-parse", "HEAD"], cd: path)
+    sha = String.trim(sha)
+
+    on_exit(fn -> File.rm_rf(path) end)
+
+    :ok = Phoenix.PubSub.subscribe(Loomkin.PubSub, "orchestration.work_unit")
+
+    artifact = %{worktree_path: path, files_touched: ["x.txt"]}
+
+    callbacks = %{
+      implementer: fn _wu -> {:ok, artifact} end,
+      validator: fn _ -> :ok end,
+      reviewer: fn _ -> {:pass, [ok_verdict()]} end,
+      committer: fn _ -> {:ok, sha} end
+    }
+
+    {:ok, pid} =
+      WorkUnitPipeline.start_link(
+        work_unit: %{id: "wu-diff", title: "diff"},
+        callbacks: callbacks,
+        owner: self()
+      )
+
+    WorkUnitPipeline.start(pid)
+
+    state = wait_for(pid, &(&1 == :done), 2_000)
+    assert state == :done
+
+    assert_receive {"orchestration.work_unit",
+                    %{
+                      work_unit_id: "wu-diff",
+                      event: :diff,
+                      sha: ^sha,
+                      stats: %{files: files_count}
+                    } = payload},
+                   1_500
+
+    assert files_count >= 1
+    assert is_list(payload.files)
+    assert String.contains?(payload.patch_excerpt, "diff --git")
+  end
 end

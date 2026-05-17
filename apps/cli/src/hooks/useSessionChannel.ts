@@ -8,6 +8,8 @@ import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.
 import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
 import { runHooks } from "../lib/hooks.js";
 import { formatOrchestrationPhase } from "../lib/orchestrationFeedRenderer.js";
+import { epicCardStore, type PhasePayload } from "../stores/epicCardStore.js";
+import { formatSummary as formatDiffSummary, type DiffPayload } from "../components/DiffPreview.js";
 import type {
   Message,
   ToolCall,
@@ -68,15 +70,22 @@ export function useSessionChannel() {
     });
 
     // Orchestration framework phase events — translated server-side from
-    // orchestration.* PubSub topics. We surface them as terse system-role
-    // messages so users see the pipeline progress inline with the chat.
+    // orchestration.* PubSub topics. We funnel every recognised event into
+    // the live `epicCardStore` so a single sticky card per epic replaces
+    // the per-event firehose. Unknown subtypes still fall back to a terse
+    // system-role message for debugging / backward compat.
     on("orchestration_phase", (raw) => {
-      const payload = raw as {
-        subtype?: string;
-        event?: unknown;
-        epic_id?: string;
-        work_unit_id?: string;
-      };
+      const payload = raw as PhasePayload;
+      const subtype = payload.subtype;
+      const isKnown = subtype === "epic" || subtype === "work_unit" || subtype === "knowledge";
+
+      if (isKnown && payload.epic_id) {
+        epicCardStore.getState().applyEvent(payload);
+        return;
+      }
+
+      // Fallback: keep the legacy system-message rendering for any
+      // payload we don't yet route into the card store.
       const text = formatOrchestrationPhase(payload);
       if (!text) return;
 
@@ -87,6 +96,42 @@ export function useSessionChannel() {
         role: "system",
         content: text,
       } as Message);
+    });
+
+    // Inline diff preview event. Emitted by the server after every
+    // successful work-unit commit (see Loomkin.Orchestration.Diff).
+    //
+    // We always surface a one-line system message with the +/- summary so
+    // the user sees something in the conversation feed. When the payload
+    // (or a future server enrichment) carries an epic_id we also feed
+    // the epicCardStore so it can show the diff alongside the live card.
+    on("orchestration_diff", (raw) => {
+      const payload = raw as DiffPayload & {
+        epic_id?: string;
+        subtype?: string;
+      };
+
+      const summary = formatDiffSummary(payload);
+      const wuSuffix = payload.work_unit_id ? ` [wu:${payload.work_unit_id.slice(0, 6)}]` : "";
+
+      useSessionStore.getState().addMessage({
+        id: `orchestration-diff-${payload.sha ?? Date.now()}-${Math.floor(Math.random() * 10_000)}`,
+        role: "system",
+        content: `diff ${summary}${wuSuffix}`,
+      } as Message);
+
+      if (payload.epic_id) {
+        const stats = payload.stats ?? {};
+        epicCardStore.getState().applyEvent({
+          subtype: "orchestration_diff",
+          epic_id: payload.epic_id,
+          work_unit_id: payload.work_unit_id,
+          diff: {
+            work_unit_id: payload.work_unit_id,
+            stats: `+${stats.additions ?? 0} −${stats.deletions ?? 0} across ${stats.files ?? 0}`,
+          },
+        } as PhasePayload);
+      }
     });
 
     on("stream_start", (raw) => {

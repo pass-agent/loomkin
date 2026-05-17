@@ -39,6 +39,7 @@ defmodule LoomkinWeb.OrchestrationShowLive do
          |> assign(:work_units, Context.list_work_units(id))
          |> assign(:gate_results, Context.list_gate_results(id))
          |> assign(:wu_events, %{})
+         |> assign(:wu_diffs, %{})
          |> assign(:pr_ref, pr_ref_for_epic(epic))
          |> assign(:shepherd_status, shepherd_status_for(epic))
          |> assign(:page_title, "Epic " <> epic.title)}
@@ -52,6 +53,21 @@ defmodule LoomkinWeb.OrchestrationShowLive do
      |> assign(:epic, Context.get_epic(id))
      |> assign(:work_units, Context.list_work_units(id))
      |> assign(:gate_results, Context.list_gate_results(id))}
+  end
+
+  def handle_info(
+        {@wu_topic, %{work_unit_id: wu_id, event: :diff} = payload},
+        socket
+      ) do
+    summary = %{
+      sha: payload[:sha],
+      stats: payload[:stats] || %{additions: 0, deletions: 0, files: 0},
+      files: payload[:files] || [],
+      patch_excerpt: payload[:patch_excerpt] || ""
+    }
+
+    diffs = Map.put(socket.assigns.wu_diffs, wu_id, summary)
+    {:noreply, assign(socket, :wu_diffs, diffs)}
   end
 
   def handle_info({@wu_topic, %{work_unit_id: wu_id, event: ev}}, socket) do
@@ -181,6 +197,12 @@ defmodule LoomkinWeb.OrchestrationShowLive do
           </p>
         </header>
 
+        <.live_component
+          module={LoomkinWeb.OrchestrationPanelComponent}
+          id={"panel-" <> @epic.id}
+          epic={@epic}
+        />
+
         <section class="card p-6 mb-6" aria-labelledby="orch-phases-h">
           <h2
             id="orch-phases-h"
@@ -305,6 +327,54 @@ defmodule LoomkinWeb.OrchestrationShowLive do
                 <strong style="color: var(--text-primary);">{wu.title}</strong>
                 <% {wcls, wlbl} = status_badge(wu.status) %>
                 <span class={wcls}>{wlbl}</span>
+              </div>
+              <% diff = Map.get(@wu_diffs, wu.id) %>
+              <div
+                :if={diff}
+                class="mt-3 rounded p-2 text-xs font-mono"
+                style="background: var(--surface-2); border: 1px solid var(--border-subtle);"
+                aria-label="Diff summary for work unit"
+              >
+                <div class="flex items-center gap-3">
+                  <span style="color: var(--text-brand);">
+                    +{diff.stats.additions}
+                  </span>
+                  <span style="color: var(--text-danger, var(--text-secondary));">
+                    −{diff.stats.deletions}
+                  </span>
+                  <span style="color: var(--text-muted);">
+                    across {diff.stats.files} {if diff.stats.files == 1, do: "file", else: "files"}
+                  </span>
+                  <span :if={diff.sha} style="color: var(--text-muted);">
+                    · <code>{String.slice(diff.sha, 0, 7)}</code>
+                  </span>
+                </div>
+                <details :if={diff.files != []} class="mt-2">
+                  <summary class="cursor-pointer" style="color: var(--text-muted);">
+                    files
+                  </summary>
+                  <ul role="list" class="mt-1 pl-2">
+                    <li
+                      :for={f <- diff.files}
+                      style="color: var(--text-secondary);"
+                    >
+                      <span style="color: var(--text-brand);">+{f.additions}</span>
+                      <span style="color: var(--text-danger, var(--text-secondary));">
+                        −{f.deletions}
+                      </span>
+                      <span class="ml-2">{f.path}</span>
+                    </li>
+                  </ul>
+                </details>
+                <details :if={diff.patch_excerpt != ""} class="mt-2">
+                  <summary class="cursor-pointer" style="color: var(--text-muted);">
+                    patch excerpt
+                  </summary>
+                  <pre
+                    class="mt-1 whitespace-pre-wrap rounded p-2 text-xs"
+                    style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-subtle);"
+                  >{diff.patch_excerpt}</pre>
+                </details>
               </div>
               <details class="mt-3 text-xs font-mono">
                 <summary
