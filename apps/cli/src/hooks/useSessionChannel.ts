@@ -7,6 +7,7 @@ import { isMcpTool, truncateMcpOutput } from "../lib/mcpTruncation.js";
 import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.js";
 import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
 import { runHooks } from "../lib/hooks.js";
+import { formatOrchestrationPhase } from "../lib/orchestrationFeedRenderer.js";
 import type { Message, ToolCall, PermissionRequest, AskUserQuestion, PlanMessage } from "../lib/types.js";
 
 /**
@@ -58,6 +59,28 @@ export function useSessionChannel() {
     on("message_updated", (raw) => {
       const payload = raw as { message: Message };
       useSessionStore.getState().updateMessage(payload.message.id, payload.message);
+    });
+
+    // Orchestration framework phase events — translated server-side from
+    // orchestration.* PubSub topics. We surface them as terse system-role
+    // messages so users see the pipeline progress inline with the chat.
+    on("orchestration_phase", (raw) => {
+      const payload = raw as {
+        subtype?: string;
+        event?: unknown;
+        epic_id?: string;
+        work_unit_id?: string;
+      };
+      const text = formatOrchestrationPhase(payload);
+      if (!text) return;
+
+      const idSuffix = `${payload.subtype ?? "x"}-${payload.epic_id ?? payload.work_unit_id ?? "x"}-${Date.now()}-${Math.floor(Math.random() * 10_000)}`;
+
+      useSessionStore.getState().addMessage({
+        id: `orchestration-${idSuffix}`,
+        role: "system",
+        content: text,
+      } as Message);
     });
 
     on("stream_start", (raw) => {

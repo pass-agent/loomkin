@@ -97,7 +97,11 @@ defmodule Loomkin.Application do
         {Task.Supervisor, name: Loomkin.Healing.TaskSupervisor},
 
         # Self-healing orchestrator (manages heal-diagnose-fix-resume lifecycle)
-        {Loomkin.Healing.Orchestrator, shutdown: 15_000}
+        {Loomkin.Healing.Orchestrator, shutdown: 15_000},
+
+        # Orchestration subsystem — 9-phase workflow with adversarial gates
+        # See docs/orchestration/ARCHITECTURE.md
+        Loomkin.Orchestration.Supervisor
       ] ++
         maybe_start_mcp_server() ++
         maybe_start_endpoint()

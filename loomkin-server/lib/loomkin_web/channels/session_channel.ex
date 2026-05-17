@@ -414,6 +414,22 @@ defmodule LoomkinWeb.SessionChannel do
     {:noreply, socket}
   end
 
+  # Orchestration framework phase events — translated from the
+  # orchestration.* PubSub topics by Loomkin.Orchestration.SignalBridge.
+  # See docs/orchestration/ARCHITECTURE.md.
+  def handle_info(%Jido.Signal{type: "session.orchestration.phase"} = sig, socket) do
+    if sig.data[:session_id] in [nil, socket.assigns.session_id] do
+      push(socket, "orchestration_phase", %{
+        subtype: sig.data[:subtype],
+        event: sig.data[:event],
+        epic_id: sig.data[:epic_id],
+        work_unit_id: sig.data[:work_unit_id]
+      })
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info(%Jido.Signal{type: "session.status.changed"} = sig, socket) do
     if sig.data[:session_id] == socket.assigns.session_id do
       case sig.data[:raw_event] do

@@ -32,6 +32,16 @@ config :loomkin,
   max_repo_map_tokens: 2048,
   max_decision_context_tokens: 1024
 
+# Orchestration-level configuration. Cross-model review is off by default to
+# preserve existing test/runtime behaviour; opt in per-environment.
+config :loomkin, Loomkin.Orchestration,
+  cross_model: false,
+  reviewer_model_pool: [
+    "anthropic:claude-sonnet-4-5",
+    "google_oauth:gemini-2.5-flash",
+    "openai:gpt-4o"
+  ]
+
 # Tool runner concurrency limits (per-type and total)
 config :loomkin, :runner_limits, %{
   shell: 20,

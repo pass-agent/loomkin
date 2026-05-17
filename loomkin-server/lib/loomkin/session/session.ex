@@ -5,6 +5,7 @@ defmodule Loomkin.Session do
 
   require Logger
 
+  alias Loomkin.Orchestration.SessionBridge
   alias Loomkin.Session.Architect
   alias Loomkin.Session.Persistence
 
@@ -280,39 +281,17 @@ defmodule Loomkin.Session do
 
   @impl true
   def handle_call({:send_message, text, opts}, from, state) do
-    # Auto-title session from first user message if still using default timestamp title
-    state = maybe_auto_title(state, text)
-
-    # Spawn bootstrap agents on first message (deferred from session start)
-    state = maybe_spawn_bootstrap_agents(state)
-
-    target_agent = Keyword.get(opts, :target_agent)
-
-    # Route directly to a named agent if requested, otherwise try concierge
-    result =
-      if target_agent && state.team_id do
-        case Loomkin.Session.Manager.find_agent(state.team_id, target_agent) do
-          {:ok, pid} ->
-            {:routed, pid}
-
-          :error ->
-            Logger.warning(
-              "[Kin:session] target_agent=#{target_agent} not found, falling back to concierge"
-            )
-
-            maybe_route_to_concierge(state, text)
-        end
-      else
-        maybe_route_to_concierge(state, text)
-      end
-
-    Logger.info(
-      "[Kin:session] new_message routing=#{inspect(result)} target_agent=#{inspect(target_agent)}"
-    )
-
-    case result do
-      {:routed, concierge_pid} ->
-        # Persist and broadcast the user message
+    # Orchestration front-door: every user message is classified and routed
+    # through SessionBridge. The bridge may produce the assistant response
+    # directly via a real pipeline ({:ok, response}), submit an Epic and
+    # stream phase events asynchronously ({:complex_task, epic_id}), or
+    # decline ({:legacy, _}) — in which case we fall through to the existing
+    # concierge/architect code path below.
+    case SessionBridge.dispatch(state, text, opts) do
+      {:ok, response} when is_binary(response) ->
+        # Pipeline produced the response. Persist + broadcast the same
+        # user/assistant pair the legacy concierge arm produces so the
+        # session transcript + downstream subscribers see the same shape.
         {:ok, saved_user} =
           Persistence.save_message(%{session_id: state.id, role: :user, content: text})
 
@@ -320,51 +299,43 @@ defmodule Loomkin.Session do
         state = %{state | messages: state.messages ++ [user_msg]}
         broadcast(state.id, {:new_message, state.id, user_msg})
 
-        state = update_status(state, :thinking)
+        {:ok, saved_assistant} =
+          Persistence.save_message(%{
+            session_id: state.id,
+            role: :assistant,
+            content: response
+          })
 
-        # Run concierge call in an async Task so the Session stays responsive
-        session_id = state.id
+        assistant_msg = %{
+          role: :assistant,
+          content: response,
+          from: "concierge",
+          id: saved_assistant.id
+        }
 
-        task =
-          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
-            case Loomkin.Teams.Agent.send_message(concierge_pid, text) do
-              {:ok, response_text} ->
-                # Persist and broadcast the assistant response
-                {:ok, saved_assistant} =
-                  Persistence.save_message(%{
-                    session_id: session_id,
-                    role: :assistant,
-                    content: response_text
-                  })
+        broadcast(state.id, {:new_message, state.id, assistant_msg})
 
-                assistant_msg = %{
-                  role: :assistant,
-                  content: response_text,
-                  from: "concierge",
-                  id: saved_assistant.id
-                }
+        {:reply, {:ok, response}, %{state | messages: state.messages ++ [assistant_msg]}}
 
-                broadcast(session_id, {:new_message, session_id, assistant_msg})
-                {:ok, response_text, assistant_msg}
+      {:complex_task, epic_id} ->
+        # Acknowledge to the caller; the orchestrator streams phase events
+        # via Loomkin.Orchestration.SignalBridge — the session does not
+        # block waiting for the epic to finish.
+        ack = %{
+          role: :assistant,
+          content: "Started orchestration epic #{epic_id}.",
+          id: Ecto.UUID.generate()
+        }
 
-              {:error, reason} ->
-                {:error, reason}
-            end
-          end)
+        broadcast(state.id, {:new_message, state.id, ack})
 
-        {:noreply, %{state | architect_task: {task, from}}}
+        {:reply, {:ok, "epic:#{epic_id}"}, state}
 
-      :not_routed ->
-        state = update_status(state, :thinking)
+      {:legacy, _reason} ->
+        legacy_dispatch(text, opts, from, state)
 
-        # Run architect in an async Task so the GenServer stays responsive
-        # for permission responses while the architect is running.
-        task =
-          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
-            Architect.run(text, state, architect_model: state.model)
-          end)
-
-        {:noreply, %{state | architect_task: {task, from}}}
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
     end
   end
 
@@ -912,6 +883,100 @@ defmodule Loomkin.Session do
       {:routed, pid}
     else
       _ -> :not_routed
+    end
+  end
+
+  # Original (pre-orchestration) send_message body. Reached when SessionBridge
+  # returns {:legacy, _} — i.e. the pipeline opted out (e.g. no team yet) and
+  # we need to run the concierge/architect path that bootstraps the team and
+  # produces a response the old way. Kept verbatim so the migration to the
+  # orchestration pipelines is non-destructive.
+  defp legacy_dispatch(text, opts, from, state) do
+    # Auto-title session from first user message if still using default timestamp title
+    state = maybe_auto_title(state, text)
+
+    # Spawn bootstrap agents on first message (deferred from session start)
+    state = maybe_spawn_bootstrap_agents(state)
+
+    target_agent = Keyword.get(opts, :target_agent)
+
+    # Route directly to a named agent if requested, otherwise try concierge
+    result =
+      if target_agent && state.team_id do
+        case Loomkin.Session.Manager.find_agent(state.team_id, target_agent) do
+          {:ok, pid} ->
+            {:routed, pid}
+
+          :error ->
+            Logger.warning(
+              "[Kin:session] target_agent=#{target_agent} not found, falling back to concierge"
+            )
+
+            maybe_route_to_concierge(state, text)
+        end
+      else
+        maybe_route_to_concierge(state, text)
+      end
+
+    Logger.info(
+      "[Kin:session] new_message routing=#{inspect(result)} target_agent=#{inspect(target_agent)}"
+    )
+
+    case result do
+      {:routed, concierge_pid} ->
+        # Persist and broadcast the user message
+        {:ok, saved_user} =
+          Persistence.save_message(%{session_id: state.id, role: :user, content: text})
+
+        user_msg = %{role: :user, content: text, id: saved_user.id}
+        state = %{state | messages: state.messages ++ [user_msg]}
+        broadcast(state.id, {:new_message, state.id, user_msg})
+
+        state = update_status(state, :thinking)
+
+        # Run concierge call in an async Task so the Session stays responsive
+        session_id = state.id
+
+        task =
+          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+            case Loomkin.Teams.Agent.send_message(concierge_pid, text) do
+              {:ok, response_text} ->
+                # Persist and broadcast the assistant response
+                {:ok, saved_assistant} =
+                  Persistence.save_message(%{
+                    session_id: session_id,
+                    role: :assistant,
+                    content: response_text
+                  })
+
+                assistant_msg = %{
+                  role: :assistant,
+                  content: response_text,
+                  from: "concierge",
+                  id: saved_assistant.id
+                }
+
+                broadcast(session_id, {:new_message, session_id, assistant_msg})
+                {:ok, response_text, assistant_msg}
+
+              {:error, reason} ->
+                {:error, reason}
+            end
+          end)
+
+        {:noreply, %{state | architect_task: {task, from}}}
+
+      :not_routed ->
+        state = update_status(state, :thinking)
+
+        # Run architect in an async Task so the GenServer stays responsive
+        # for permission responses while the architect is running.
+        task =
+          Task.Supervisor.async_nolink(Loomkin.Teams.TaskSupervisor, fn ->
+            Architect.run(text, state, architect_model: state.model)
+          end)
+
+        {:noreply, %{state | architect_task: {task, from}}}
     end
   end
 

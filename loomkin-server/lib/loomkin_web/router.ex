@@ -82,6 +82,10 @@ defmodule LoomkinWeb.Router do
     get "/vaults", VaultController, :index
     get "/vaults/:vault_id", VaultController, :show
     get "/vaults/:vault_id/search", VaultController, :search
+
+    get "/orchestration/epics", OrchestrationController, :index
+    post "/orchestration/epics", OrchestrationController, :create
+    get "/orchestration/epics/:id", OrchestrationController, :show
   end
 
   # CORS preflight for API routes
@@ -184,6 +188,21 @@ defmodule LoomkinWeb.Router do
       live "/orgs", OrgLive, :index
       live "/orgs/new", OrgLive, :new
       live "/orgs/:slug", OrgLive, :show
+    end
+  end
+
+  # Orchestration dashboard — 9-phase pipeline.
+  # Scope: authenticated only. Reason: epic specs and code paths are
+  # proprietary; we match the security posture of /orgs and /vault.
+  scope "/orchestration", LoomkinWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live_session :orchestration,
+      on_mount: [{LoomkinWeb.UserAuth, :require_authenticated_user}] do
+      live "/", OrchestrationIndexLive, :index
+      live "/knowledge", OrchestrationKnowledgeLive, :index
+      live "/metrics", OrchestrationMetricsLive, :index
+      live "/:id", OrchestrationShowLive, :show
     end
   end
 

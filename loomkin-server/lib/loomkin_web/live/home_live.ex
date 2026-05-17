@@ -96,6 +96,13 @@ defmodule LoomkinWeb.HomeLive do
         <div class="w-20" />
         <div class="flex items-center gap-3">
           <%= if @user do %>
+            <.link
+              navigate={~p"/orchestration"}
+              class="px-3 py-1.5 rounded text-xs font-mono transition-colors"
+              style="color: var(--text-brand); border: 1px solid var(--border-brand); background: var(--brand-subtle);"
+            >
+              orchestration
+            </.link>
             <span class="text-xs font-mono" style="color: var(--text-muted);">
               {@user.username || @user.email}
             </span>
