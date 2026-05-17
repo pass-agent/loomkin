@@ -68,6 +68,32 @@ function formatElapsed(card: EpicCard, now: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Format a USD cost into "$0.43" / "$12.00". Returns "—" for nullish.
+ * Exported for tests.
+ */
+export function formatCost(cost: number | undefined | null): string {
+  if (typeof cost !== "number" || !Number.isFinite(cost)) return "—";
+  if (cost === 0) return "$0.00";
+  // Show 4 digits for tiny costs so we don't render "$0.00" for a real spend.
+  const digits = cost < 0.01 ? 4 : 2;
+  return `$${cost.toFixed(digits)}`;
+}
+
+/**
+ * Format an ETA in seconds into "3m 12s" / "45s". Returns "—" for nullish.
+ * Exported for tests.
+ */
+export function formatEta(seconds: number | undefined | null): string {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) {
+    return "—";
+  }
+  const total = Math.floor(seconds);
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return minutes > 0 ? `${minutes}m ${secs}s` : `${secs}s`;
+}
+
 function statusColor(status: EpicCard["status"]): string {
   switch (status) {
     case "closed":
@@ -208,6 +234,13 @@ export function OrchestrationEpicCard({
         </Text>
         {persona?.role_blurb ? <Text dimColor> · {persona.role_blurb}</Text> : null}
         <Text dimColor>{`  ${elapsed}${banner}`}</Text>
+      </Box>
+
+      <Box>
+        <Text dimColor>cost: </Text>
+        <Text>{formatCost(card.cost_usd)}</Text>
+        <Text dimColor> · eta: </Text>
+        <Text>{formatEta(card.eta_seconds)}</Text>
       </Box>
 
       <Box>

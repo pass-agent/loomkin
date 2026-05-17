@@ -25,7 +25,12 @@ defmodule Loomkin.Orchestration.Supervisor do
       Loomkin.Orchestration.Curator,
       Loomkin.Orchestration.SignalBridge,
       Loomkin.Orchestration.Metrics.TelemetryHandler,
-      Loomkin.Orchestration.PRShepherd.Supervisor
+      Loomkin.Orchestration.CostTracker,
+      Loomkin.Orchestration.PRShepherd.Supervisor,
+      # Recovery MUST be last — it relies on EpicRegistry, EpicSupervisor,
+      # and SwarmCoordinator all being already up when its handle_continue
+      # sweep fires.
+      Loomkin.Orchestration.Recovery
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)

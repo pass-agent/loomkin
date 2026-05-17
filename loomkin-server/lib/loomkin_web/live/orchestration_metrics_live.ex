@@ -137,6 +137,37 @@ defmodule LoomkinWeb.OrchestrationMetricsLive do
     map_size(pg) == 0 and map_size(id) == 0 and map_size(pm) == 0 and ec == 0
   end
 
+  defp format_cost_decimal(%Decimal{} = d) do
+    "$" <> (d |> Decimal.round(4) |> Decimal.to_string(:normal))
+  end
+
+  defp format_cost_decimal(_), do: "$0"
+
+  defp format_duration_ms(ms) when is_integer(ms) and ms >= 0 do
+    total_seconds = div(ms, 1_000)
+    minutes = div(total_seconds, 60)
+    seconds = rem(total_seconds, 60)
+
+    cond do
+      minutes > 0 -> "#{minutes}m #{seconds}s"
+      true -> "#{seconds}s"
+    end
+  end
+
+  defp format_duration_ms(_), do: "—"
+
+  defp top_costs(by_epic, n) do
+    by_epic
+    |> Enum.sort_by(
+      fn {_id, sum} -> Decimal.to_float(decimal_or_zero(sum)) end,
+      :desc
+    )
+    |> Enum.take(n)
+  end
+
+  defp decimal_or_zero(%Decimal{} = d), do: d
+  defp decimal_or_zero(_), do: Decimal.new(0)
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -371,6 +402,100 @@ defmodule LoomkinWeb.OrchestrationMetricsLive do
                 style="color: var(--text-primary);"
               >
                 {count}
+              </span>
+            </li>
+          </ul>
+        </section>
+
+        <section
+          class="card p-6 mb-6"
+          aria-labelledby="orch-metrics-costs-h"
+          data-testid="orchestration-metrics-costs"
+        >
+          <h2
+            id="orch-metrics-costs-h"
+            class="text-lg font-medium mb-4"
+            style="color: var(--text-primary);"
+          >
+            Cost per epic (top 10)
+          </h2>
+          <p
+            :if={map_size(@aggregate.cost_per_epic) == 0}
+            class="text-sm"
+            style="color: var(--text-muted);"
+          >
+            No cost data recorded yet — orchestration LLM calls populate this when models are priced.
+          </p>
+          <table
+            :if={map_size(@aggregate.cost_per_epic) > 0}
+            class="w-full text-sm"
+          >
+            <caption class="sr-only">Top 10 epics by total LLM cost</caption>
+            <thead>
+              <tr
+                style="color: var(--text-muted);"
+                class="text-xs font-mono uppercase tracking-wider text-left"
+              >
+                <th scope="col" class="pb-2 pr-4">Epic</th>
+                <th scope="col" class="pb-2 pr-4">Cost (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr :for={{epic_id, sum} <- top_costs(@aggregate.cost_per_epic, 10)}>
+                <th
+                  scope="row"
+                  class="py-2 pr-4 font-medium align-top font-mono text-xs"
+                  style="color: var(--text-primary);"
+                >
+                  <code>{String.slice(epic_id || "", 0, 8)}</code>
+                </th>
+                <td class="py-2 pr-4 align-top">
+                  <strong style="color: var(--text-brand);">{format_cost_decimal(sum)}</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section
+          class="card p-6 mb-6"
+          aria-labelledby="orch-metrics-phase-durations-h"
+          data-testid="orchestration-metrics-phase-durations"
+        >
+          <h2
+            id="orch-metrics-phase-durations-h"
+            class="text-lg font-medium mb-4"
+            style="color: var(--text-primary);"
+          >
+            Avg phase duration
+          </h2>
+          <p
+            :if={map_size(@aggregate.avg_phase_duration_ms_by_phase) == 0}
+            class="text-sm"
+            style="color: var(--text-muted);"
+          >
+            No phase durations recorded yet.
+          </p>
+          <ul
+            :if={map_size(@aggregate.avg_phase_duration_ms_by_phase) > 0}
+            role="list"
+            class="flex flex-col gap-2"
+          >
+            <li
+              :for={
+                {phase, ms} <-
+                  Enum.sort_by(@aggregate.avg_phase_duration_ms_by_phase, fn {p, _} -> p end)
+              }
+              class="flex items-center gap-3"
+            >
+              <span class="text-xs font-mono w-32 shrink-0" style="color: var(--text-secondary);">
+                {phase}
+              </span>
+              <span class="text-sm font-medium" style="color: var(--text-primary);">
+                {format_duration_ms(ms)}
+              </span>
+              <span class="text-xs font-mono" style="color: var(--text-muted);">
+                ({ms} ms)
               </span>
             </li>
           </ul>

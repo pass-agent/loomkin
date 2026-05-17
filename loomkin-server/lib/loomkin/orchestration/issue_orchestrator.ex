@@ -97,6 +97,9 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
 
   @impl :gen_statem
   def init(opts) do
+    resume_snapshot = Keyword.get(opts, :resume_snapshot)
+    resume_phase = Keyword.get(opts, :resume_phase)
+
     data = %__MODULE__{
       epic: Keyword.fetch!(opts, :epic),
       callbacks: Keyword.fetch!(opts, :callbacks),
@@ -112,7 +115,54 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
       approval_reason: nil
     }
 
-    {:ok, :pending, data}
+    case resume_snapshot do
+      nil ->
+        {:ok, :pending, data}
+
+      snap when is_map(snap) ->
+        {:ok, :pending, apply_resume(data, snap, resume_phase)}
+    end
+  end
+
+  # When resuming after a BEAM restart we replay enough scalar state to make
+  # `status/1` honest (iteration counts, attempt knobs, pause + approval
+  # context) and mark which artifacts existed on disk before the crash with a
+  # `:persisted` sentinel. The orchestrator itself always restarts from
+  # `:research` per the v1 recovery contract (see `Recovery` moduledoc); the
+  # snapshot fields are advisory only.
+  defp apply_resume(data, snapshot, resume_phase) do
+    iterations =
+      snapshot
+      |> Map.get("iterations", %{})
+      |> Enum.into(%{}, fn {k, v} -> {string_to_phase(k), v} end)
+
+    artifacts =
+      snapshot
+      |> Map.get("artifacts_keys", [])
+      |> Enum.into(%{}, fn k -> {string_to_phase(k), :persisted} end)
+
+    attempt_knobs =
+      snapshot
+      |> Map.get("attempt_knobs", %{})
+      |> Enum.into(%{}, fn {k, v} -> {string_to_phase(k), v} end)
+
+    %{
+      data
+      | iterations: iterations,
+        artifacts: artifacts,
+        attempt_knobs: attempt_knobs,
+        paused_from: string_to_phase(Map.get(snapshot, "paused_from")) || resume_phase,
+        approval_reason: Map.get(snapshot, "approval_reason")
+    }
+  end
+
+  defp string_to_phase(nil), do: nil
+  defp string_to_phase(s) when is_atom(s), do: s
+
+  defp string_to_phase(s) when is_binary(s) do
+    String.to_existing_atom(s)
+  rescue
+    ArgumentError -> nil
   end
 
   ## :pending — awaits :start
@@ -120,7 +170,17 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
   def pending(:enter, _old, _data), do: :keep_state_and_data
 
   def pending(:cast, :start, data) do
-    broadcast(data, :created)
+    # If `artifacts` is non-empty here, the orchestrator was re-spawned by
+    # `Recovery` after a BEAM restart. Emit a `:resumed` event so the UI can
+    # annotate the timeline; per the v1 contract we still restart from
+    # :research (cheap re-runs are preferred over reconstructing the in-
+    # memory artifact map from disk).
+    if map_size(data.artifacts) > 0 do
+      broadcast(data, {:resumed, :research})
+    else
+      broadcast(data, :created)
+    end
+
     {:next_state, :research, data}
   end
 
@@ -432,11 +492,24 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
   end
 
   defp enter_phase(data, phase) do
+    seed_epic_attribution(data)
     broadcast(data, {:phase_entered, phase})
     persist_phase(data, phase)
     emit_phase_telemetry(data, phase)
     data
   end
+
+  # Seed the process dictionary so downstream `Loomkin.Orchestration.LLM.ReqLLM`
+  # calls can attribute their token cost to the right epic. The orchestrator
+  # always runs callbacks (researcher, planner, gates, executor, pr_opener,
+  # knowledge) synchronously in its own process, so a `Process.put/2` here
+  # propagates to every LLM call those callbacks make.
+  defp seed_epic_attribution(%{epic: %{id: id}}) when is_binary(id) do
+    Process.put(:loomkin_epic_id, id)
+    :ok
+  end
+
+  defp seed_epic_attribution(_), do: :ok
 
   defp emit_phase_telemetry(%{epic: epic} = data, phase) do
     epic_id = Map.get(epic, :id) || Map.get(epic, "id")
@@ -454,9 +527,9 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
     _ -> :ok
   end
 
-  defp persist_phase(%{epic: %{id: id}}, phase) when is_binary(id) do
-    # Best-effort: update Epic.current_phase. If the epic isn't in the DB
-    # (e.g. unit-test fixtures) we silently no-op.
+  defp persist_phase(%{epic: %{id: id}} = data, phase) when is_binary(id) do
+    # Best-effort: update Epic.current_phase + state_snapshot. If the epic
+    # isn't in the DB (e.g. unit-test fixtures) we silently no-op.
     try do
       case Loomkin.Repo.get(Loomkin.Orchestration.Schema.Epic, id) do
         nil ->
@@ -466,7 +539,10 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
           epic
           |> Ecto.Changeset.change(%{
             current_phase: Atom.to_string(phase),
-            status: phase_to_status(phase)
+            status: phase_to_status(phase),
+            state_snapshot: build_state_snapshot(data, phase),
+            last_phase: Atom.to_string(phase),
+            last_iteration: Map.get(data.iterations, phase, 0)
           })
           |> Loomkin.Repo.update()
       end
@@ -479,18 +555,58 @@ defmodule Loomkin.Orchestration.IssueOrchestrator do
 
   defp persist_phase(_, _), do: :ok
 
+  # Snapshot shape mirrors the recovery contract. We store only scalar/atom-key
+  # data (Jason-serialisable) — full artifacts are deliberately omitted because
+  # they can be megabytes. The simpler v1 resume strategy restarts from
+  # :research, so artifacts_keys is advisory only.
+  defp build_state_snapshot(data, phase) do
+    %{
+      "iterations" => stringify_phase_keys(data.iterations),
+      "gate_verdicts_keys" => data.gate_verdicts |> Map.keys() |> Enum.map(&Atom.to_string/1),
+      "attempt_knobs" => stringify_phase_keys(data.attempt_knobs),
+      "artifacts_keys" => data.artifacts |> Map.keys() |> Enum.map(&Atom.to_string/1),
+      "paused_from" => atom_to_string(data.paused_from),
+      "approval_reason" => data.approval_reason,
+      "last_phase_entered" => Atom.to_string(phase)
+    }
+  end
+
+  defp stringify_phase_keys(map) when is_map(map) do
+    Enum.into(map, %{}, fn {k, v} -> {Atom.to_string(k), v} end)
+  end
+
+  defp atom_to_string(nil), do: nil
+  defp atom_to_string(a) when is_atom(a), do: Atom.to_string(a)
+  defp atom_to_string(s) when is_binary(s), do: s
+
   defp phase_to_status(:closure), do: :in_progress
   defp phase_to_status(_), do: :in_progress
 
-  defp persist_terminal(%{epic: %{id: id}}, status) when is_binary(id) do
+  defp persist_terminal(%{epic: %{id: id}} = data, status) when is_binary(id) do
     try do
       case Loomkin.Repo.get(Loomkin.Orchestration.Schema.Epic, id) do
         nil ->
           :ok
 
         epic ->
+          # Terminal states: clear the snapshot for :closed / :cancelled /
+          # :failed (those don't need recovery). For :awaiting_human we stamp
+          # the snapshot so a future restart can re-park the orchestrator.
+          attrs =
+            case status do
+              :awaiting_human ->
+                %{
+                  status: status,
+                  state_snapshot: build_state_snapshot(data, :escalated),
+                  last_phase: "escalated"
+                }
+
+              _ ->
+                %{status: status, state_snapshot: %{}}
+            end
+
           epic
-          |> Ecto.Changeset.change(%{status: status})
+          |> Ecto.Changeset.change(attrs)
           |> Loomkin.Repo.update()
       end
     rescue

@@ -25,6 +25,9 @@ defmodule Loomkin.Orchestration.Schema.Epic do
     field :branch, :string
     field :created_by, :string
     field :metadata, :map, default: %{}
+    field :state_snapshot, :map, default: %{}
+    field :last_phase, :string
+    field :last_iteration, :integer
 
     embeds_many :dod_items, DoDItem, on_replace: :delete
 
@@ -32,7 +35,7 @@ defmodule Loomkin.Orchestration.Schema.Epic do
   end
 
   @required ~w(id title spec)a
-  @optional ~w(status current_phase priority worktree_path base_branch branch created_by metadata)a
+  @optional ~w(status current_phase priority worktree_path base_branch branch created_by metadata state_snapshot last_phase last_iteration)a
 
   def changeset(epic, attrs) do
     epic

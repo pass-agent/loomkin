@@ -99,9 +99,68 @@ defmodule Loomkin.Orchestration.SignalBridge do
     catch
       _, _ -> :ok
     end
+
+    # Piggy-back: every epic-level event is a good moment to refresh the
+    # client-side cost + ETA bands. The compute is cheap (two indexed
+    # queries) and the signal is dropped when no epic_id is in the payload.
+    if subtype == :epic, do: publish_cost_update(payload)
   end
 
   defp publish(_topic, _other), do: :ok
+
+  defp publish_cost_update(%{epic_id: epic_id} = payload) when is_binary(epic_id) do
+    cost = safe_cost(epic_id)
+    eta_ms = safe_eta(epic_id, payload[:current_phase] || payload[:phase])
+
+    data = %{
+      epic_id: epic_id,
+      session_id: payload[:session_id],
+      cost_usd: cost_to_float(cost),
+      eta_seconds: ms_to_seconds(eta_ms)
+    }
+
+    signal = %Jido.Signal{
+      id: Ecto.UUID.generate(),
+      source: "loomkin.orchestration",
+      type: "session.orchestration.cost",
+      datacontenttype: "application/json",
+      time: DateTime.utc_now() |> DateTime.to_iso8601(),
+      data: data,
+      specversion: "1.0.2"
+    }
+
+    try do
+      Loomkin.Signals.publish(signal)
+    rescue
+      _ -> :ok
+    catch
+      _, _ -> :ok
+    end
+  end
+
+  defp publish_cost_update(_), do: :ok
+
+  defp safe_cost(epic_id) do
+    Loomkin.Orchestration.Metrics.cost_for_epic(epic_id)
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
+  end
+
+  defp safe_eta(epic_id, phase) do
+    Loomkin.Orchestration.Metrics.eta_for_epic(epic_id, phase)
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
+  end
+
+  defp cost_to_float(%Decimal{} = d), do: Decimal.to_float(d)
+  defp cost_to_float(_), do: nil
+
+  defp ms_to_seconds(ms) when is_integer(ms) and ms >= 0, do: div(ms, 1_000)
+  defp ms_to_seconds(_), do: nil
 
   defp publish_diff(payload) when is_map(payload) do
     data = %{

@@ -3,6 +3,7 @@ defmodule Loomkin.Orchestration.MetricsTest do
 
   alias Ecto.UUID
   alias Loomkin.Orchestration.Metrics
+  alias Loomkin.Orchestration.Schema.CostEvent
   alias Loomkin.Orchestration.Schema.PhaseMetric
 
   describe "record/1" do
@@ -172,13 +173,15 @@ defmodule Loomkin.Orchestration.MetricsTest do
       %{epic: epic}
     end
 
-    test "returns all four roll-up keys" do
+    test "returns all six roll-up keys" do
       agg = Metrics.aggregate()
 
       assert Map.has_key?(agg, :pass_rate_by_gate)
       assert Map.has_key?(agg, :iteration_distribution)
       assert Map.has_key?(agg, :per_model_pass_rate)
       assert Map.has_key?(agg, :escalation_count)
+      assert Map.has_key?(agg, :cost_per_epic)
+      assert Map.has_key?(agg, :avg_phase_duration_ms_by_phase)
     end
 
     test "computes pass rate per gate" do
@@ -217,6 +220,82 @@ defmodule Loomkin.Orchestration.MetricsTest do
     end
   end
 
+  describe "cost + eta aggregates" do
+    setup do
+      epic_a = UUID.generate()
+      epic_b = UUID.generate()
+
+      {:ok, _} = insert_cost(%{epic_id: epic_a, model: "sonnet", cost_usd: "1.23"})
+      {:ok, _} = insert_cost(%{epic_id: epic_a, model: "sonnet", cost_usd: "0.77"})
+      {:ok, _} = insert_cost(%{epic_id: epic_b, model: "haiku", cost_usd: "0.10"})
+      # Unpriced row — should not break aggregation
+      {:ok, _} = insert_cost(%{epic_id: epic_a, model: "unknown", cost_usd: nil})
+      # Anonymous row — should be excluded from per-epic map
+      {:ok, _} = insert_cost(%{epic_id: nil, model: "sonnet", cost_usd: "9.99"})
+
+      # Phase durations for ETA
+      {:ok, _} =
+        insert_metric(%{
+          epic_id: epic_a,
+          event_kind: :phase_entered,
+          phase: "plan",
+          duration_ms: 5_000
+        })
+
+      {:ok, _} =
+        insert_metric(%{
+          epic_id: epic_a,
+          event_kind: :phase_entered,
+          phase: "decompose",
+          duration_ms: 10_000
+        })
+
+      {:ok, _} =
+        insert_metric(%{
+          epic_id: epic_a,
+          event_kind: :phase_entered,
+          phase: "execute",
+          duration_ms: 30_000
+        })
+
+      %{epic_a: epic_a, epic_b: epic_b}
+    end
+
+    test "cost_per_epic sums priced rows per epic", %{epic_a: a, epic_b: b} do
+      %{cost_per_epic: by_epic} = Metrics.aggregate()
+
+      assert Decimal.equal?(Decimal.round(by_epic[a], 2), Decimal.new("2.00"))
+      assert Decimal.equal?(Decimal.round(by_epic[b], 2), Decimal.new("0.10"))
+      # Rows with nil epic_id are not in the map
+      refute Map.has_key?(by_epic, nil)
+    end
+
+    test "avg_phase_duration_ms_by_phase averages by phase string" do
+      %{avg_phase_duration_ms_by_phase: by_phase} = Metrics.aggregate()
+
+      assert by_phase["plan"] == 5_000
+      assert by_phase["decompose"] == 10_000
+      assert by_phase["execute"] == 30_000
+    end
+
+    test "cost_for_epic returns the per-epic sum", %{epic_a: a} do
+      sum = Metrics.cost_for_epic(a)
+      assert %Decimal{} = sum
+      assert Decimal.equal?(Decimal.round(sum, 2), Decimal.new("2.00"))
+    end
+
+    test "eta_for_epic sums remaining phase averages from current phase", %{epic_a: a} do
+      # current_phase = :plan_review → remaining phases = design_review,
+      # decompose (10s), execute (30s), final_review, pr, closure.
+      # decompose + execute average = 40_000 ms.
+      assert Metrics.eta_for_epic(a, :plan_review) == 40_000
+    end
+
+    test "eta_for_epic returns nil when no remaining-phase data", %{epic_a: a} do
+      assert Metrics.eta_for_epic(a, :closure) == nil
+    end
+  end
+
   defp insert_metric(attrs) do
     {inserted_at, attrs} = Map.pop(attrs, :inserted_at)
     attrs = Map.put_new(attrs, :id, UUID.generate())
@@ -231,5 +310,20 @@ defmodule Loomkin.Orchestration.MetricsTest do
       end
 
     Loomkin.Repo.insert(changeset)
+  end
+
+  defp insert_cost(attrs) do
+    attrs =
+      attrs
+      |> Map.put_new(:id, UUID.generate())
+      |> Map.update(:cost_usd, nil, fn
+        nil -> nil
+        s when is_binary(s) -> Decimal.new(s)
+        %Decimal{} = d -> d
+      end)
+
+    %CostEvent{}
+    |> CostEvent.changeset(attrs)
+    |> Loomkin.Repo.insert()
   end
 end

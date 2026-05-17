@@ -8,7 +8,7 @@ import { shouldExtract, runBackgroundExtraction } from "../lib/sessionExtractor.
 import { loadAllMemories, formatMemoriesForPrompt } from "../lib/memory.js";
 import { runHooks } from "../lib/hooks.js";
 import { formatOrchestrationPhase } from "../lib/orchestrationFeedRenderer.js";
-import { epicCardStore, type PhasePayload } from "../stores/epicCardStore.js";
+import { epicCardStore, type CostPayload, type PhasePayload } from "../stores/epicCardStore.js";
 import { formatSummary as formatDiffSummary, type DiffPayload } from "../components/DiffPreview.js";
 import type {
   Message,
@@ -96,6 +96,17 @@ export function useSessionChannel() {
         role: "system",
         content: text,
       } as Message);
+    });
+
+    // Per-epic cost + ETA event. Emitted by the server's SignalBridge
+    // whenever the orchestration epic fires a phase-level event. The
+    // payload carries the *running* cost in USD and the projected
+    // remaining time in seconds. Either may be null when the server has
+    // insufficient data — we just leave the fields untouched on the card.
+    on("orchestration_cost", (raw) => {
+      const payload = raw as unknown as CostPayload;
+      if (!payload.epic_id) return;
+      epicCardStore.getState().applyCost(payload);
     });
 
     // Inline diff preview event. Emitted by the server after every

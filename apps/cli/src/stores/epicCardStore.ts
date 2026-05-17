@@ -47,6 +47,16 @@ export interface EpicCard {
   last_event_text: string | null;
   diff_summaries: DiffSummary[];
   started_at: number;
+  /** Running total LLM cost in USD for this epic. `undefined` while unknown. */
+  cost_usd?: number;
+  /** Projected remaining time in seconds. `undefined` while unknown. */
+  eta_seconds?: number;
+}
+
+export interface CostPayload {
+  epic_id: string;
+  cost_usd?: number | null;
+  eta_seconds?: number | null;
 }
 
 export interface PhasePayload {
@@ -63,6 +73,7 @@ export interface PhasePayload {
 export interface EpicCardState {
   cards: Record<string, EpicCard>;
   applyEvent: (payload: PhasePayload) => void;
+  applyCost: (payload: CostPayload) => void;
   removeCard: (epic_id: string) => void;
   /** Test/debug helper — wipe all cards (does not run timers). */
   reset: () => void;
@@ -258,6 +269,26 @@ export const epicCardStore = createStore<EpicCardState>((set, get) => ({
         }
       }, REMOVE_AFTER_CLOSED_MS);
     }
+  },
+
+  applyCost: ({ epic_id, cost_usd, eta_seconds }) => {
+    if (!epic_id) return;
+    const existing = get().cards[epic_id];
+    const card: EpicCard = existing ? { ...existing } : emptyCard(epic_id);
+
+    if (typeof cost_usd === "number" && Number.isFinite(cost_usd)) {
+      card.cost_usd = cost_usd;
+    } else if (cost_usd === null) {
+      card.cost_usd = undefined;
+    }
+
+    if (typeof eta_seconds === "number" && Number.isFinite(eta_seconds)) {
+      card.eta_seconds = eta_seconds;
+    } else if (eta_seconds === null) {
+      card.eta_seconds = undefined;
+    }
+
+    set({ cards: { ...get().cards, [epic_id]: card } });
   },
 
   removeCard: (epic_id) => {

@@ -13,8 +13,10 @@ defmodule LoomkinWeb.OrchestrationShowLive do
 
   alias Loomkin.Orchestration
   alias Loomkin.Orchestration.Context
+  alias Loomkin.Orchestration.Metrics
   alias Loomkin.Orchestration.PRShepherd
   alias Loomkin.Orchestration.SwarmCoordinator
+  alias LoomkinWeb.OrchestrationPanelComponent
 
   @epic_topic "orchestration.epic"
   @wu_topic "orchestration.work_unit"
@@ -43,17 +45,39 @@ defmodule LoomkinWeb.OrchestrationShowLive do
          |> assign(:wu_diffs, %{})
          |> assign(:pr_ref, pr_ref_for_epic(epic))
          |> assign(:shepherd_status, shepherd_status_for(epic))
+         |> assign(:cost_usd, safe_cost(epic))
+         |> assign(:eta_ms, safe_eta(epic))
          |> assign(:page_title, "Epic " <> epic.title)}
     end
   end
 
+  defp safe_cost(%{id: id}) when is_binary(id) do
+    Metrics.cost_for_epic(id)
+  rescue
+    _ -> nil
+  end
+
+  defp safe_cost(_), do: nil
+
+  defp safe_eta(%{id: id, current_phase: phase}) when is_binary(id) do
+    Metrics.eta_for_epic(id, phase)
+  rescue
+    _ -> nil
+  end
+
+  defp safe_eta(_), do: nil
+
   @impl true
   def handle_info({@epic_topic, %{epic_id: id}}, %{assigns: %{epic: %{id: id}}} = socket) do
+    fresh = Context.get_epic(id)
+
     {:noreply,
      socket
-     |> assign(:epic, Context.get_epic(id))
+     |> assign(:epic, fresh)
      |> assign(:work_units, Context.list_work_units(id))
-     |> assign(:gate_results, Context.list_gate_results(id))}
+     |> assign(:gate_results, Context.list_gate_results(id))
+     |> assign(:cost_usd, safe_cost(fresh))
+     |> assign(:eta_ms, safe_eta(fresh))}
   end
 
   def handle_info(
@@ -246,6 +270,26 @@ defmodule LoomkinWeb.OrchestrationShowLive do
             <span :if={paused?(@epic)} class="badge badge-warning">paused</span>
             <span :if={@epic.current_phase} style="color: var(--text-secondary);">
               phase: <strong style="color: var(--text-primary);">{@epic.current_phase}</strong>
+            </span>
+            <span
+              style="color: var(--text-secondary);"
+              data-testid="orchestration-header-cost"
+              aria-label={"Cost: " <> OrchestrationPanelComponent.format_cost(@cost_usd)}
+            >
+              cost:
+              <strong style="color: var(--text-primary);">
+                {OrchestrationPanelComponent.format_cost(@cost_usd)}
+              </strong>
+            </span>
+            <span
+              style="color: var(--text-secondary);"
+              data-testid="orchestration-header-eta"
+              aria-label={"ETA: " <> OrchestrationPanelComponent.format_eta(@eta_ms)}
+            >
+              eta:
+              <strong style="color: var(--text-primary);">
+                {OrchestrationPanelComponent.format_eta(@eta_ms)}
+              </strong>
             </span>
           </p>
 

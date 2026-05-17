@@ -430,6 +430,21 @@ defmodule LoomkinWeb.SessionChannel do
     {:noreply, socket}
   end
 
+  # Per-epic cost + ETA updates. Emitted by `Loomkin.Orchestration.SignalBridge`
+  # whenever a cost-event is recorded, so CLI / mobile clients can surface
+  # the running spend and the projected time-to-finish on the live card.
+  def handle_info(%Jido.Signal{type: "session.orchestration.cost"} = sig, socket) do
+    if sig.data[:session_id] in [nil, socket.assigns.session_id] do
+      push(socket, "orchestration_cost", %{
+        epic_id: sig.data[:epic_id],
+        cost_usd: sig.data[:cost_usd],
+        eta_seconds: sig.data[:eta_seconds]
+      })
+    end
+
+    {:noreply, socket}
+  end
+
   # Inline diff preview events. Emitted by SignalBridge after a successful
   # work-unit commit so the CLI / mobile clients can surface a +N −M
   # summary (and optionally an expandable patch excerpt) inline.

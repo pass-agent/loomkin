@@ -16,6 +16,7 @@ defmodule LoomkinWeb.OrchestrationPanelComponent do
 
   alias Loomkin.Orchestration
   alias Loomkin.Orchestration.Context
+  alias Loomkin.Orchestration.Metrics
   alias Loomkin.Orchestration.Personas
   alias Loomkin.Orchestration.SwarmCoordinator
 
@@ -45,8 +46,52 @@ defmodule LoomkinWeb.OrchestrationPanelComponent do
      |> assign(assigns)
      |> assign(:work_unit_count, work_unit_count_for(epic))
      |> assign(:status, status_for(epic))
-     |> assign(:persona, persona_for_epic(epic))}
+     |> assign(:persona, persona_for_epic(epic))
+     |> assign(:cost_usd, cost_for(epic))
+     |> assign(:eta_ms, eta_for(epic))}
   end
+
+  defp cost_for(%{id: id}) when is_binary(id) do
+    Metrics.cost_for_epic(id)
+  rescue
+    _ -> nil
+  end
+
+  defp cost_for(_), do: nil
+
+  defp eta_for(%{id: id, current_phase: phase}) when is_binary(id) do
+    Metrics.eta_for_epic(id, phase)
+  rescue
+    _ -> nil
+  end
+
+  defp eta_for(_), do: nil
+
+  @doc "Public formatting helpers shared with `OrchestrationShowLive`."
+  def format_cost(nil), do: "—"
+
+  def format_cost(%Decimal{} = d) do
+    # Render with 2 fractional digits, e.g. "$0.43" / "$12.00".
+    rounded = Decimal.round(d, 2)
+    "$" <> Decimal.to_string(rounded, :normal)
+  end
+
+  def format_cost(_), do: "—"
+
+  def format_eta(nil), do: "—"
+
+  def format_eta(ms) when is_integer(ms) and ms >= 0 do
+    total_seconds = div(ms, 1_000)
+    minutes = div(total_seconds, 60)
+    seconds = rem(total_seconds, 60)
+
+    cond do
+      minutes > 0 -> "#{minutes}m #{seconds}s"
+      true -> "#{seconds}s"
+    end
+  end
+
+  def format_eta(_), do: "—"
 
   @impl true
   def handle_event("pause", %{"id" => epic_id}, socket) do
@@ -198,6 +243,20 @@ defmodule LoomkinWeb.OrchestrationPanelComponent do
         <dd style="color: var(--text-primary);">{@work_unit_count}</dd>
         <dt style="color: var(--text-muted);">Last event</dt>
         <dd style="color: var(--text-primary);">{@last_event || "—"}</dd>
+        <dt style="color: var(--text-muted);">Cost</dt>
+        <dd
+          style="color: var(--text-primary);"
+          data-testid="orchestration-card-cost"
+        >
+          {format_cost(@cost_usd)}
+        </dd>
+        <dt style="color: var(--text-muted);">ETA</dt>
+        <dd
+          style="color: var(--text-primary);"
+          data-testid="orchestration-card-eta"
+        >
+          {format_eta(@eta_ms)}
+        </dd>
       </dl>
 
       <div
